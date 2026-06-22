@@ -473,10 +473,12 @@ function mostrarPantalla(id){
 document.getElementById('btnMarcar').onclick = async ()=>{
   if(!nombreSel) return;
   modoActual = 'marcar';
+  erroresSeguidosMarcar = 0;
   try{ await abrirCamara(); }catch(err){ return; }
   procesarFrameMarcar();
 };
 
+let erroresSeguidosMarcar = 0;
 async function procesarFrameMarcar(){
   if(errorModelos){
     cerrarCamara();
@@ -490,10 +492,17 @@ async function procesarFrameMarcar(){
   }
   let deteccion;
   try{
-    deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({inputSize:320, scoreThreshold:0.5}))
       .withFaceLandmarks().withFaceDescriptor();
+    erroresSeguidosMarcar = 0;
   }catch(err){
     console.error('Error detectando rostro:', err);
+    erroresSeguidosMarcar++;
+    if(erroresSeguidosMarcar >= 8){
+      cerrarCamara();
+      mostrarResultado('err', 'No se pudo analizar el rostro', `Tu navegador/celular tuvo un problema procesando la imagen.<br><span style="font-size:11px">${escapeHtml(err.message||String(err))}</span>`, 'Intenta con otro navegador (Chrome/Safari actualizado) o avisa a soporte con este mensaje');
+      return;
+    }
     setTimeout(procesarFrameMarcar, 400);
     return;
   }
@@ -641,6 +650,7 @@ document.getElementById('btnPinConfirmar').onclick = ()=>{
       pintarGrilla('grillaEnrolar', (nombre, el, cont)=>{
         nombreEnrolando = nombre;
         modoActual = 'enrolar';
+        erroresSeguidosEnrolar = 0;
         abrirCamara().then(procesarFrameEnrolar).catch(()=>{});
       });
       mostrarPantalla('pantallaEnrolar');
@@ -682,6 +692,7 @@ document.getElementById('btnGuardarPersonal').onclick = ()=>{
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2200);
 };
 
+let erroresSeguidosEnrolar = 0;
 async function procesarFrameEnrolar(){
   if(errorModelos){
     cerrarCamara();
@@ -696,10 +707,17 @@ async function procesarFrameEnrolar(){
   document.getElementById('estadoCamara').textContent = `Capturando rostro de ${nombreEnrolando}…`;
   let deteccion;
   try{
-    deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({inputSize:320, scoreThreshold:0.5}))
       .withFaceLandmarks().withFaceDescriptor();
+    erroresSeguidosEnrolar = 0;
   }catch(err){
     console.error('Error detectando rostro:', err);
+    erroresSeguidosEnrolar++;
+    if(erroresSeguidosEnrolar >= 8){
+      cerrarCamara();
+      mostrarResultado('err', 'No se pudo analizar el rostro', `Tu navegador/celular tuvo un problema procesando la imagen.<br><span style="font-size:11px">${escapeHtml(err.message||String(err))}</span>`, 'Intenta con otro navegador (Chrome/Safari actualizado) o avisa a soporte con este mensaje');
+      return;
+    }
     setTimeout(procesarFrameEnrolar, 400);
     return;
   }
