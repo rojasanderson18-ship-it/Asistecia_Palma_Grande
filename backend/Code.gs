@@ -111,11 +111,21 @@ function doGet(e) {
     const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
 
     const marcas = [];
+    const debugFilas = [];
     for (let i = 1; i < datos.length; i++) {
       const [fecha, , , doc, , , tipo] = datos[i];
-      if (normalizarFecha(fecha) === hoy && String(doc) === documento) marcas.push(tipo);
+      const fechaNorm = normalizarFecha(fecha);
+      const docNorm = String(doc);
+      const coincide = fechaNorm === hoy && docNorm === documento;
+      if (coincide) marcas.push(tipo);
+      debugFilas.push({
+        fechaCruda: fecha, tipoFechaCruda: (typeof fecha) + (fecha instanceof Date ? "(Date)" : ""),
+        fechaNorm: fechaNorm, hoy: hoy, fechaCoincide: fechaNorm === hoy,
+        docCruda: doc, docNorm: docNorm, documentoParam: documento, docCoincide: docNorm === documento,
+        tipo: tipo
+      });
     }
-    return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas }))
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas, debugFilas: debugFilas }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
