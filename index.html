@@ -363,6 +363,11 @@ setInterval(verificarGps, 60000);
 /* ======================================================================
    GRILLA DE PERSONAL
    ====================================================================== */
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 function iniciales(nombre){
   return nombre.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
 }
@@ -372,7 +377,13 @@ function pintarGrilla(contenedorId, onClick){
   getPersonalCompleto().forEach(({nombre})=>{
     const div = document.createElement('div');
     div.className = 'persona';
-    div.innerHTML = `<div class="inicial">${iniciales(nombre)}</div><div class="nom">${nombre}</div>`;
+    const inicial = document.createElement('div');
+    inicial.className = 'inicial';
+    inicial.textContent = iniciales(nombre);
+    const nom = document.createElement('div');
+    nom.className = 'nom';
+    nom.textContent = nombre;
+    div.append(inicial, nom);
     div.onclick = ()=> onClick(nombre, div, cont);
     cont.appendChild(div);
   });
@@ -435,7 +446,13 @@ let modoActual = null; // 'marcar' | 'enrolar'
 let nombreEnrolando = null;
 
 async function abrirCamara(){
-  stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:480, height:480 } });
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:480, height:480 } });
+  }catch(err){
+    modoActual = null;
+    mostrarResultado('err', 'No se pudo acceder a la cámara', 'Revisa los permisos de cámara del navegador e intenta de nuevo.', '');
+    throw err;
+  }
   video.srcObject = stream;
   mostrarPantalla('pantallaCamara');
 }
@@ -452,7 +469,7 @@ function mostrarPantalla(id){
 document.getElementById('btnMarcar').onclick = async ()=>{
   if(!nombreSel) return;
   modoActual = 'marcar';
-  await abrirCamara();
+  try{ await abrirCamara(); }catch(err){ return; }
   procesarFrameMarcar();
 };
 
@@ -483,7 +500,7 @@ async function procesarFrameMarcar(){
   cerrarCamara();
 
   if(!referencia){
-    mostrarResultado('err', 'Sin rostro de referencia', `<b>${nombreSel}</b> no está enrolado todavía.`, 'Pide a Gerencia que lo enrole primero');
+    mostrarResultado('err', 'Sin rostro de referencia', `<b>${escapeHtml(nombreSel)}</b> no está enrolado todavía.`, 'Pide a Gerencia que lo enrole primero');
     return;
   }
 
@@ -491,7 +508,7 @@ async function procesarFrameMarcar(){
   const coincide = distancia <= CONFIG.UMBRAL_FACIAL;
 
   if(!coincide){
-    mostrarResultado('err', 'Rostro no coincide', `Seleccionaste <b>${nombreSel}</b> pero el rostro detectado no coincide.`, 'Vuelve a intentar o avisa a tu supervisor');
+    mostrarResultado('err', 'Rostro no coincide', `Seleccionaste <b>${escapeHtml(nombreSel)}</b> pero el rostro detectado no coincide.`, 'Vuelve a intentar o avisa a tu supervisor');
     return;
   }
 
@@ -508,7 +525,7 @@ async function procesarFrameMarcar(){
   };
   enviarAlServidor(payload);
 
-  mostrarResultado('ok', 'Registro confirmado', `<b>${nombreSel}</b><br>${tipo} · ${hora.toLocaleTimeString('es-CO')}`,
+  mostrarResultado('ok', 'Registro confirmado', `<b>${escapeHtml(nombreSel)}</b><br>${tipo} · ${hora.toLocaleTimeString('es-CO')}`,
     gpsOk ? '' : 'Marcado fuera de geocerca — revisión Gerencia');
 
   setTimeout(()=>{
@@ -565,6 +582,33 @@ function enviarAlServidor(payload){
   });
 }
 
+/* ---------- Reintento de registros que no se pudieron enviar ---------- */
+let reintentandoCola = false;
+async function reintentarCola(){
+  if(reintentandoCola) return;
+  if(!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR_AQUI')) return;
+  const cola = JSON.parse(localStorage.getItem('cola_asistencia')||'[]');
+  if(!cola.length) return;
+  reintentandoCola = true;
+  const pendientes = [];
+  for(const item of cola){
+    try{
+      await fetch(CONFIG.GS_URL, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify(item)
+      });
+    }catch(err){
+      pendientes.push(item);
+    }
+  }
+  localStorage.setItem('cola_asistencia', JSON.stringify(pendientes));
+  reintentandoCola = false;
+}
+window.addEventListener('online', reintentarCola);
+setInterval(reintentarCola, 2*60*1000);
+setTimeout(reintentarCola, 3000);
+
 /* ======================================================================
    FLUJO ENROLAMIENTO (protegido por PIN)
    ====================================================================== */
@@ -586,7 +630,7 @@ document.getElementById('btnPinConfirmar').onclick = ()=>{
       pintarGrilla('grillaEnrolar', (nombre, el, cont)=>{
         nombreEnrolando = nombre;
         modoActual = 'enrolar';
-        abrirCamara().then(procesarFrameEnrolar);
+        abrirCamara().then(procesarFrameEnrolar).catch(()=>{});
       });
       mostrarPantalla('pantallaEnrolar');
     } else {
@@ -606,6 +650,8 @@ document.getElementById('btnGuardarPersonal').onclick = ()=>{
   const cargo = document.getElementById('nuevoCargo').value;
   if(!nombre){ alert('Escribe el nombre completo'); return; }
   if(!cargo){ alert('Selecciona un cargo'); return; }
+  const yaExiste = getPersonalCompleto().some(p=> p.nombre.toLowerCase() === nombre.toLowerCase());
+  if(yaExiste){ alert('Ya existe una persona registrada con ese nombre'); return; }
 
   const extra = getPersonalExtra();
   extra.push({nombre, cargo});
@@ -621,7 +667,7 @@ document.getElementById('btnGuardarPersonal').onclick = ()=>{
   // Avisa al backend para que quede también en el Sheet (hoja Personal)
   enviarAlServidor({ accion:'registrarPersonal', nombre, cargo, fechaHora: new Date().toISOString() });
 
-  mostrarResultado('ok', 'Personal agregado', `<b>${nombre}</b><br>${cargo}`, 'Ahora puedes enrolar su rostro');
+  mostrarResultado('ok', 'Personal agregado', `<b>${escapeHtml(nombre)}</b><br>${escapeHtml(cargo)}`, 'Ahora puedes enrolar su rostro');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2200);
 };
 
@@ -649,7 +695,7 @@ async function procesarFrameEnrolar(){
 
   guardarRostro(nombreEnrolando, deteccion.descriptor);
   cerrarCamara();
-  mostrarResultado('ok', 'Empleado enrolado', `<b>${nombreEnrolando}</b> ya puede marcar asistencia`, '');
+  mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2000);
 }
 </script>
