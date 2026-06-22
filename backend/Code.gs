@@ -233,9 +233,14 @@ function calcularResumenDashboard(fechaParam) {
     porPersona[clave][tipo] = hora;
   }
 
-  let tardanzas = 0, jornadasCompletas = 0;
+  let tardanzas = 0, jornadasCompletas = 0, totalHoras = 0;
   const porFinca = {};
   const filas = [];
+
+  const horaADecimal = (hStr) => {
+    const [h, mi, s] = String(hStr).split(":").map(Number);
+    return h + mi / 60 + (s || 0) / 3600;
+  };
 
   Object.keys(porPersona).forEach(documento => {
     const p = porPersona[documento];
@@ -245,11 +250,23 @@ function calcularResumenDashboard(fechaParam) {
       const [h, mi] = String(p.Entrada).split(":").map(Number);
       if ((h + mi / 60) > HORA_TOLERANCIA_ENTRADA) tardanzas++;
     }
-    if (p.Entrada && p.Salida) jornadasCompletas++;
+
+    let horasLaboradas = "";
+    if (p.Entrada && p.Salida) {
+      jornadasCompletas++;
+      const tiempoAlmuerzo = (p["Inicio almuerzo"] && p["Fin almuerzo"])
+        ? horaADecimal(p["Fin almuerzo"]) - horaADecimal(p["Inicio almuerzo"]) : 0;
+      const horasDecimal = horaADecimal(p.Salida) - horaADecimal(p.Entrada) - tiempoAlmuerzo;
+      totalHoras += horasDecimal;
+      const horasEnteras = Math.floor(horasDecimal);
+      const minutos = Math.round((horasDecimal - horasEnteras) * 60);
+      horasLaboradas = horasEnteras + "h " + minutos + "m";
+    }
 
     filas.push({
       documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
-      entrada: p.Entrada || "", salida: p.Salida || "", fotoURL: p.fotoURL || ""
+      entrada: p.Entrada || "", salida: p.Salida || "", fotoURL: p.fotoURL || "",
+      horasLaboradas: horasLaboradas
     });
   });
 
@@ -259,6 +276,7 @@ function calcularResumenDashboard(fechaParam) {
     totalPersonas: Object.keys(porPersona).length,
     tardanzas: tardanzas,
     jornadasCompletas: jornadasCompletas,
+    totalHoras: totalHoras.toFixed(1),
     porFinca: porFinca,
     filas: filas
   })).setMimeType(ContentService.MimeType.JSON);
