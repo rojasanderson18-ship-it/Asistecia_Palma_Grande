@@ -402,17 +402,28 @@ function guardarRostro(nombre, descriptor){
 /* ======================================================================
    CARGA DE MODELOS face-api.js (CDN con pesos)
    ====================================================================== */
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
 let modelosListos = false;
+let errorModelos = null;
 async function cargarModelos(){
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-  ]);
-  modelosListos = true;
+  try{
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    ]);
+    modelosListos = true;
+  }catch(err){
+    errorModelos = err.message || 'Error desconocido cargando modelos';
+    console.error('Error cargando modelos faciales:', err);
+  }
 }
 cargarModelos();
+setTimeout(()=>{
+  if(!modelosListos && !errorModelos){
+    errorModelos = 'Tiempo de espera agotado (CDN no responde)';
+  }
+}, 15000);
 
 /* ======================================================================
    CÁMARA
@@ -446,6 +457,11 @@ document.getElementById('btnMarcar').onclick = async ()=>{
 };
 
 async function procesarFrameMarcar(){
+  if(errorModelos){
+    cerrarCamara();
+    mostrarResultado('err', 'No cargaron los modelos', `Error: ${errorModelos}`, 'Verifica conexión e intenta de nuevo');
+    return;
+  }
   if(!modelosListos){
     document.getElementById('estadoCamara').textContent = 'Cargando modelos faciales…';
     setTimeout(procesarFrameMarcar, 500);
@@ -610,6 +626,11 @@ document.getElementById('btnGuardarPersonal').onclick = ()=>{
 };
 
 async function procesarFrameEnrolar(){
+  if(errorModelos){
+    cerrarCamara();
+    mostrarResultado('err', 'No cargaron los modelos', `Error: ${errorModelos}`, 'Verifica conexión e intenta de nuevo');
+    return;
+  }
   if(!modelosListos){
     document.getElementById('estadoCamara').textContent = 'Cargando modelos faciales…';
     setTimeout(procesarFrameEnrolar, 500);
