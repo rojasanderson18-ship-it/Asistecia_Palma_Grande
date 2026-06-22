@@ -231,7 +231,7 @@
     <button class="btn secundario" id="btnVolverMarcacion">Volver</button>
   </div>
 
-  <div class="pie">Palma Grande S.A.S. · Reconocimiento local (face-api.js) · Foto guardada solo para control interno de Dirección Agronómico</div>
+  <div class="pie">Palma Grande S.A.S. · Reconocimiento local (face-api.js) · Foto de enrolamiento guardada solo para control interno de Dirección Agronómico</div>
 </div>
 
 <script>
@@ -560,8 +560,8 @@ function cerrarCamara(){
 }
 
 // Toma una foto pequeña (240x240, JPEG comprimido) del frame actual de la
-// cámara para adjuntarla a la marcación, usada luego en el reporte PDF.
-function capturarFotoMarcacion(){
+// cámara, usada como foto de perfil del empleado en el reporte PDF.
+function capturarFotoVideo(){
   try{
     const lado = 240;
     const canvas = document.createElement('canvas');
@@ -651,11 +651,10 @@ async function procesarFrameMarcar(){
   const tipo = tipoCalculado || 'Entrada';
   const hora = new Date();
   const personaMarcando = getPersonalPorDocumento(documentoInput.value.trim());
-  const foto = capturarFotoMarcacion();
   const payload = {
     accion:'marcar', nombre:nombreSel, documento: personaMarcando?personaMarcando.documento:'', finca:CONFIG.FINCA.nombre, tipo, cargo: getCargo(nombreSel),
     fechaHora: hora.toISOString(), lat: gpsCoords?gpsCoords.lat:null, lng: gpsCoords?gpsCoords.lng:null,
-    dentroGeocerca: gpsOk, distanciaFacial: distancia, foto
+    dentroGeocerca: gpsOk, distanciaFacial: distancia
   };
   enviarAlServidor(payload);
 
@@ -846,7 +845,12 @@ async function procesarFrameEnrolar(){
   }
 
   guardarRostro(nombreEnrolando, deteccion.descriptor);
+  const personaEnrolando = getPersonalCompleto().find(p=> p.nombre === nombreEnrolando);
+  const foto = capturarFotoVideo();
   cerrarCamara();
+  if(personaEnrolando && foto){
+    enviarAlServidor({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto });
+  }
   mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2000);
 }
