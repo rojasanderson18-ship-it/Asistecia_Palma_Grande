@@ -92,7 +92,9 @@ function doPost(e) {
 
     const hoja = obtenerOhCrearHoja();
     const fechaHora = new Date(datos.fechaHora);
+    Logger.log("foto recibida: " + (datos.foto ? ("SI, longitud=" + datos.foto.length) : "NO/vacia"));
     const fotoURL = guardarFoto(datos.foto, datos.documento, datos.tipo);
+    Logger.log("fotoURL resultante: " + fotoURL);
 
     hoja.appendRow([
       Utilities.formatDate(fechaHora, "America/Bogota", "dd/MM/yyyy"),
