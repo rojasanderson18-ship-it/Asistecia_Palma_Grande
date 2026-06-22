@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de Asistencia | Dirección Agronómico — Palma Grande S.A.S.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#06140e; --bg-1:#0d2317; --panel:#0f2a1c; --panel-line:rgba(244,243,235,0.07);
+    --verde:#5fb98a; --verde-glow:rgba(95,185,138,0.35); --dorado:#cfa854; --rojo:#c4574a;
+    --texto:#f4f3eb; --tenue:#8da591; --tenue2:#5e7868;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter', system-ui, sans-serif;
+    background:radial-gradient(circle at 20% -10%, rgba(95,185,138,0.10), transparent 40%),
+               linear-gradient(165deg, var(--bg-1) 0%, var(--bg-0) 75%);
+    color:var(--texto); min-height:100vh; padding:24px;
+  }
+  .contenedor{ max-width:1100px; margin:0 auto; }
+  h1{ font-family:'Fraunces', serif; font-weight:600; font-size:28px; margin-bottom:4px; }
+  .subtitulo{ color:var(--tenue); font-size:14px; margin-bottom:22px; }
+  .panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; padding:18px; margin-bottom:18px; }
+  .filtros{ display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+  .campo label{ display:block; font-size:12px; color:var(--tenue); margin-bottom:6px; }
+  .campo input{ padding:10px 12px; border-radius:8px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; }
+  button{ font-family:'Inter', sans-serif; font-weight:600; border:none; border-radius:8px; padding:11px 18px; cursor:pointer; }
+  .btn-primario{ background:var(--verde); color:#06140d; }
+  .btn-secundario{ background:transparent; color:var(--texto); border:1px solid var(--panel-line); }
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:18px; }
+  .kpi{ background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; padding:16px; }
+  .kpi .num{ font-family:'Fraunces', serif; font-size:32px; font-weight:600; color:var(--verde); }
+  .kpi .etq{ font-size:12.5px; color:var(--tenue); margin-top:4px; }
+  .kpi.alerta .num{ color:var(--dorado); }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; padding:10px 8px; color:var(--tenue); font-weight:600; border-bottom:1px solid var(--panel-line); }
+  td{ padding:9px 8px; border-bottom:1px solid var(--panel-line); }
+  .foto-mini{ width:38px; height:38px; border-radius:8px; object-fit:cover; background:var(--bg-1); }
+  .badge{ padding:3px 9px; border-radius:6px; font-size:12px; font-weight:600; }
+  .badge.completa{ background:rgba(95,185,138,0.15); color:var(--verde); }
+  .badge.incompleta{ background:rgba(207,168,84,0.15); color:var(--dorado); }
+  .finca-pill{ display:inline-block; background:var(--bg-1); border:1px solid var(--panel-line); padding:6px 12px; border-radius:20px; margin:3px; font-size:13px; }
+  .vacio{ text-align:center; color:var(--tenue); padding:30px; }
+  .pie{ text-align:center; color:var(--tenue2); font-size:11.5px; margin-top:18px; }
+  @media print{
+    body{ background:#fff; color:#111; padding:0; }
+    .no-imprimir{ display:none !important; }
+    .panel{ border:1px solid #ccc; background:#fff; }
+    .kpi .num{ color:#1a6b41; }
+    th{ color:#444; }
+  }
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <h1>Reporte de Asistencia</h1>
+  <div class="subtitulo">Dirección Agronómico · Palma Grande S.A.S.</div>
+
+  <div class="panel no-imprimir">
+    <div class="filtros">
+      <div class="campo">
+        <label>Fecha</label>
+        <input type="date" id="fechaInput">
+      </div>
+      <button class="btn-primario" id="btnConsultar">Consultar</button>
+      <button class="btn-secundario" id="btnPdf">🖨️ Exportar PDF</button>
+    </div>
+  </div>
+
+  <div id="zonaResultado">
+    <div class="vacio">Consultando…</div>
+  </div>
+
+  <div class="pie">Palma Grande S.A.S. · Reporte generado el <span id="fechaGeneracion"></span></div>
+</div>
+
+<script>
+const CONFIG = {
+  GS_URL: "https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec"
+};
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+function hoyISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function isoADDMMYYYY(iso){
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+const fechaInput = document.getElementById('fechaInput');
+fechaInput.value = hoyISO();
+document.getElementById('fechaGeneracion').textContent = new Date().toLocaleString('es-CO');
+
+async function consultar(){
+  const zona = document.getElementById('zonaResultado');
+  zona.innerHTML = '<div class="vacio">Consultando…</div>';
+  const fechaDDMMYYYY = isoADDMMYYYY(fechaInput.value);
+  try{
+    const resp = await fetch(`${CONFIG.GS_URL}?accion=resumenDashboard&fecha=${encodeURIComponent(fechaDDMMYYYY)}&_=${Date.now()}`, { cache:'no-store' });
+    const datos = await resp.json();
+    if(!datos || !datos.ok){ zona.innerHTML = '<div class="vacio">No se pudo cargar el reporte.</div>'; return; }
+    pintarReporte(datos);
+  }catch(err){
+    zona.innerHTML = `<div class="vacio">Error de conexión: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function pintarReporte(datos){
+  const zona = document.getElementById('zonaResultado');
+  const incompletas = datos.totalPersonas - datos.jornadasCompletas;
+
+  const pillsFinca = Object.keys(datos.porFinca).map(finca =>
+    `<span class="finca-pill">${escapeHtml(finca)}: <b>${datos.porFinca[finca]}</b></span>`
+  ).join('');
+
+  const filasHtml = datos.filas.length ? datos.filas.map(f => `
+    <tr>
+      <td>${f.fotoURL ? `<img class="foto-mini" src="${escapeHtml(f.fotoURL)}" alt="">` : '—'}</td>
+      <td>${escapeHtml(f.nombre)}</td>
+      <td>${escapeHtml(f.documento)}</td>
+      <td>${escapeHtml(f.cargo)}</td>
+      <td>${escapeHtml(f.finca)}</td>
+      <td>${escapeHtml(f.entrada) || '—'}</td>
+      <td>${escapeHtml(f.salida) || '—'}</td>
+      <td>${f.entrada && f.salida ? '<span class="badge completa">Completa</span>' : '<span class="badge incompleta">Incompleta</span>'}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="8" class="vacio">Sin marcaciones para esta fecha</td></tr>';
+
+  zona.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="num">${datos.totalPersonas}</div><div class="etq">Personas con marcación</div></div>
+      <div class="kpi"><div class="num">${datos.jornadasCompletas}</div><div class="etq">Jornadas completas</div></div>
+      <div class="kpi ${incompletas>0?'alerta':''}"><div class="num">${incompletas}</div><div class="etq">Jornadas incompletas</div></div>
+      <div class="kpi ${datos.tardanzas>0?'alerta':''}"><div class="num">${datos.tardanzas}</div><div class="etq">Tardanzas (después 6:15 am)</div></div>
+    </div>
+    <div class="panel">
+      <div style="font-size:13px; color:var(--tenue); margin-bottom:8px;">Por finca</div>
+      ${pillsFinca || '<span class="vacio">Sin datos</span>'}
+    </div>
+    <div class="panel">
+      <div style="font-size:13px; color:var(--tenue); margin-bottom:10px;">Detalle del ${escapeHtml(datos.fecha)}</div>
+      <table>
+        <thead><tr><th>Foto</th><th>Nombre</th><th>Documento</th><th>Cargo</th><th>Finca</th><th>Entrada</th><th>Salida</th><th>Estado</th></tr></thead>
+        <tbody>${filasHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+document.getElementById('btnConsultar').onclick = consultar;
+document.getElementById('btnPdf').onclick = ()=> window.print();
+consultar();
+</script>
+</body>
+</html>
