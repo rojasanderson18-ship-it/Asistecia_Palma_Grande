@@ -130,9 +130,10 @@ function pintarReporte(datos){
       <td>${escapeHtml(f.finca)}</td>
       <td>${escapeHtml(f.entrada) || '—'}</td>
       <td>${escapeHtml(f.salida) || '—'}</td>
+      <td>${escapeHtml(f.horasLaboradas) || '—'}</td>
       <td>${f.entrada && f.salida ? '<span class="badge completa">Completa</span>' : '<span class="badge incompleta">Incompleta</span>'}</td>
     </tr>
-  `).join('') : '<tr><td colspan="8" class="vacio">Sin marcaciones para esta fecha</td></tr>';
+  `).join('') : '<tr><td colspan="9" class="vacio">Sin marcaciones para esta fecha</td></tr>';
 
   zona.innerHTML = `
     <div class="kpis">
@@ -140,6 +141,7 @@ function pintarReporte(datos){
       <div class="kpi"><div class="num">${datos.jornadasCompletas}</div><div class="etq">Jornadas completas</div></div>
       <div class="kpi ${incompletas>0?'alerta':''}"><div class="num">${incompletas}</div><div class="etq">Jornadas incompletas</div></div>
       <div class="kpi ${datos.tardanzas>0?'alerta':''}"><div class="num">${datos.tardanzas}</div><div class="etq">Tardanzas (después 6:15 am)</div></div>
+      <div class="kpi"><div class="num">${datos.totalHoras || 0}h</div><div class="etq">Total horas laboradas</div></div>
     </div>
     <div class="panel">
       <div style="font-size:13px; color:var(--tenue); margin-bottom:8px;">Por finca</div>
@@ -148,7 +150,7 @@ function pintarReporte(datos){
     <div class="panel">
       <div style="font-size:13px; color:var(--tenue); margin-bottom:10px;">Detalle del ${escapeHtml(datos.fecha)}</div>
       <table>
-        <thead><tr><th>Foto</th><th>Nombre</th><th>Documento</th><th>Cargo</th><th>Finca</th><th>Entrada</th><th>Salida</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Foto</th><th>Nombre</th><th>Documento</th><th>Cargo</th><th>Finca</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Estado</th></tr></thead>
         <tbody>${filasHtml}</tbody>
       </table>
     </div>
