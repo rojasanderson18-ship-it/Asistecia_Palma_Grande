@@ -13,7 +13,7 @@
  * 5. Copia la URL que termina en /exec y pégala en CONFIG.GS_URL del index.html
  ***********************************************************/
 
-const SHEET_ID = "PEGAR_AQUI_ID_DEL_SHEET"; // <-- reemplazar
+const SHEET_ID = "1ZjIJ_AHty-ltlFDJP_0MV4mIXAhs1oNKhKcYWNMlbC8";
 const HOJA_MARCACIONES = "Marcaciones";
 
 // Evita inyección de fórmulas: si el valor empieza con =,+,-,@ o tab,
