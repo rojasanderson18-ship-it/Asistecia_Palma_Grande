@@ -1,0 +1,8 @@
+{
+  "appId": "com.palmagrande.asistencia",
+  "appName": "Asistencia Palma Grande",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  }
+}

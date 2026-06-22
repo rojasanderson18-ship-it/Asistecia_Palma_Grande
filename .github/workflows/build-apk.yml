@@ -1,0 +1,47 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, claude/jolly-ritchie-s32f26]
+    paths:
+      - 'index.html'
+      - 'lib/**'
+      - 'models/**'
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Sincronizar assets web con el proyecto Android
+        run: npx cap sync android
+
+      - name: Compilar APK debug
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Subir APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: asistencia-palma-grande-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
