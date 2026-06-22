@@ -95,7 +95,10 @@ function doPost(e) {
 // como fecha, como un objeto Date real. Esto normaliza ambos casos al mismo
 // formato de texto para poder compararlos.
 function normalizarFecha(valor) {
-  if (valor instanceof Date) {
+  // instanceof Date puede fallar si el valor viene de otro "realm" de JS
+  // (pasa con algunos valores devueltos por getValues() en Apps Script),
+  // por eso se verifica con Object.prototype.toString en vez de instanceof.
+  if (Object.prototype.toString.call(valor) === "[object Date]") {
     return Utilities.formatDate(valor, "America/Bogota", "dd/MM/yyyy");
   }
   return String(valor);
@@ -111,21 +114,11 @@ function doGet(e) {
     const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
 
     const marcas = [];
-    const debugFilas = [];
     for (let i = 1; i < datos.length; i++) {
       const [fecha, , , doc, , , tipo] = datos[i];
-      const fechaNorm = normalizarFecha(fecha);
-      const docNorm = String(doc);
-      const coincide = fechaNorm === hoy && docNorm === documento;
-      if (coincide) marcas.push(tipo);
-      debugFilas.push({
-        fechaCruda: fecha, tipoFechaCruda: (typeof fecha) + (fecha instanceof Date ? "(Date)" : ""),
-        fechaNorm: fechaNorm, hoy: hoy, fechaCoincide: fechaNorm === hoy,
-        docCruda: doc, docNorm: docNorm, documentoParam: documento, docCoincide: docNorm === documento,
-        tipo: tipo
-      });
+      if (normalizarFecha(fecha) === hoy && String(doc) === documento) marcas.push(tipo);
     }
-    return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas, debugFilas: debugFilas }))
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
