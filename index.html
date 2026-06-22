@@ -108,6 +108,9 @@
   .aviso{ font-size:12px; color:var(--dorado); margin-top:12px; font-weight:500; }
 
   input[type=password]{ width:100%; padding:13px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-size:18px; text-align:center; letter-spacing:6px; margin-bottom:12px;}
+  .input-documento{ width:100%; padding:14px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; font-size:20px; text-align:center; letter-spacing:2px; }
+  .detalle-doc{ min-height:18px; font-size:12.5px; color:var(--verde); text-align:center; margin-top:9px; font-weight:600; }
+  .detalle-doc.err{ color:var(--rojo); }
 
   .pie{ margin-top:auto; padding-top:18px; text-align:center; font-size:9.5px; color:var(--tenue2); line-height:1.6; }
   .link-discreto{ text-align:center; font-size:11px; color:var(--tenue2); margin-top:10px; text-decoration:underline; cursor:pointer; }
@@ -143,8 +146,9 @@
     </div>
 
     <div class="panel">
-      <div class="etiqueta-seccion">Toca tu nombre</div>
-      <div class="grilla" id="grillaNombres"></div>
+      <div class="etiqueta-seccion">Digita tu número de documento</div>
+      <input type="text" id="documentoInput" inputmode="numeric" pattern="[0-9]*" maxlength="15" placeholder="Ej: 1121816934" class="input-documento">
+      <p class="detalle-doc" id="docPersonaEncontrada"></p>
     </div>
 
     <button class="btn" id="btnMarcar" disabled>📸 Registrar asistencia</button>
@@ -181,6 +185,8 @@
   <!-- ===================== PANTALLA: AGREGAR PERSONAL ===================== -->
   <div class="pantalla" id="pantallaAgregar">
     <div class="panel">
+      <div class="etiqueta-seccion">Número de documento</div>
+      <input type="text" id="nuevoDocumento" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 1121816934" style="width:100%; padding:13px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-size:14px; margin-bottom:14px;">
       <div class="etiqueta-seccion">Nombre completo</div>
       <input type="text" id="nuevoNombre" placeholder="Ej: Pedro Pablo Ramirez" style="width:100%; padding:13px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-size:14px; margin-bottom:14px;">
       <div class="etiqueta-seccion">Cargo</div>
@@ -219,35 +225,35 @@ const CONFIG = {
   PIN_GERENCIA: "2105",
   FINCA: { id: 2, nombre: "Finca 2", lat: 2.722853, lng: -72.735464, radioMetros: 100 }, // <-- AJUSTAR radio si hace falta
   PERSONAL_BASE: [
-    {nombre:"Rusbel Reynel Algarra Salgado", cargo:"Conductor"},
-    {nombre:"Dubian Camilo Cuervo Gomez", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Arnol Neyer Escamilla Gil", cargo:"Sup. Sanidad Plantacion"},
-    {nombre:"Ricardo Gaitan Cleves", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Leanis Yulieth Garizao Argumedo", cargo:"Almacenista"},
-    {nombre:"Fernando Francisco Leon Suarez", cargo:"Operario Tractor"},
-    {nombre:"Juan Carlos Oviedo Castillejo", cargo:"Sup. Cultivo"},
-    {nombre:"Alix Viviana Peña Garzon", cargo:"Sup. Cultivo"},
-    {nombre:"Ayler Perez Guzman", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Ciro Alfonso Romero Ramos", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Luis Fernando Sanchez Chitiva", cargo:"Director Tecnico"},
-    {nombre:"Jose Oswaldo Sanchez Martinez", cargo:"Operario Tractor"},
-    {nombre:"Edgar Alfonso Tinjaca Niño", cargo:"Jefe de Taller"},
-    {nombre:"Jurley Trujillo Fernandez", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Johony Manuel Valdez Yance", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Saul Camilo Vega Gutierrez", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Nayiver Ercilia Vergara Alvarez", cargo:"Auxiliar Administrativa"},
-    {nombre:"Cesar Alberto Verona Monterrosa", cargo:"Operario Tractor"},
-    {nombre:"Anderson Gonzalo Rojas Rojas", cargo:"Superintendente"},
-    {nombre:"Ever Ferney Cleves Florez", cargo:"Operario Tractor"},
-    {nombre:"Sandro Edison Bonilla Parra", cargo:"Operario Tractor"},
-    {nombre:"Brayan Farid Perez Avendaño", cargo:"Supervisor"},
-    {nombre:"John Fredy Garnica Buitrago", cargo:"Operario Tractor"},
-    {nombre:"Mabel Gisette Romero Guerrero", cargo:"Auxiliar HSEQ"},
-    {nombre:"Julio Cesar Bacca Moreno", cargo:"Operario Tractor"},
-    {nombre:"Andres Felipe Fajardo Cardenas", cargo:"Supervisor"},
-    {nombre:"Juan David Guiza Fajardo", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Sebastian Rafael Celedon Moreno", cargo:"Auxiliar de Sanidad"},
-    {nombre:"Tulio Antonio Olaya Gonzalez", cargo:"Mecanico Integral"}
+    {documento:"1121816934", nombre:"Rusbel Reynel Algarra Salgado", cargo:"Conductor"},
+    {documento:"1120926454", nombre:"Dubian Camilo Cuervo Gomez", cargo:"Auxiliar de Sanidad"},
+    {documento:"1123162209", nombre:"Arnol Neyer Escamilla Gil", cargo:"Sup. Sanidad Plantacion"},
+    {documento:"1122655798", nombre:"Ricardo Gaitan Cleves", cargo:"Auxiliar de Sanidad"},
+    {documento:"1063282651", nombre:"Leanis Yulieth Garizao Argumedo", cargo:"Almacenista"},
+    {documento:"1093738385", nombre:"Fernando Francisco Leon Suarez", cargo:"Operario Tractor"},
+    {documento:"79728288", nombre:"Juan Carlos Oviedo Castillejo", cargo:"Sup. Cultivo"},
+    {documento:"1120924351", nombre:"Alix Viviana Peña Garzon", cargo:"Sup. Cultivo"},
+    {documento:"1006534617", nombre:"Ayler Perez Guzman", cargo:"Auxiliar de Sanidad"},
+    {documento:"82391042", nombre:"Ciro Alfonso Romero Ramos", cargo:"Auxiliar de Sanidad"},
+    {documento:"1006810316", nombre:"Luis Fernando Sanchez Chitiva", cargo:"Director Tecnico"},
+    {documento:"86010042", nombre:"Jose Oswaldo Sanchez Martinez", cargo:"Operario Tractor"},
+    {documento:"11434440", nombre:"Edgar Alfonso Tinjaca Niño", cargo:"Jefe de Taller"},
+    {documento:"79978603", nombre:"Jurley Trujillo Fernandez", cargo:"Auxiliar de Sanidad"},
+    {documento:"15174884", nombre:"Johony Manuel Valdez Yance", cargo:"Auxiliar de Sanidad"},
+    {documento:"1066269860", nombre:"Saul Camilo Vega Gutierrez", cargo:"Auxiliar de Sanidad"},
+    {documento:"1121884438", nombre:"Nayiver Ercilia Vergara Alvarez", cargo:"Auxiliar Administrativa"},
+    {documento:"78715610", nombre:"Cesar Alberto Verona Monterrosa", cargo:"Operario Tractor"},
+    {documento:"1121944143", nombre:"Anderson Gonzalo Rojas Rojas", cargo:"Superintendente"},
+    {documento:"17417318", nombre:"Ever Ferney Cleves Florez", cargo:"Operario Tractor"},
+    {documento:"7392093", nombre:"Sandro Edison Bonilla Parra", cargo:"Operario Tractor"},
+    {documento:"1193447192", nombre:"Brayan Farid Perez Avendaño", cargo:"Supervisor"},
+    {documento:"1120560605", nombre:"John Fredy Garnica Buitrago", cargo:"Operario Tractor"},
+    {documento:"1007294977", nombre:"Mabel Gisette Romero Guerrero", cargo:"Auxiliar HSEQ"},
+    {documento:"1120365099", nombre:"Julio Cesar Bacca Moreno", cargo:"Operario Tractor"},
+    {documento:"1192803681", nombre:"Andres Felipe Fajardo Cardenas", cargo:"Supervisor"},
+    {documento:"1006879326", nombre:"Juan David Guiza Fajardo", cargo:"Auxiliar de Sanidad"},
+    {documento:"1001933516", nombre:"Sebastian Rafael Celedon Moreno", cargo:"Auxiliar de Sanidad"},
+    {documento:"4428130", nombre:"Tulio Antonio Olaya Gonzalez", cargo:"Mecanico Integral"}
   ],
   HORARIO: {
     entrada: 6.0,
@@ -275,6 +281,10 @@ function getPersonalCompleto(){
 function getCargo(nombre){
   const p = getPersonalCompleto().find(p=>p.nombre===nombre);
   return p ? p.cargo : '';
+}
+function getPersonalPorDocumento(documento){
+  const doc = String(documento).trim();
+  return getPersonalCompleto().find(p=> String(p.documento) === doc);
 }
 
 document.getElementById('nombreFinca').textContent = CONFIG.FINCA.nombre + " · Puerto Concordia";
@@ -390,11 +400,30 @@ function pintarGrilla(contenedorId, onClick){
 }
 
 let nombreSel = null;
-pintarGrilla('grillaNombres', (nombre, el, cont)=>{
-  cont.querySelectorAll('.persona').forEach(c=>c.classList.remove('activo'));
-  el.classList.add('activo');
-  nombreSel = nombre;
-  document.getElementById('btnMarcar').disabled = false;
+const documentoInput = document.getElementById('documentoInput');
+const docPersonaEncontrada = document.getElementById('docPersonaEncontrada');
+documentoInput.addEventListener('input', ()=>{
+  documentoInput.value = documentoInput.value.replace(/\D/g, '');
+  const doc = documentoInput.value.trim();
+  if(!doc){
+    nombreSel = null;
+    docPersonaEncontrada.textContent = '';
+    docPersonaEncontrada.className = 'detalle-doc';
+    document.getElementById('btnMarcar').disabled = true;
+    return;
+  }
+  const persona = getPersonalPorDocumento(doc);
+  if(persona){
+    nombreSel = persona.nombre;
+    docPersonaEncontrada.textContent = persona.nombre;
+    docPersonaEncontrada.className = 'detalle-doc';
+    document.getElementById('btnMarcar').disabled = false;
+  } else {
+    nombreSel = null;
+    docPersonaEncontrada.textContent = 'Documento no encontrado';
+    docPersonaEncontrada.className = 'detalle-doc err';
+    document.getElementById('btnMarcar').disabled = true;
+  }
 });
 
 /* ======================================================================
@@ -538,8 +567,9 @@ async function procesarFrameMarcar(){
 
   const tipo = detectarTipo();
   const hora = new Date();
+  const personaMarcando = getPersonalPorDocumento(documentoInput.value.trim());
   const payload = {
-    accion:'marcar', nombre:nombreSel, finca:CONFIG.FINCA.nombre, tipo, cargo: getCargo(nombreSel),
+    accion:'marcar', nombre:nombreSel, documento: personaMarcando?personaMarcando.documento:'', finca:CONFIG.FINCA.nombre, tipo, cargo: getCargo(nombreSel),
     fechaHora: hora.toISOString(), lat: gpsCoords?gpsCoords.lat:null, lng: gpsCoords?gpsCoords.lng:null,
     dentroGeocerca: gpsOk, distanciaFacial: distancia
   };
@@ -550,7 +580,9 @@ async function procesarFrameMarcar(){
 
   setTimeout(()=>{
     nombreSel = null;
-    document.querySelectorAll('#grillaNombres .persona').forEach(c=>c.classList.remove('activo'));
+    documentoInput.value = '';
+    docPersonaEncontrada.textContent = '';
+    docPersonaEncontrada.className = 'detalle-doc';
     document.getElementById('btnMarcar').disabled = true;
     mostrarPantalla('pantallaMarcacion');
   }, 2400);
@@ -655,6 +687,7 @@ document.getElementById('btnPinConfirmar').onclick = ()=>{
       });
       mostrarPantalla('pantallaEnrolar');
     } else {
+      document.getElementById('nuevoDocumento').value = '';
       document.getElementById('nuevoNombre').value = '';
       document.getElementById('nuevoCargo').value = '';
       mostrarPantalla('pantallaAgregar');
@@ -667,28 +700,25 @@ document.getElementById('btnVolverMarcacion').onclick = ()=> mostrarPantalla('pa
 document.getElementById('btnCancelarAgregar').onclick = ()=> mostrarPantalla('pantallaMarcacion');
 
 document.getElementById('btnGuardarPersonal').onclick = ()=>{
+  const documento = document.getElementById('nuevoDocumento').value.trim();
   const nombre = document.getElementById('nuevoNombre').value.trim();
   const cargo = document.getElementById('nuevoCargo').value;
+  if(!documento){ alert('Escribe el número de documento'); return; }
+  if(!/^\d+$/.test(documento)){ alert('El documento solo debe tener números'); return; }
   if(!nombre){ alert('Escribe el nombre completo'); return; }
   if(!cargo){ alert('Selecciona un cargo'); return; }
-  const yaExiste = getPersonalCompleto().some(p=> p.nombre.toLowerCase() === nombre.toLowerCase());
-  if(yaExiste){ alert('Ya existe una persona registrada con ese nombre'); return; }
+  const yaExisteNombre = getPersonalCompleto().some(p=> p.nombre.toLowerCase() === nombre.toLowerCase());
+  if(yaExisteNombre){ alert('Ya existe una persona registrada con ese nombre'); return; }
+  if(getPersonalPorDocumento(documento)){ alert('Ya existe una persona registrada con ese documento'); return; }
 
   const extra = getPersonalExtra();
-  extra.push({nombre, cargo});
+  extra.push({documento, nombre, cargo});
   guardarPersonalExtra(extra);
 
-  // Refresca las grillas con el nuevo personal ya incluido y ordenado
-  pintarGrilla('grillaNombres', (n, el, cont)=>{
-    cont.querySelectorAll('.persona').forEach(c=>c.classList.remove('activo'));
-    el.classList.add('activo'); nombreSel = n;
-    document.getElementById('btnMarcar').disabled = false;
-  });
-
   // Avisa al backend para que quede también en el Sheet (hoja Personal)
-  enviarAlServidor({ accion:'registrarPersonal', nombre, cargo, fechaHora: new Date().toISOString() });
+  enviarAlServidor({ accion:'registrarPersonal', documento, nombre, cargo, fechaHora: new Date().toISOString() });
 
-  mostrarResultado('ok', 'Personal agregado', `<b>${escapeHtml(nombre)}</b><br>${escapeHtml(cargo)}`, 'Ahora puedes enrolar su rostro');
+  mostrarResultado('ok', 'Personal agregado', `<b>${escapeHtml(nombre)}</b><br>${escapeHtml(cargo)} · Doc. ${escapeHtml(documento)}`, 'Ahora puedes enrolar su rostro');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2200);
 };
 

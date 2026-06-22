@@ -5,7 +5,7 @@
  * INSTRUCCIONES:
  * 1. Crea un Google Sheet nuevo llamado "Control_Asistencia"
  * 2. Crea una hoja llamada "Marcaciones" con esta fila de encabezado en A1:
- *    Fecha | Hora | Nombre | Finca | Tipo | Lat | Lng | DentroGeocerca | DistanciaFacial | Timestamp
+ *    Fecha | Hora | Nombre | Documento | Cargo | Finca | Tipo | Lat | Lng | DentroGeocerca | DistanciaFacial | Timestamp
  * 3. Abre Extensiones > Apps Script, pega este código
  * 4. Implementar > Nueva implementación > Aplicación web
  *    - Ejecutar como: Yo
@@ -29,7 +29,7 @@ function obtenerOhCrearHoja() {
   if (!hoja) {
     hoja = ss.insertSheet(HOJA_MARCACIONES);
     hoja.appendRow([
-      "Fecha", "Hora", "Nombre", "Cargo", "Finca", "Tipo",
+      "Fecha", "Hora", "Nombre", "Documento", "Cargo", "Finca", "Tipo",
       "Lat", "Lng", "DentroGeocerca", "DistanciaFacial", "Timestamp"
     ]);
     hoja.setFrozenRows(1);
@@ -42,7 +42,7 @@ function obtenerOhCrearHojaPersonal() {
   let hoja = ss.getSheetByName("Personal");
   if (!hoja) {
     hoja = ss.insertSheet("Personal");
-    hoja.appendRow(["Nombre", "Cargo", "Fecha registro"]);
+    hoja.appendRow(["Documento", "Nombre", "Cargo", "Fecha registro"]);
     hoja.setFrozenRows(1);
   }
   return hoja;
@@ -55,6 +55,7 @@ function doPost(e) {
     if (datos.accion === 'registrarPersonal') {
       const hojaPersonal = obtenerOhCrearHojaPersonal();
       hojaPersonal.appendRow([
+        sanitizarCelda(datos.documento || ""),
         sanitizarCelda(datos.nombre),
         sanitizarCelda(datos.cargo),
         new Date()
@@ -70,6 +71,7 @@ function doPost(e) {
       Utilities.formatDate(fechaHora, "America/Bogota", "dd/MM/yyyy"),
       Utilities.formatDate(fechaHora, "America/Bogota", "HH:mm:ss"),
       sanitizarCelda(datos.nombre),
+      sanitizarCelda(datos.documento || ""),
       sanitizarCelda(datos.cargo || ""),
       sanitizarCelda(datos.finca),
       sanitizarCelda(datos.tipo),
@@ -114,7 +116,7 @@ function calcularResumenDiario() {
   const marcasHoy = {}; // { "Nombre|Finca": {Entrada:.., 'Inicio almuerzo':.., ...} }
 
   for (let i = 1; i < datos.length; i++) {
-    const [fecha, hora, nombre, cargo, finca, tipo] = datos[i];
+    const [fecha, hora, nombre, documento, cargo, finca, tipo] = datos[i];
     if (fecha !== hoy) continue;
     const clave = nombre + "|" + finca;
     if (!marcasHoy[clave]) marcasHoy[clave] = { cargo };
