@@ -231,7 +231,7 @@
     <button class="btn secundario" id="btnVolverMarcacion">Volver</button>
   </div>
 
-  <div class="pie">Palma Grande S.A.S. · Reconocimiento local (face-api.js) · Sin envío de fotos a terceros</div>
+  <div class="pie">Palma Grande S.A.S. · Reconocimiento local (face-api.js) · Foto guardada solo para control interno de Dirección Agronómico</div>
 </div>
 
 <script>
@@ -559,6 +559,23 @@ function cerrarCamara(){
   // El stream solo se libera al cerrar/recargar la pestaña.
 }
 
+// Toma una foto pequeña (240x240, JPEG comprimido) del frame actual de la
+// cámara para adjuntarla a la marcación, usada luego en el reporte PDF.
+function capturarFotoMarcacion(){
+  try{
+    const lado = 240;
+    const canvas = document.createElement('canvas');
+    canvas.width = lado; canvas.height = lado;
+    const ctx = canvas.getContext('2d');
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const lienzo = Math.min(vw, vh);
+    ctx.drawImage(video, (vw-lienzo)/2, (vh-lienzo)/2, lienzo, lienzo, 0, 0, lado, lado);
+    return canvas.toDataURL('image/jpeg', 0.5);
+  }catch(err){
+    return '';
+  }
+}
+
 function mostrarPantalla(id){
   document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('show'));
   document.getElementById(id).classList.add('show');
@@ -634,10 +651,11 @@ async function procesarFrameMarcar(){
   const tipo = tipoCalculado || 'Entrada';
   const hora = new Date();
   const personaMarcando = getPersonalPorDocumento(documentoInput.value.trim());
+  const foto = capturarFotoMarcacion();
   const payload = {
     accion:'marcar', nombre:nombreSel, documento: personaMarcando?personaMarcando.documento:'', finca:CONFIG.FINCA.nombre, tipo, cargo: getCargo(nombreSel),
     fechaHora: hora.toISOString(), lat: gpsCoords?gpsCoords.lat:null, lng: gpsCoords?gpsCoords.lng:null,
-    dentroGeocerca: gpsOk, distanciaFacial: distancia
+    dentroGeocerca: gpsOk, distanciaFacial: distancia, foto
   };
   enviarAlServidor(payload);
 

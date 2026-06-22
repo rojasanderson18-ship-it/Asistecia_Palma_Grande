@@ -30,11 +30,37 @@ function obtenerOhCrearHoja() {
     hoja = ss.insertSheet(HOJA_MARCACIONES);
     hoja.appendRow([
       "Fecha", "Hora", "Nombre", "Documento", "Cargo", "Finca", "Tipo",
-      "Lat", "Lng", "DentroGeocerca", "DistanciaFacial", "Timestamp"
+      "Lat", "Lng", "DentroGeocerca", "DistanciaFacial", "Timestamp", "FotoURL"
     ]);
     hoja.setFrozenRows(1);
   }
   return hoja;
+}
+
+// Carpeta de Drive donde se guardan las fotos tomadas al marcar.
+function obtenerOhCrearCarpetaFotos() {
+  const carpetas = DriveApp.getFoldersByName("Fotos_Asistencia_PalmaGrande");
+  if (carpetas.hasNext()) return carpetas.next();
+  return DriveApp.createFolder("Fotos_Asistencia_PalmaGrande");
+}
+
+// Decodifica una foto en base64 (data URL) y la guarda en Drive,
+// devolviendo una URL pública para usarla luego en el reporte/PDF.
+function guardarFoto(fotoDataUrl, documento, tipo) {
+  if (!fotoDataUrl) return "";
+  try {
+    const partes = String(fotoDataUrl).split(",");
+    const base64 = partes.length > 1 ? partes[1] : partes[0];
+    const bytes = Utilities.base64Decode(base64);
+    const nombreArchivo = (documento || "sin-doc") + "_" + (tipo || "") + "_" + Date.now() + ".jpg";
+    const blob = Utilities.newBlob(bytes, "image/jpeg", nombreArchivo);
+    const carpeta = obtenerOhCrearCarpetaFotos();
+    const archivo = carpeta.createFile(blob);
+    archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return "https://drive.google.com/uc?export=view&id=" + archivo.getId();
+  } catch (err) {
+    return "";
+  }
 }
 
 function obtenerOhCrearHojaPersonal() {
@@ -66,6 +92,7 @@ function doPost(e) {
 
     const hoja = obtenerOhCrearHoja();
     const fechaHora = new Date(datos.fechaHora);
+    const fotoURL = guardarFoto(datos.foto, datos.documento, datos.tipo);
 
     hoja.appendRow([
       Utilities.formatDate(fechaHora, "America/Bogota", "dd/MM/yyyy"),
@@ -79,7 +106,8 @@ function doPost(e) {
       datos.lng || "",
       datos.dentroGeocerca ? "SI" : "NO",
       datos.distanciaFacial ? datos.distanciaFacial.toFixed(3) : "",
-      new Date()
+      new Date(),
+      fotoURL
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
@@ -122,9 +150,73 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (accion === 'resumenDashboard') {
+    return calcularResumenDashboard(e.parameter.fecha);
+  }
+
   // Permite probar que el endpoint está vivo abriendo la URL en el navegador
   return ContentService.createTextOutput(JSON.stringify({ status: "Control_Asistencia backend activo" }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Indicadores para el dashboard de Dirección Agronómico: asistencia,
+ * tardanzas, jornadas completas y desglose por finca, para una fecha
+ * puntual (por defecto hoy). Incluye el listado detallado por persona
+ * con la URL de la foto tomada al marcar, para el reporte PDF.
+ */
+function calcularResumenDashboard(fechaParam) {
+  const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
+  const fecha = fechaParam || hoy;
+
+  const hoja = obtenerOhCrearHoja();
+  const datos = hoja.getDataRange().getValues();
+
+  const HORA_TOLERANCIA_ENTRADA = 6.25; // 6:15 am
+
+  const porPersona = {}; // documento -> {nombre, cargo, finca, Entrada, Salida, fotoURL}
+
+  for (let i = 1; i < datos.length; i++) {
+    const fila = datos[i];
+    const fechaFila = fila[0], hora = fila[1], nombre = fila[2], documento = fila[3],
+      cargo = fila[4], finca = fila[5], tipo = fila[6], dentroGeocerca = fila[9], fotoURL = fila[12];
+    if (normalizarFecha(fechaFila) !== fecha) continue;
+
+    const clave = String(documento);
+    if (!porPersona[clave]) porPersona[clave] = { nombre, cargo, finca, fotoURL: "" };
+    porPersona[clave][tipo] = hora;
+    if (fotoURL) porPersona[clave].fotoURL = fotoURL;
+  }
+
+  let tardanzas = 0, jornadasCompletas = 0;
+  const porFinca = {};
+  const filas = [];
+
+  Object.keys(porPersona).forEach(documento => {
+    const p = porPersona[documento];
+    porFinca[p.finca] = (porFinca[p.finca] || 0) + 1;
+
+    if (p.Entrada) {
+      const [h, mi] = String(p.Entrada).split(":").map(Number);
+      if ((h + mi / 60) > HORA_TOLERANCIA_ENTRADA) tardanzas++;
+    }
+    if (p.Entrada && p.Salida) jornadasCompletas++;
+
+    filas.push({
+      documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
+      entrada: p.Entrada || "", salida: p.Salida || "", fotoURL: p.fotoURL || ""
+    });
+  });
+
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    fecha: fecha,
+    totalPersonas: Object.keys(porPersona).length,
+    tardanzas: tardanzas,
+    jornadasCompletas: jornadasCompletas,
+    porFinca: porFinca,
+    filas: filas
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
