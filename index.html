@@ -6,7 +6,7 @@
 <title>Control de Asistencia | Palma Grande S.A.S.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="lib/face-api/face-api.min.js"></script>
 <style>
   :root{
     --bg-0:#06140e; --bg-1:#0d2317; --panel:#0f2a1c; --panel-line:rgba(244,243,235,0.07);
@@ -231,7 +231,7 @@
     <button class="btn secundario" id="btnVolverMarcacion">Volver</button>
   </div>
 
-  <div class="pie">Palma Grande S.A.S. · Reconocimiento local (face-api.js) · Foto guardada solo para control interno de Dirección Agronómico</div>
+  <div class="pie">Palma Grande S.A.S. · Reconocimiento local (face-api.js) · Foto de enrolamiento guardada solo para control interno de Dirección Agronómico</div>
 </div>
 
 <script>
@@ -405,6 +405,7 @@ function iniciales(nombre){
 function pintarGrilla(contenedorId, onClick){
   const cont = document.getElementById(contenedorId);
   cont.innerHTML = '';
+  const rostros = getRostros();
   getPersonalCompleto().forEach(({nombre})=>{
     const div = document.createElement('div');
     div.className = 'persona';
@@ -415,6 +416,15 @@ function pintarGrilla(contenedorId, onClick){
     nom.className = 'nom';
     nom.textContent = nombre;
     div.append(inicial, nom);
+    if(contenedorId === 'grillaEnrolar'){
+      const estado = document.createElement('div');
+      estado.className = 'estado-enrolado';
+      estado.textContent = rostros[nombre] ? '✓ Enrolado' : 'Sin enrolar';
+      estado.style.fontSize = '11px';
+      estado.style.marginTop = '2px';
+      estado.style.color = rostros[nombre] ? 'var(--verde, #2e7d32)' : 'var(--rojo, #b3261e)';
+      div.append(estado);
+    }
     div.onclick = ()=> onClick(nombre, div, cont);
     cont.appendChild(div);
   });
@@ -499,7 +509,7 @@ function guardarRostro(nombre, descriptor){
 /* ======================================================================
    CARGA DE MODELOS face-api.js (CDN con pesos)
    ====================================================================== */
-const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+const MODEL_URL = 'models';
 let modelosListos = false;
 let errorModelos = null;
 async function cargarModelos(){
@@ -560,8 +570,8 @@ function cerrarCamara(){
 }
 
 // Toma una foto pequeña (240x240, JPEG comprimido) del frame actual de la
-// cámara para adjuntarla a la marcación, usada luego en el reporte PDF.
-function capturarFotoMarcacion(){
+// cámara, usada como foto de perfil del empleado en el reporte PDF.
+function capturarFotoVideo(){
   try{
     const lado = 240;
     const canvas = document.createElement('canvas');
@@ -651,11 +661,10 @@ async function procesarFrameMarcar(){
   const tipo = tipoCalculado || 'Entrada';
   const hora = new Date();
   const personaMarcando = getPersonalPorDocumento(documentoInput.value.trim());
-  const foto = capturarFotoMarcacion();
   const payload = {
     accion:'marcar', nombre:nombreSel, documento: personaMarcando?personaMarcando.documento:'', finca:CONFIG.FINCA.nombre, tipo, cargo: getCargo(nombreSel),
     fechaHora: hora.toISOString(), lat: gpsCoords?gpsCoords.lat:null, lng: gpsCoords?gpsCoords.lng:null,
-    dentroGeocerca: gpsOk, distanciaFacial: distancia, foto
+    dentroGeocerca: gpsOk, distanciaFacial: distancia
   };
   enviarAlServidor(payload);
 
@@ -846,7 +855,12 @@ async function procesarFrameEnrolar(){
   }
 
   guardarRostro(nombreEnrolando, deteccion.descriptor);
+  const personaEnrolando = getPersonalCompleto().find(p=> p.nombre === nombreEnrolando);
+  const foto = capturarFotoVideo();
   cerrarCamara();
+  if(personaEnrolando && foto){
+    enviarAlServidor({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto });
+  }
   mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2000);
 }

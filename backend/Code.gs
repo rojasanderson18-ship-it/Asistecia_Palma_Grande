@@ -30,14 +30,14 @@ function obtenerOhCrearHoja() {
     hoja = ss.insertSheet(HOJA_MARCACIONES);
     hoja.appendRow([
       "Fecha", "Hora", "Nombre", "Documento", "Cargo", "Finca", "Tipo",
-      "Lat", "Lng", "DentroGeocerca", "DistanciaFacial", "Timestamp", "FotoURL"
+      "Lat", "Lng", "DentroGeocerca", "DistanciaFacial", "Timestamp"
     ]);
     hoja.setFrozenRows(1);
   }
   return hoja;
 }
 
-// Carpeta de Drive donde se guardan las fotos tomadas al marcar.
+// Carpeta de Drive donde se guarda la foto de enrolamiento de cada empleado.
 function obtenerOhCrearCarpetaFotos() {
   const carpetas = DriveApp.getFoldersByName("Fotos_Asistencia_PalmaGrande");
   if (carpetas.hasNext()) return carpetas.next();
@@ -46,6 +46,7 @@ function obtenerOhCrearCarpetaFotos() {
 
 // Decodifica una foto en base64 (data URL) y la guarda en Drive,
 // devolviendo una URL pública para usarla luego en el reporte/PDF.
+// Se guarda una sola vez por empleado, al enrolar su rostro.
 function guardarFoto(fotoDataUrl, documento, tipo) {
   if (!fotoDataUrl) return "";
   try {
@@ -68,10 +69,25 @@ function obtenerOhCrearHojaPersonal() {
   let hoja = ss.getSheetByName("Personal");
   if (!hoja) {
     hoja = ss.insertSheet("Personal");
-    hoja.appendRow(["Documento", "Nombre", "Cargo", "Fecha registro"]);
+    hoja.appendRow(["Documento", "Nombre", "Cargo", "Fecha registro", "FotoURL"]);
     hoja.setFrozenRows(1);
   }
   return hoja;
+}
+
+// Busca la fila de un documento en la hoja Personal y guarda ahí la foto
+// tomada al enrolar su rostro (columna FotoURL).
+function guardarFotoPersonal(documento, fotoDataUrl) {
+  const hoja = obtenerOhCrearHojaPersonal();
+  const datos = hoja.getDataRange().getValues();
+  for (let i = 1; i < datos.length; i++) {
+    if (String(datos[i][0]) === String(documento)) {
+      const fotoURL = guardarFoto(fotoDataUrl, documento, "Enrolamiento");
+      hoja.getRange(i + 1, 5).setValue(fotoURL);
+      return fotoURL;
+    }
+  }
+  return "";
 }
 
 function doPost(e) {
@@ -84,15 +100,21 @@ function doPost(e) {
         sanitizarCelda(datos.documento || ""),
         sanitizarCelda(datos.nombre),
         sanitizarCelda(datos.cargo),
-        new Date()
+        new Date(),
+        ""
       ]);
       return ContentService.createTextOutput(JSON.stringify({ ok: true }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (datos.accion === 'guardarFotoPersonal') {
+      const fotoURL = guardarFotoPersonal(datos.documento, datos.foto);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, fotoURL: fotoURL }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const hoja = obtenerOhCrearHoja();
     const fechaHora = new Date(datos.fechaHora);
-    const fotoURL = guardarFoto(datos.foto, datos.documento, datos.tipo);
 
     hoja.appendRow([
       Utilities.formatDate(fechaHora, "America/Bogota", "dd/MM/yyyy"),
@@ -106,8 +128,7 @@ function doPost(e) {
       datos.lng || "",
       datos.dentroGeocerca ? "SI" : "NO",
       datos.distanciaFacial ? datos.distanciaFacial.toFixed(3) : "",
-      new Date(),
-      fotoURL
+      new Date()
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
@@ -159,11 +180,22 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Mapa documento -> FotoURL tomada al enrolar el rostro de cada empleado.
+function obtenerFotosPorDocumento() {
+  const hojaPersonal = obtenerOhCrearHojaPersonal();
+  const datos = hojaPersonal.getDataRange().getValues();
+  const fotos = {};
+  for (let i = 1; i < datos.length; i++) {
+    fotos[String(datos[i][0])] = datos[i][4] || "";
+  }
+  return fotos;
+}
+
 /**
  * Indicadores para el dashboard de Dirección Agronómico: asistencia,
  * tardanzas, jornadas completas y desglose por finca, para una fecha
  * puntual (por defecto hoy). Incluye el listado detallado por persona
- * con la URL de la foto tomada al marcar, para el reporte PDF.
+ * con la URL de la foto de enrolamiento, para el reporte PDF.
  */
 function calcularResumenDashboard(fechaParam) {
   const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
@@ -171,6 +203,7 @@ function calcularResumenDashboard(fechaParam) {
 
   const hoja = obtenerOhCrearHoja();
   const datos = hoja.getDataRange().getValues();
+  const fotosPorDocumento = obtenerFotosPorDocumento();
 
   const HORA_TOLERANCIA_ENTRADA = 6.25; // 6:15 am
 
@@ -179,13 +212,12 @@ function calcularResumenDashboard(fechaParam) {
   for (let i = 1; i < datos.length; i++) {
     const fila = datos[i];
     const fechaFila = fila[0], hora = fila[1], nombre = fila[2], documento = fila[3],
-      cargo = fila[4], finca = fila[5], tipo = fila[6], dentroGeocerca = fila[9], fotoURL = fila[12];
+      cargo = fila[4], finca = fila[5], tipo = fila[6];
     if (normalizarFecha(fechaFila) !== fecha) continue;
 
     const clave = String(documento);
-    if (!porPersona[clave]) porPersona[clave] = { nombre, cargo, finca, fotoURL: "" };
+    if (!porPersona[clave]) porPersona[clave] = { nombre, cargo, finca, fotoURL: fotosPorDocumento[clave] || "" };
     porPersona[clave][tipo] = hora;
-    if (fotoURL) porPersona[clave].fotoURL = fotoURL;
   }
 
   let tardanzas = 0, jornadasCompletas = 0;

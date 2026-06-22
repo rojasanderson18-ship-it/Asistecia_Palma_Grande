@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Asistencia Palma Grande</string>
+    <string name="title_activity_main">Asistencia Palma Grande</string>
+    <string name="package_name">com.palmagrande.asistencia</string>
+    <string name="custom_url_scheme">com.palmagrande.asistencia</string>
+</resources>
