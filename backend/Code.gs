@@ -99,11 +99,23 @@ function doGet(e) {
 
 /**
  * Función auxiliar: calcula horas trabajadas, déficit y horas extra
- * Se puede llamar manualmente o programar como trigger diario.
- * Lee todas las marcaciones del día y agrupa por Nombre+Finca.
+ * Se puede llamar manualmente o programar como trigger diario
+ * (Apps Script > Activadores > Añadir activador > calcularResumenDiario > diario).
+ * Lee todas las marcaciones del día y agrupa por Nombre+Finca, y las
+ * guarda en una única hoja "Resumen" acumulativa (una fila por persona/día).
  */
-function calcularResumenDiario() {
+function obtenerOhCrearHojaResumen() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
+  let hoja = ss.getSheetByName("Resumen");
+  if (!hoja) {
+    hoja = ss.insertSheet("Resumen");
+    hoja.appendRow(["Fecha", "Nombre", "Documento", "Cargo", "Finca", "Entrada", "Salida", "Horas trabajadas", "Déficit (min)", "Extra (min)"]);
+    hoja.setFrozenRows(1);
+  }
+  return hoja;
+}
+
+function calcularResumenDiario() {
   const hoja = obtenerOhCrearHoja();
   const datos = hoja.getDataRange().getValues();
   const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
@@ -119,17 +131,17 @@ function calcularResumenDiario() {
     const [fecha, hora, nombre, documento, cargo, finca, tipo] = datos[i];
     if (fecha !== hoy) continue;
     const clave = nombre + "|" + finca;
-    if (!marcasHoy[clave]) marcasHoy[clave] = { cargo };
+    if (!marcasHoy[clave]) marcasHoy[clave] = { cargo, documento };
     marcasHoy[clave][tipo] = hora;
   }
 
-  const resumen = [["Nombre", "Cargo", "Finca", "Entrada", "Salida", "Horas trabajadas", "Déficit (min)", "Extra (min)"]];
+  const filasNuevas = [];
 
   Object.keys(marcasHoy).forEach(clave => {
     const [nombre, finca] = clave.split("|");
     const m = marcasHoy[clave];
     if (!m["Entrada"] || !m["Salida"]) {
-      resumen.push([nombre, m.cargo || "", finca, m["Entrada"]||"", m["Salida"]||"", "INCOMPLETO", "", ""]);
+      filasNuevas.push([hoy, nombre, m.documento || "", m.cargo || "", finca, m["Entrada"]||"", m["Salida"]||"", "INCOMPLETO", "", ""]);
       return;
     }
     const horaADecimal = (hStr) => {
@@ -147,11 +159,18 @@ function calcularResumenDiario() {
     const deficitMin = Math.max(0, (HORARIO.entrada - entrada) * 60) + Math.max(0, (horaCierre - salida) * 60);
     const extraMin = Math.max(0, (salida - horaCierre) * 60);
 
-    resumen.push([nombre, m.cargo || "", finca, m["Entrada"], m["Salida"], horasTrabajadas.toFixed(2), deficitMin.toFixed(0), extraMin.toFixed(0)]);
+    filasNuevas.push([hoy, nombre, m.documento || "", m.cargo || "", finca, m["Entrada"], m["Salida"], horasTrabajadas.toFixed(2), deficitMin.toFixed(0), extraMin.toFixed(0)]);
   });
 
-  let hojaResumen = ss.getSheetByName("Resumen_" + hoy.replace(/\//g, "-"));
-  if (!hojaResumen) hojaResumen = ss.insertSheet("Resumen_" + hoy.replace(/\//g, "-"));
-  hojaResumen.clearContents();
-  hojaResumen.getRange(1, 1, resumen.length, resumen[0].length).setValues(resumen);
+  const hojaResumen = obtenerOhCrearHojaResumen();
+
+  // Si ya se calculó el resumen de hoy antes, borra esas filas para no duplicar
+  const existentes = hojaResumen.getDataRange().getValues();
+  for (let i = existentes.length - 1; i >= 1; i--) {
+    if (existentes[i][0] === hoy) hojaResumen.deleteRow(i + 1);
+  }
+
+  if (filasNuevas.length) {
+    hojaResumen.getRange(hojaResumen.getLastRow() + 1, 1, filasNuevas.length, filasNuevas[0].length).setValues(filasNuevas);
+  }
 }
