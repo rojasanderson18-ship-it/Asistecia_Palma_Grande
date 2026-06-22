@@ -319,7 +319,7 @@ async function obtenerTipoParaDocumento(documento){
     return { tipo:'Entrada', completo:false };
   }
   try{
-    const resp = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(documento)}`);
+    const resp = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(documento)}&_=${Date.now()}`, { cache:'no-store' });
     const datos = await resp.json();
     const marcas = (datos && datos.marcas) || [];
     if(marcas.includes('Salida')) return { tipo:'Salida', completo:true };
