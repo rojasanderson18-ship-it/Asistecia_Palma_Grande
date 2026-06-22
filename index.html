@@ -413,7 +413,7 @@ function guardarRostro(nombre, descriptor){
 /* ======================================================================
    CARGA DE MODELOS face-api.js (CDN con pesos)
    ====================================================================== */
-const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
 let modelosListos = false;
 let errorModelos = null;
 async function cargarModelos(){
@@ -455,6 +455,10 @@ async function abrirCamara(){
   }
   video.srcObject = stream;
   mostrarPantalla('pantallaCamara');
+  await new Promise(resolve=>{
+    if(video.readyState >= 2) return resolve();
+    video.onloadeddata = ()=> resolve();
+  });
 }
 function cerrarCamara(){
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
@@ -484,8 +488,15 @@ async function procesarFrameMarcar(){
     setTimeout(procesarFrameMarcar, 500);
     return;
   }
-  const deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks().withFaceDescriptor();
+  let deteccion;
+  try{
+    deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks().withFaceDescriptor();
+  }catch(err){
+    console.error('Error detectando rostro:', err);
+    setTimeout(procesarFrameMarcar, 400);
+    return;
+  }
 
   if(modoActual !== 'marcar') return; // se canceló
 
@@ -683,8 +694,15 @@ async function procesarFrameEnrolar(){
     return;
   }
   document.getElementById('estadoCamara').textContent = `Capturando rostro de ${nombreEnrolando}…`;
-  const deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks().withFaceDescriptor();
+  let deteccion;
+  try{
+    deteccion = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks().withFaceDescriptor();
+  }catch(err){
+    console.error('Error detectando rostro:', err);
+    setTimeout(procesarFrameEnrolar, 400);
+    return;
+  }
 
   if(modoActual !== 'enrolar') return;
 
