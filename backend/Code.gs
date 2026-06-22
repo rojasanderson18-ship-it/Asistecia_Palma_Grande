@@ -92,6 +92,23 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  const accion = e.parameter && e.parameter.accion;
+
+  if (accion === 'marcasHoy') {
+    const documento = String(e.parameter.documento || "").trim();
+    const hoja = obtenerOhCrearHoja();
+    const datos = hoja.getDataRange().getValues();
+    const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
+
+    const marcas = [];
+    for (let i = 1; i < datos.length; i++) {
+      const [fecha, , , doc, , , tipo] = datos[i];
+      if (fecha === hoy && String(doc) === documento) marcas.push(tipo);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // Permite probar que el endpoint está vivo abriendo la URL en el navegador
   return ContentService.createTextOutput(JSON.stringify({ status: "Control_Asistencia backend activo" }))
     .setMimeType(ContentService.MimeType.JSON);

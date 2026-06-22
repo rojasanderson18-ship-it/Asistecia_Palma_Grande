@@ -275,8 +275,6 @@ const CONFIG = {
   ],
   HORARIO: {
     entrada: 6.0,
-    almuerzoInicio: 12.0,
-    almuerzoFin: 13.0,
     salida: 14.75,        // 2:45 pm
     salidaSabado: 11.75   // 11:45 am
   },
@@ -312,21 +310,27 @@ document.getElementById('nombreFinca').textContent = CONFIG.FINCA.nombre + " · 
    ====================================================================== */
 function esSabado(d){ return d.getDay()===6; }
 
-function detectarTipo(){
-  const ahora = new Date();
-  const sab = esSabado(ahora);
-  const h = ahora.getHours() + ahora.getMinutes()/60;
-  const H = CONFIG.HORARIO;
-  let tipo = 'Entrada';
-  if(!sab){
-    if(h>=H.almuerzoInicio && h<H.almuerzoFin) tipo='Inicio almuerzo';
-    else if(h>=H.almuerzoFin && h<H.salida) tipo='Fin almuerzo';
-    else if(h>=H.salida) tipo='Salida';
-  } else {
-    if(h>=H.salidaSabado) tipo='Salida';
+/* Determina Entrada/Salida según las marcas que la persona ya tenga hoy en el
+   Sheet (no según la hora del reloj), para que cubra entradas/salidas fuera
+   del horario típico sin clasificarlas mal. */
+let tipoCalculado = null;
+async function obtenerTipoParaDocumento(documento){
+  if(!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR_AQUI')){
+    return { tipo:'Entrada', completo:false };
   }
-  document.getElementById('tipoAuto').textContent = tipo;
-  return tipo;
+  try{
+    const resp = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(documento)}`);
+    const datos = await resp.json();
+    const marcas = (datos && datos.marcas) || [];
+    if(marcas.includes('Salida')) return { tipo:'Salida', completo:true };
+    if(marcas.includes('Entrada')) return { tipo:'Salida', completo:false };
+    return { tipo:'Entrada', completo:false };
+  }catch(err){
+    // Sin conexión: usamos la hora del reloj solo como respaldo
+    const ahora = new Date();
+    const h = ahora.getHours() + ahora.getMinutes()/60;
+    return { tipo: h < 12 ? 'Entrada' : 'Salida', completo:false };
+  }
 }
 
 function actualizarBarraTurno(){
@@ -346,7 +350,6 @@ function actualizarReloj(){
   const ahora = new Date();
   document.getElementById('reloj').textContent = ahora.toLocaleTimeString('es-CO');
   document.getElementById('fechaHoy').textContent = ahora.toLocaleDateString('es-CO', {weekday:'long', day:'numeric', month:'long'});
-  detectarTipo();
   actualizarBarraTurno();
 }
 setInterval(actualizarReloj, 1000);
@@ -420,28 +423,49 @@ function pintarGrilla(contenedorId, onClick){
 let nombreSel = null;
 const documentoInput = document.getElementById('documentoInput');
 const docPersonaEncontrada = document.getElementById('docPersonaEncontrada');
-function actualizarDocumento(){
+async function actualizarDocumento(){
   documentoInput.value = documentoInput.value.replace(/\D/g, '');
   const doc = documentoInput.value.trim();
+  const tipoAutoEl = document.getElementById('tipoAuto');
   if(!doc){
     nombreSel = null;
+    tipoCalculado = null;
+    tipoAutoEl.textContent = '—';
     docPersonaEncontrada.textContent = '';
     docPersonaEncontrada.className = 'detalle-doc';
     document.getElementById('btnMarcar').disabled = true;
     return;
   }
   const persona = getPersonalPorDocumento(doc);
-  if(persona){
-    nombreSel = persona.nombre;
-    docPersonaEncontrada.textContent = persona.nombre;
-    docPersonaEncontrada.className = 'detalle-doc';
-    document.getElementById('btnMarcar').disabled = false;
-  } else {
+  if(!persona){
     nombreSel = null;
+    tipoCalculado = null;
+    tipoAutoEl.textContent = '—';
     docPersonaEncontrada.textContent = 'Documento no encontrado';
     docPersonaEncontrada.className = 'detalle-doc err';
     document.getElementById('btnMarcar').disabled = true;
+    return;
   }
+  nombreSel = persona.nombre;
+  docPersonaEncontrada.textContent = persona.nombre;
+  docPersonaEncontrada.className = 'detalle-doc';
+  document.getElementById('btnMarcar').disabled = true;
+  tipoAutoEl.textContent = 'Verificando…';
+
+  const resultado = await obtenerTipoParaDocumento(doc);
+  if(documentoInput.value.trim() !== doc) return; // el usuario siguió escribiendo, descarta esta respuesta
+
+  if(resultado.completo){
+    tipoCalculado = null;
+    tipoAutoEl.textContent = 'Jornada completa';
+    docPersonaEncontrada.textContent = 'Ya registraste tu entrada y salida hoy';
+    docPersonaEncontrada.className = 'detalle-doc err';
+    document.getElementById('btnMarcar').disabled = true;
+    return;
+  }
+  tipoCalculado = resultado.tipo;
+  tipoAutoEl.textContent = tipoCalculado;
+  document.getElementById('btnMarcar').disabled = false;
 }
 documentoInput.addEventListener('input', actualizarDocumento);
 
@@ -607,7 +631,7 @@ async function procesarFrameMarcar(){
     // se permite marcar igual, pero queda flag para Gerencia
   }
 
-  const tipo = detectarTipo();
+  const tipo = tipoCalculado || 'Entrada';
   const hora = new Date();
   const personaMarcando = getPersonalPorDocumento(documentoInput.value.trim());
   const payload = {
@@ -622,9 +646,11 @@ async function procesarFrameMarcar(){
 
   setTimeout(()=>{
     nombreSel = null;
+    tipoCalculado = null;
     documentoInput.value = '';
     docPersonaEncontrada.textContent = '';
     docPersonaEncontrada.className = 'detalle-doc';
+    document.getElementById('tipoAuto').textContent = '—';
     document.getElementById('btnMarcar').disabled = true;
     mostrarPantalla('pantallaMarcacion');
   }, 2400);
