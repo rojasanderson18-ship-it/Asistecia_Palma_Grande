@@ -75,6 +75,18 @@ function obtenerOhCrearHojaPersonal() {
   return hoja;
 }
 
+// Si el empleado ya tenia una foto de enrolamiento, la borra de Drive
+// para no acumular una foto nueva cada vez que se vuelve a enrolar.
+function borrarFotoAnterior(fotoURL) {
+  if (!fotoURL) return;
+  try {
+    const id = String(fotoURL).split("id=")[1];
+    if (id) DriveApp.getFileById(id).setTrashed(true);
+  } catch (err) {
+    // El archivo ya no existe o la URL no tenia el formato esperado.
+  }
+}
+
 // Busca la fila de un documento en la hoja Personal y guarda ahí la foto
 // tomada al enrolar su rostro (columna FotoURL).
 function guardarFotoPersonal(documento, fotoDataUrl) {
@@ -82,6 +94,7 @@ function guardarFotoPersonal(documento, fotoDataUrl) {
   const datos = hoja.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
     if (String(datos[i][0]) === String(documento)) {
+      borrarFotoAnterior(datos[i][4]);
       const fotoURL = guardarFoto(fotoDataUrl, documento, "Enrolamiento");
       hoja.getRange(i + 1, 5).setValue(fotoURL);
       return fotoURL;
