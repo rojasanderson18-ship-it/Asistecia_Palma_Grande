@@ -320,16 +320,20 @@ async function obtenerTipoParaDocumento(documento){
   }
   try{
     const resp = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(documento)}&_=${Date.now()}`, { cache:'no-store' });
-    const datos = await resp.json();
+    const textoBruto = await resp.text();
+    let datos;
+    try{ datos = JSON.parse(textoBruto); }catch(e){
+      return { tipo:'Entrada', completo:false, debug:'Respuesta no es JSON: '+textoBruto.slice(0,80) };
+    }
     const marcas = (datos && datos.marcas) || [];
-    if(marcas.includes('Salida')) return { tipo:'Salida', completo:true };
-    if(marcas.includes('Entrada')) return { tipo:'Salida', completo:false };
-    return { tipo:'Entrada', completo:false };
+    if(marcas.includes('Salida')) return { tipo:'Salida', completo:true, debug:'marcas:'+JSON.stringify(marcas) };
+    if(marcas.includes('Entrada')) return { tipo:'Salida', completo:false, debug:'marcas:'+JSON.stringify(marcas) };
+    return { tipo:'Entrada', completo:false, debug:'marcas:'+JSON.stringify(marcas) };
   }catch(err){
     // Sin conexión: usamos la hora del reloj solo como respaldo
     const ahora = new Date();
     const h = ahora.getHours() + ahora.getMinutes()/60;
-    return { tipo: h < 12 ? 'Entrada' : 'Salida', completo:false };
+    return { tipo: h < 12 ? 'Entrada' : 'Salida', completo:false, debug:'ERROR fetch: '+err.message };
   }
 }
 
@@ -461,11 +465,26 @@ async function actualizarDocumento(){
     docPersonaEncontrada.textContent = 'Ya registraste tu entrada y salida hoy';
     docPersonaEncontrada.className = 'detalle-doc err';
     document.getElementById('btnMarcar').disabled = true;
+    mostrarDebug(resultado.debug);
     return;
   }
   tipoCalculado = resultado.tipo;
   tipoAutoEl.textContent = tipoCalculado;
   document.getElementById('btnMarcar').disabled = false;
+  mostrarDebug(resultado.debug);
+}
+function mostrarDebug(texto){
+  let el = document.getElementById('debugMarcas');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'debugMarcas';
+    el.style.fontSize = '11px';
+    el.style.color = '#888';
+    el.style.wordBreak = 'break-all';
+    el.style.marginTop = '4px';
+    docPersonaEncontrada.insertAdjacentElement('afterend', el);
+  }
+  el.textContent = texto || '';
 }
 documentoInput.addEventListener('input', actualizarDocumento);
 
