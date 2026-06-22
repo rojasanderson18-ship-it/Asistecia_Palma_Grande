@@ -91,6 +91,16 @@ function doPost(e) {
   }
 }
 
+// Sheets puede guardar la celda "Fecha" como texto o, si interpretó el valor
+// como fecha, como un objeto Date real. Esto normaliza ambos casos al mismo
+// formato de texto para poder compararlos.
+function normalizarFecha(valor) {
+  if (valor instanceof Date) {
+    return Utilities.formatDate(valor, "America/Bogota", "dd/MM/yyyy");
+  }
+  return String(valor);
+}
+
 function doGet(e) {
   const accion = e.parameter && e.parameter.accion;
 
@@ -103,7 +113,7 @@ function doGet(e) {
     const marcas = [];
     for (let i = 1; i < datos.length; i++) {
       const [fecha, , , doc, , , tipo] = datos[i];
-      if (fecha === hoy && String(doc) === documento) marcas.push(tipo);
+      if (normalizarFecha(fecha) === hoy && String(doc) === documento) marcas.push(tipo);
     }
     return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -146,7 +156,7 @@ function calcularResumenDiario() {
 
   for (let i = 1; i < datos.length; i++) {
     const [fecha, hora, nombre, documento, cargo, finca, tipo] = datos[i];
-    if (fecha !== hoy) continue;
+    if (normalizarFecha(fecha) !== hoy) continue;
     const clave = nombre + "|" + finca;
     if (!marcasHoy[clave]) marcasHoy[clave] = { cargo, documento };
     marcasHoy[clave][tipo] = hora;
@@ -184,7 +194,7 @@ function calcularResumenDiario() {
   // Si ya se calculó el resumen de hoy antes, borra esas filas para no duplicar
   const existentes = hojaResumen.getDataRange().getValues();
   for (let i = existentes.length - 1; i >= 1; i--) {
-    if (existentes[i][0] === hoy) hojaResumen.deleteRow(i + 1);
+    if (normalizarFecha(existentes[i][0]) === hoy) hojaResumen.deleteRow(i + 1);
   }
 
   if (filasNuevas.length) {
