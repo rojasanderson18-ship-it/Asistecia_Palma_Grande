@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Asistencia | Palma Grande S.A.S.</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#2e7d32">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="lib/face-api/face-api.min.js"></script>
@@ -863,6 +867,10 @@ async function procesarFrameEnrolar(){
   }
   mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2000);
+}
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
 </body>
