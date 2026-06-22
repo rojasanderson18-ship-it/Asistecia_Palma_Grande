@@ -6,7 +6,7 @@
 <title>Control de Asistencia | Palma Grande S.A.S.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="lib/face-api/face-api.min.js"></script>
 <style>
   :root{
     --bg-0:#06140e; --bg-1:#0d2317; --panel:#0f2a1c; --panel-line:rgba(244,243,235,0.07);
@@ -509,7 +509,7 @@ function guardarRostro(nombre, descriptor){
 /* ======================================================================
    CARGA DE MODELOS face-api.js (CDN con pesos)
    ====================================================================== */
-const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+const MODEL_URL = 'models';
 let modelosListos = false;
 let errorModelos = null;
 async function cargarModelos(){
