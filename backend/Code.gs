@@ -95,7 +95,7 @@ function borrarFotoAnterior(fotoURL) {
 
 // Busca la fila de un documento en la hoja Personal y guarda ahí la foto
 // tomada al enrolar su rostro (columna FotoURL).
-function guardarFotoPersonal(documento, fotoDataUrl) {
+function guardarFotoPersonal(documento, fotoDataUrl, nombre, cargo) {
   const hoja = obtenerOhCrearHojaPersonal();
   const datos = hoja.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
@@ -107,7 +107,18 @@ function guardarFotoPersonal(documento, fotoDataUrl) {
       return fotoURL;
     }
   }
-  throw new Error("No se encontró el documento '" + documento + "' en la hoja Personal (filas: " + (datos.length - 1) + ")");
+  // No existía la fila (p.ej. personal precargado en PERSONAL_BASE del
+  // frontend, que nunca pasó por registrarPersonal): se crea ahora mismo.
+  const fotoURL = guardarFoto(fotoDataUrl, documento, "Enrolamiento");
+  hoja.appendRow([
+    sanitizarCelda(String(documento)),
+    sanitizarCelda(nombre || ""),
+    sanitizarCelda(cargo || ""),
+    new Date(),
+    fotoURL
+  ]);
+  SpreadsheetApp.flush();
+  return fotoURL;
 }
 
 function doPost(e) {
@@ -128,7 +139,7 @@ function doPost(e) {
     }
 
     if (datos.accion === 'guardarFotoPersonal') {
-      const fotoURL = guardarFotoPersonal(datos.documento, datos.foto);
+      const fotoURL = guardarFotoPersonal(datos.documento, datos.foto, datos.nombre, datos.cargo);
       return ContentService.createTextOutput(JSON.stringify({ ok: true, fotoURL: fotoURL }))
         .setMimeType(ContentService.MimeType.JSON);
     }

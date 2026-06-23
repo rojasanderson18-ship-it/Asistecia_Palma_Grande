@@ -884,7 +884,7 @@ async function procesarFrameEnrolar(){
 
   if(personaEnrolando && foto){
     document.getElementById('estadoCamara').textContent = 'Guardando foto…';
-    const resp = await enviarAlServidorConRespuesta({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto });
+    const resp = await enviarAlServidorConRespuesta({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto, nombre: personaEnrolando.nombre, cargo: personaEnrolando.cargo });
     document.getElementById('estadoCamara').textContent = '';
     if(!resp || !resp.ok || !resp.fotoURL){
       console.warn('No se pudo guardar la foto de enrolamiento en Drive:', resp && resp.error);
