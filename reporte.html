@@ -78,7 +78,8 @@
 
 <script>
 const CONFIG = {
-  GS_URL: "https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec"
+  GS_URL: "https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec",
+  TOKEN: "PalmaGrande2024Asist"
 };
 
 function escapeHtml(str){
@@ -104,7 +105,7 @@ async function consultar(){
   zona.innerHTML = '<div class="vacio">Consultando…</div>';
   const fechaDDMMYYYY = isoADDMMYYYY(fechaInput.value);
   try{
-    const resp = await fetch(`${CONFIG.GS_URL}?accion=resumenDashboard&fecha=${encodeURIComponent(fechaDDMMYYYY)}&_=${Date.now()}`, { cache:'no-store' });
+    const resp = await fetch(`${CONFIG.GS_URL}?accion=resumenDashboard&fecha=${encodeURIComponent(fechaDDMMYYYY)}&token=${encodeURIComponent(CONFIG.TOKEN)}&_=${Date.now()}`, { cache:'no-store' });
     const datos = await resp.json();
     if(!datos || !datos.ok){ zona.innerHTML = '<div class="vacio">No se pudo cargar el reporte.</div>'; return; }
     pintarReporte(datos);

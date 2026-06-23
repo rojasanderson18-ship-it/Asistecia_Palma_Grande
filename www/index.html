@@ -244,6 +244,7 @@
    ====================================================================== */
 const CONFIG = {
   GS_URL: "https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec",
+  TOKEN: "PalmaGrande2024Asist",
   PIN_GERENCIA: "2105",
   FINCA: { id: 2, nombre: "Finca 2", lat: 2.722853, lng: -72.735464, radioMetros: 100 }, // <-- AJUSTAR radio si hace falta
   PERSONAL_BASE: [
@@ -323,7 +324,7 @@ async function obtenerTipoParaDocumento(documento){
     return { tipo:'Entrada', completo:false };
   }
   try{
-    const resp = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(documento)}&_=${Date.now()}`, { cache:'no-store' });
+    const resp = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(documento)}&token=${encodeURIComponent(CONFIG.TOKEN)}&_=${Date.now()}`, { cache:'no-store' });
     const datos = await resp.json();
     const marcas = (datos && datos.marcas) || [];
     if(marcas.includes('Salida')) return { tipo:'Salida', completo:true };
@@ -715,6 +716,7 @@ document.getElementById('btnCancelarCamara').onclick = ()=>{
 
 /* ---------- Envío a Apps Script (mismo patrón que tus otras apps) ---------- */
 function enviarAlServidor(payload){
+  payload = Object.assign({ token: CONFIG.TOKEN }, payload);
   if(!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR_AQUI')){
     console.warn('GS_URL no configurada — guardando solo localmente', payload);
     const cola = JSON.parse(localStorage.getItem('cola_asistencia')||'[]');
@@ -737,6 +739,7 @@ function enviarAlServidor(payload){
 // para detectar fallos (p.ej. error guardando la foto en Drive) que de
 // otro modo quedarían escondidos porque el POST en sí no falla a nivel de red.
 function enviarAlServidorConRespuesta(payload){
+  payload = Object.assign({ token: CONFIG.TOKEN }, payload);
   if(!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR_AQUI')) return Promise.resolve(null);
   return fetch(CONFIG.GS_URL, {
     method:'POST',
