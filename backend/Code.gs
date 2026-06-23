@@ -103,6 +103,8 @@ function guardarFotoPersonal(documento, fotoDataUrl, nombre, cargo) {
       borrarFotoAnterior(datos[i][4]);
       const fotoURL = guardarFoto(fotoDataUrl, documento, "Enrolamiento");
       hoja.getRange(i + 1, 5).setValue(fotoURL);
+      if (!String(datos[i][1] || "").trim() && nombre) hoja.getRange(i + 1, 2).setValue(sanitizarCelda(nombre));
+      if (!String(datos[i][2] || "").trim() && cargo) hoja.getRange(i + 1, 3).setValue(sanitizarCelda(cargo));
       SpreadsheetApp.flush();
       return fotoURL;
     }
