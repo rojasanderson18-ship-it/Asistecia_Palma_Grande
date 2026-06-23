@@ -5,6 +5,7 @@ on:
     branches: [main, claude/jolly-ritchie-s32f26]
     paths:
       - 'index.html'
+      - 'www/**'
       - 'lib/**'
       - 'models/**'
       - 'android/**'
