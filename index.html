@@ -83,6 +83,10 @@
   .btn.secundario{ background:transparent; border:1px solid var(--panel-line); color:var(--tenue); margin-top:8px; }
   .btn svg{ width:16px; height:16px; }
 
+  .area-marcacion{ flex:1; overflow-y:auto; padding-bottom:130px; }
+  .barra-inferior{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px;
+    padding:14px 20px max(20px, env(safe-area-inset-bottom)); background:linear-gradient(180deg, transparent, var(--bg-0) 25%); z-index:20; }
+
   video, canvas{ border-radius:14px; width:100%; }
   .camara-wrap{ position:relative; margin-bottom:14px; }
   .camara-wrap video{ transform:scaleX(-1); background:#000; aspect-ratio:1/1; object-fit:cover; }
@@ -138,44 +142,48 @@
 
   <!-- ===================== PANTALLA: MARCACIÓN ===================== -->
   <div class="pantalla show" id="pantallaMarcacion">
-    <div class="panel">
-      <div class="barra-turno">
-        <div class="et"><span id="horaInicioTurno">6:00 am</span><span id="etiquetaTurno">Jornada en curso</span><span id="horaCierreTurno">2:45 pm</span></div>
-        <div class="pista"><div class="fill" id="fillTurno" style="width:0%"></div></div>
+    <div class="area-marcacion">
+      <div class="panel">
+        <div class="barra-turno">
+          <div class="et"><span id="horaInicioTurno">6:00 am</span><span id="etiquetaTurno">Jornada en curso</span><span id="horaCierreTurno">2:45 pm</span></div>
+          <div class="pista"><div class="fill" id="fillTurno" style="width:0%"></div></div>
+        </div>
+        <div class="fila-estado" style="margin-top:8px;">
+          <span class="et2"><span class="punto-vivo" id="puntoGps"></span>Ubicación</span>
+          <span class="valor" id="badgeGps">Verificando…</span>
+        </div>
+        <div class="fila-estado">
+          <span class="et2">🕐 Tipo de registro</span>
+          <span class="valor dorado" id="tipoAuto">Entrada</span>
+        </div>
       </div>
-      <div class="fila-estado" style="margin-top:8px;">
-        <span class="et2"><span class="punto-vivo" id="puntoGps"></span>Ubicación</span>
-        <span class="valor" id="badgeGps">Verificando…</span>
-      </div>
-      <div class="fila-estado">
-        <span class="et2">🕐 Tipo de registro</span>
-        <span class="valor dorado" id="tipoAuto">Entrada</span>
+
+      <div class="panel">
+        <div class="etiqueta-seccion">Digita tu número de documento</div>
+        <input type="text" id="documentoInput" inputmode="numeric" pattern="[0-9]*" maxlength="15" placeholder="Ej: 1121816934" class="input-documento" readonly>
+        <p class="detalle-doc" id="docPersonaEncontrada"></p>
+        <div class="teclado-numerico" id="tecladoNumerico">
+          <div class="tecla" data-tecla="1">1</div>
+          <div class="tecla" data-tecla="2">2</div>
+          <div class="tecla" data-tecla="3">3</div>
+          <div class="tecla" data-tecla="4">4</div>
+          <div class="tecla" data-tecla="5">5</div>
+          <div class="tecla" data-tecla="6">6</div>
+          <div class="tecla" data-tecla="7">7</div>
+          <div class="tecla" data-tecla="8">8</div>
+          <div class="tecla" data-tecla="9">9</div>
+          <div class="tecla tecla-borrar" data-tecla="limpiar">C</div>
+          <div class="tecla" data-tecla="0">0</div>
+          <div class="tecla tecla-borrar" data-tecla="borrar">⌫</div>
+        </div>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="etiqueta-seccion">Digita tu número de documento</div>
-      <input type="text" id="documentoInput" inputmode="numeric" pattern="[0-9]*" maxlength="15" placeholder="Ej: 1121816934" class="input-documento" readonly>
-      <p class="detalle-doc" id="docPersonaEncontrada"></p>
-      <div class="teclado-numerico" id="tecladoNumerico">
-        <div class="tecla" data-tecla="1">1</div>
-        <div class="tecla" data-tecla="2">2</div>
-        <div class="tecla" data-tecla="3">3</div>
-        <div class="tecla" data-tecla="4">4</div>
-        <div class="tecla" data-tecla="5">5</div>
-        <div class="tecla" data-tecla="6">6</div>
-        <div class="tecla" data-tecla="7">7</div>
-        <div class="tecla" data-tecla="8">8</div>
-        <div class="tecla" data-tecla="9">9</div>
-        <div class="tecla tecla-borrar" data-tecla="limpiar">C</div>
-        <div class="tecla" data-tecla="0">0</div>
-        <div class="tecla tecla-borrar" data-tecla="borrar">⌫</div>
-      </div>
+    <div class="barra-inferior">
+      <button class="btn" id="btnMarcar" disabled>📸 Registrar asistencia</button>
+      <div class="link-discreto" id="btnEnrolar">Enrolar nuevo empleado (Gerencia)</div>
+      <div class="link-discreto" id="btnAgregarPersonal">Agregar personal nuevo (Gerencia)</div>
     </div>
-
-    <button class="btn" id="btnMarcar" disabled>📸 Registrar asistencia</button>
-    <div class="link-discreto" id="btnEnrolar">Enrolar nuevo empleado (Gerencia)</div>
-    <div class="link-discreto" id="btnAgregarPersonal">Agregar personal nuevo (Gerencia)</div>
   </div>
 
   <!-- ===================== PANTALLA: CÁMARA ===================== -->
