@@ -151,11 +151,8 @@ function doPost(e) {
 
     if (datos.accion === 'guardarFotoPersonal') {
       const fotoURL = guardarFotoPersonal(datos.documento, datos.foto, datos.nombre, datos.cargo);
-      return ContentService.createTextOutput(JSON.stringify({
-        ok: true,
-        fotoURL: fotoURL,
-        debugRecibido: { documento: datos.documento, nombre: datos.nombre, cargo: datos.cargo }
-      })).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, fotoURL: fotoURL }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     const hoja = obtenerOhCrearHoja();
