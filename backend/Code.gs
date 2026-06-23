@@ -99,14 +99,15 @@ function guardarFotoPersonal(documento, fotoDataUrl) {
   const hoja = obtenerOhCrearHojaPersonal();
   const datos = hoja.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
-    if (String(datos[i][0]) === String(documento)) {
+    if (String(datos[i][0]).trim() === String(documento).trim()) {
       borrarFotoAnterior(datos[i][4]);
       const fotoURL = guardarFoto(fotoDataUrl, documento, "Enrolamiento");
       hoja.getRange(i + 1, 5).setValue(fotoURL);
+      SpreadsheetApp.flush();
       return fotoURL;
     }
   }
-  return "";
+  throw new Error("No se encontró el documento '" + documento + "' en la hoja Personal (filas: " + (datos.length - 1) + ")");
 }
 
 function doPost(e) {
