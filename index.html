@@ -885,16 +885,21 @@ async function procesarFrameEnrolar(){
   const foto = capturarFotoVideo();
   cerrarCamara();
 
-  if(personaEnrolando && foto){
-    document.getElementById('estadoCamara').textContent = 'Guardando foto…';
-    const resp = await enviarAlServidorConRespuesta({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto, nombre: personaEnrolando.nombre, cargo: personaEnrolando.cargo });
-    document.getElementById('estadoCamara').textContent = '';
-    if(!resp || !resp.ok || !resp.fotoURL){
-      console.warn('No se pudo guardar la foto de enrolamiento en Drive:', resp && resp.error);
-      mostrarResultado('err', 'Rostro enrolado, pero la foto no se guardó', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia, pero hubo un problema guardando su foto en Drive.<br><span style="font-size:11px">${escapeHtml((resp && resp.error) || 'Sin detalle del error')}</span>`, 'Avisa a soporte con este mensaje');
-      setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 4000);
-      return;
-    }
+  if(!personaEnrolando || !foto){
+    console.warn('No se pudo guardar la foto: personaEnrolando=', personaEnrolando, 'foto=', !!foto);
+    mostrarResultado('err', 'Rostro enrolado, pero la foto no se guardó', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia, pero no se pudo tomar/guardar su foto.<br><span style="font-size:11px">${!personaEnrolando ? 'No se encontró a esta persona en la lista de personal' : 'No se pudo capturar la imagen de la cámara'}</span>`, 'Avisa a soporte con este mensaje');
+    setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 4000);
+    return;
+  }
+
+  document.getElementById('estadoCamara').textContent = 'Guardando foto…';
+  const resp = await enviarAlServidorConRespuesta({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto, nombre: personaEnrolando.nombre, cargo: personaEnrolando.cargo });
+  document.getElementById('estadoCamara').textContent = '';
+  if(!resp || !resp.ok || !resp.fotoURL){
+    console.warn('No se pudo guardar la foto de enrolamiento en Drive:', resp && resp.error);
+    mostrarResultado('err', 'Rostro enrolado, pero la foto no se guardó', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia, pero hubo un problema guardando su foto en Drive.<br><span style="font-size:11px">${escapeHtml((resp && resp.error) || 'Sin detalle del error')}</span>`, 'Avisa a soporte con este mensaje');
+    setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 4000);
+    return;
   }
 
   mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
