@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asistencia-palma-v1';
+const CACHE_NAME = 'asistencia-palma-v2';
 const ARCHIVOS_CACHE = [
   './index.html',
   './manifest.json',
@@ -33,15 +33,12 @@ self.addEventListener('fetch', (event) => {
   // El backend (Google Apps Script) siempre debe ir a la red, nunca a cache.
   if (url.origin !== self.location.origin) return;
 
+  // Red primero: así cada actualización del APK se ve de inmediato.
+  // El cache es solo respaldo para cuando no hay conexión.
   event.respondWith(
-    caches.match(event.request).then((respuestaCache) => {
-      if (respuestaCache) return respuestaCache;
-      return fetch(event.request).then((respuestaRed) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, respuestaRed.clone());
-          return respuestaRed;
-        });
-      });
-    }).catch(() => caches.match('./index.html'))
+    fetch(event.request).then((respuestaRed) => {
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, respuestaRed.clone()));
+      return respuestaRed;
+    }).catch(() => caches.match(event.request).then((respuestaCache) => respuestaCache || caches.match('./index.html')))
   );
 });
