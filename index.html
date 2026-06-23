@@ -34,20 +34,20 @@
   @keyframes pulso{ 0%{transform:scale(0.6); opacity:.9;} 100%{transform:scale(2.6); opacity:0;} }
   @keyframes girar{ to{ transform:rotate(360deg); } }
 
-  .marca{ display:flex; align-items:center; gap:10px; margin-bottom:clamp(8px,2vh,18px); flex-shrink:0; animation:caida .4s ease both; }
-  .sello{ width:36px; height:36px; border-radius:9px; flex-shrink:0; background:linear-gradient(150deg, var(--verde), #2c6e4a);
-    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; font-size:16px; color:#06140d;
-    box-shadow:0 4px 14px rgba(95,185,138,0.25); }
-  .nombre{ font-size:12px; color:var(--tenue); line-height:1.3; }
-  .nombre b{ color:var(--texto); display:block; font-size:13px; font-weight:600; }
+  .encabezado{ display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid var(--panel-line);
+    padding-bottom:clamp(8px,1.6vh,12px); margin-bottom:clamp(8px,1.8vh,14px); flex-shrink:0; animation:caida .4s ease both; }
+  .marca{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .sello{ width:34px; height:34px; border-radius:9px; flex-shrink:0; background:linear-gradient(150deg, var(--verde), #2c6e4a);
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; font-size:15px; color:#06140d;
+    box-shadow:0 4px 14px rgba(95,185,138,0.3), inset 0 1px 0 rgba(255,255,255,0.15); }
+  .nombre{ font-size:11.5px; color:var(--tenue); line-height:1.3; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nombre b{ color:var(--texto); display:block; font-size:13px; font-weight:600; font-family:'Fraunces', serif; letter-spacing:-0.1px; }
+  .reloj{ text-align:right; flex-shrink:0; }
+  .reloj .hora{ font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:500; letter-spacing:0.3px; }
+  .reloj .fecha{ font-size:9.5px; color:var(--tenue2); text-transform:capitalize; margin-top:1px; }
 
-  .titulo-row{ display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid var(--panel-line); padding-bottom:clamp(8px,1.8vh,14px); margin-bottom:clamp(8px,2vh,16px); flex-shrink:0; }
-  h1{ font-family:'Fraunces', serif; font-weight:500; font-size:clamp(18px,4.5vh,22px); line-height:1.1; letter-spacing:-0.2px; }
-  .reloj{ text-align:right; }
-  .reloj .hora{ font-family:'JetBrains Mono', monospace; font-size:16px; letter-spacing:0.3px; }
-  .reloj .fecha{ font-size:10px; color:var(--tenue2); text-transform:capitalize; margin-top:2px; }
-
-  .panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:16px; padding:clamp(8px,1.8vh,12px); margin-bottom:clamp(6px,1.4vh,8px); }
+  .panel{ background:linear-gradient(165deg, rgba(244,243,235,0.025), transparent 40%), var(--panel); border:1px solid var(--panel-line); border-radius:16px;
+    padding:clamp(8px,1.8vh,12px); margin-bottom:clamp(6px,1.4vh,8px); box-shadow:0 6px 18px -10px rgba(0,0,0,0.5); }
   .barra-turno .et{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--tenue2); margin-bottom:8px; letter-spacing:.3px; text-transform:uppercase;}
   .pista{ height:5px; border-radius:4px; background:rgba(244,243,235,0.06); position:relative; overflow:hidden; margin-bottom:4px;}
   .pista .fill{ position:absolute; left:0; top:0; height:100%; border-radius:4px; background:linear-gradient(90deg, var(--verde), #3d8c64); transition:width 1s ease; }
@@ -55,10 +55,10 @@
   .fila-estado{ display:flex; justify-content:space-between; align-items:center; padding:clamp(5px,1.2vh,9px) 0; }
   .fila-estado+.fila-estado{ border-top:1px solid var(--panel-line); }
   .et2{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--tenue); }
-  .valor{ font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px; }
-  .valor.ok{ background:rgba(95,185,138,0.13); color:var(--verde); }
-  .valor.dorado{ background:rgba(207,168,84,0.13); color:var(--dorado); }
-  .valor.rojo{ background:rgba(196,87,74,0.15); color:var(--rojo); }
+  .valor{ font-size:12px; font-weight:600; padding:4px 11px; border-radius:20px; border:1px solid transparent; }
+  .valor.ok{ background:rgba(95,185,138,0.13); color:var(--verde); border-color:rgba(95,185,138,0.25); }
+  .valor.dorado{ background:rgba(207,168,84,0.13); color:var(--dorado); border-color:rgba(207,168,84,0.25); }
+  .valor.rojo{ background:rgba(196,87,74,0.15); color:var(--rojo); border-color:rgba(196,87,74,0.3); }
 
   .punto-vivo{ width:7px; height:7px; border-radius:50%; background:var(--verde); display:inline-block; position:relative; }
   .punto-vivo::after{ content:''; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid var(--verde); animation:pulso 1.8s ease-out infinite; }
@@ -77,11 +77,12 @@
   .persona.activo .inicial{ background:var(--verde); color:#06140d; box-shadow:0 0 0 4px rgba(95,185,138,0.15); }
   .persona.activo .nom{ color:var(--verde); }
 
-  .btn{ width:100%; padding:clamp(9px,2vh,13px); border-radius:13px; border:none; margin-top:clamp(5px,1.2vh,8px); font-size:14px; font-weight:600; cursor:pointer; transition:all .15s;
-    display:flex; align-items:center; justify-content:center; gap:8px; background:var(--verde); color:#06140d; font-family:'Inter',sans-serif; }
-  .btn:active{ transform:scale(0.98); }
-  .btn:disabled{ background:rgba(244,243,235,0.07); color:var(--tenue2); }
-  .btn.secundario{ background:transparent; border:1px solid var(--panel-line); color:var(--tenue); margin-top:8px; }
+  .btn{ width:100%; padding:clamp(9px,2vh,13px); border-radius:13px; border:none; margin-top:clamp(5px,1.2vh,8px); font-size:14.5px; font-weight:600; cursor:pointer; transition:all .15s;
+    display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(155deg, var(--verde), #3d8c64); color:#06140d; font-family:'Inter',sans-serif;
+    letter-spacing:0.1px; box-shadow:0 8px 20px -8px var(--verde-glow), inset 0 1px 0 rgba(255,255,255,0.2); }
+  .btn:active{ transform:scale(0.98); box-shadow:0 4px 10px -6px var(--verde-glow), inset 0 1px 0 rgba(255,255,255,0.2); }
+  .btn:disabled{ background:rgba(244,243,235,0.07); color:var(--tenue2); box-shadow:none; }
+  .btn.secundario{ background:transparent; border:1px solid var(--panel-line); color:var(--tenue); margin-top:8px; box-shadow:none; }
   .btn svg{ width:16px; height:16px; }
 
   .area-marcacion{ flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; justify-content:center; }
@@ -120,8 +121,8 @@
   .detalle-doc{ min-height:18px; font-size:12.5px; color:var(--verde); text-align:center; margin-top:clamp(4px,1vh,9px); font-weight:600; }
   .detalle-doc.err{ color:var(--rojo); }
   .teclado-numerico{ display:grid; grid-template-columns:repeat(3, 1fr); gap:clamp(4px,1vh,6px); margin-top:clamp(4px,1vh,8px); }
-  .tecla{ padding:clamp(6px,1.6vh,11px) 0; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:600; text-align:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
-  .tecla:active{ background:var(--panel-line); }
+  .tecla{ padding:clamp(6px,1.6vh,11px) 0; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:600; text-align:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; transition:transform .1s, background .1s; }
+  .tecla:active{ background:var(--panel-line); transform:scale(0.94); }
   .tecla.tecla-borrar{ color:var(--rojo); }
 
   .pie{ margin-top:auto; padding-top:18px; text-align:center; font-size:9.5px; color:var(--tenue2); line-height:1.6; }
@@ -131,12 +132,11 @@
 <body>
 <div class="app">
 
-  <div class="marca">
-    <div class="sello">PG</div>
-    <div class="nombre"><b>Palma Grande S.A.S.</b><span id="nombreFinca">Finca 1 · Puerto Concordia</span></div>
-  </div>
-  <div class="titulo-row">
-    <h1>Control de<br>asistencia</h1>
+  <div class="encabezado">
+    <div class="marca">
+      <div class="sello">PG</div>
+      <div class="nombre"><b>Palma Grande S.A.S.</b><span id="nombreFinca">Finca 1 · Puerto Concordia</span></div>
+    </div>
     <div class="reloj"><div class="hora" id="reloj">--:--:--</div><div class="fecha" id="fechaHoy">—</div></div>
   </div>
 
