@@ -60,7 +60,13 @@ function guardarFoto(fotoDataUrl, documento, tipo) {
     archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return "https://drive.google.com/uc?export=view&id=" + archivo.getId();
   } catch (err) {
-    return "";
+    // No tragar el error en silencio: se registra en las ejecuciones de Apps
+    // Script y se relanza para que doPost lo devuelva en la respuesta JSON,
+    // en vez de simplemente "no guardar la foto" sin ninguna pista del motivo
+    // (causa típica: la política de Drive de la cuenta bloquea el uso de
+    // "Cualquiera con el enlace" en setSharing).
+    Logger.log("Error guardando foto: " + err.message);
+    throw err;
   }
 }
 
