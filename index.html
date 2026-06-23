@@ -810,7 +810,7 @@ document.getElementById('btnPinConfirmar').onclick = ()=>{
 document.getElementById('btnVolverMarcacion').onclick = ()=> mostrarPantalla('pantallaMarcacion');
 document.getElementById('btnCancelarAgregar').onclick = ()=> mostrarPantalla('pantallaMarcacion');
 
-document.getElementById('btnGuardarPersonal').onclick = ()=>{
+document.getElementById('btnGuardarPersonal').onclick = async ()=>{
   const documento = document.getElementById('nuevoDocumento').value.trim();
   const nombre = document.getElementById('nuevoNombre').value.trim();
   const cargo = document.getElementById('nuevoCargo').value;
@@ -822,12 +822,19 @@ document.getElementById('btnGuardarPersonal').onclick = ()=>{
   if(yaExisteNombre){ alert('Ya existe una persona registrada con ese nombre'); return; }
   if(getPersonalPorDocumento(documento)){ alert('Ya existe una persona registrada con ese documento'); return; }
 
+  const btn = document.getElementById('btnGuardarPersonal');
+  btn.disabled = true;
+  const resp = await enviarAlServidorConRespuesta({ accion:'registrarPersonal', documento, nombre, cargo, fechaHora: new Date().toISOString() });
+  btn.disabled = false;
+
+  if(!resp || !resp.ok){
+    mostrarResultado('err', 'No se pudo registrar en el servidor', `No se guardó <b>${escapeHtml(nombre)}</b> en la hoja Personal del Sheet, así que no podrás enrolar su foto todavía.<br><span style="font-size:11px">${escapeHtml((resp && resp.error) || 'Sin conexión con el servidor')}</span>`, 'Verifica tu conexión e intenta de nuevo');
+    return;
+  }
+
   const extra = getPersonalExtra();
   extra.push({documento, nombre, cargo});
   guardarPersonalExtra(extra);
-
-  // Avisa al backend para que quede también en el Sheet (hoja Personal)
-  enviarAlServidor({ accion:'registrarPersonal', documento, nombre, cargo, fechaHora: new Date().toISOString() });
 
   mostrarResultado('ok', 'Personal agregado', `<b>${escapeHtml(nombre)}</b><br>${escapeHtml(cargo)} · Doc. ${escapeHtml(documento)}`, 'Ahora puedes enrolar su rostro');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2200);
