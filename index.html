@@ -899,8 +899,9 @@ async function procesarFrameEnrolar(){
     return;
   }
 
-  mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
-  setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2000);
+  const dbg = resp.debugRecibido || {};
+  mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia<br><span style="font-size:11px">DEBUG → doc:${escapeHtml(dbg.documento)} nombre:${escapeHtml(dbg.nombre)} cargo:${escapeHtml(dbg.cargo)}</span>`, '');
+  setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 6000);
 }
 
 if('serviceWorker' in navigator){
