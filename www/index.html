@@ -18,14 +18,15 @@
     --texto:#f4f3eb; --tenue:#8da591; --tenue2:#5e7868;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; overflow:hidden; }
   body{
     font-family:'Inter', system-ui, sans-serif;
     background:radial-gradient(circle at 20% -10%, rgba(95,185,138,0.10), transparent 40%),
                radial-gradient(circle at 100% 110%, rgba(207,168,84,0.06), transparent 45%),
                linear-gradient(165deg, var(--bg-1) 0%, var(--bg-0) 75%);
-    color:var(--texto); min-height:100vh; display:flex; justify-content:center; overflow-x:hidden;
+    color:var(--texto); height:100vh; display:flex; justify-content:center; overflow:hidden;
   }
-  .app{ width:100%; max-width:430px; min-height:100vh; padding:24px 20px 30px; display:flex; flex-direction:column; }
+  .app{ width:100%; max-width:430px; height:100vh; padding:18px 20px 14px; display:flex; flex-direction:column; overflow:hidden; }
 
   @keyframes caida{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);} }
   @keyframes popin{ from{ transform:scale(0.6); opacity:0;} to{ transform:scale(1); opacity:1;} }
@@ -46,7 +47,7 @@
   .reloj .hora{ font-family:'JetBrains Mono', monospace; font-size:16px; letter-spacing:0.3px; }
   .reloj .fecha{ font-size:10px; color:var(--tenue2); text-transform:capitalize; margin-top:2px; }
 
-  .panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:16px; padding:16px; margin-bottom:12px; }
+  .panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:16px; padding:12px; margin-bottom:8px; }
   .barra-turno .et{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--tenue2); margin-bottom:8px; letter-spacing:.3px; text-transform:uppercase;}
   .pista{ height:5px; border-radius:4px; background:rgba(244,243,235,0.06); position:relative; overflow:hidden; margin-bottom:4px;}
   .pista .fill{ position:absolute; left:0; top:0; height:100%; border-radius:4px; background:linear-gradient(90deg, var(--verde), #3d8c64); transition:width 1s ease; }
@@ -76,16 +77,15 @@
   .persona.activo .inicial{ background:var(--verde); color:#06140d; box-shadow:0 0 0 4px rgba(95,185,138,0.15); }
   .persona.activo .nom{ color:var(--verde); }
 
-  .btn{ width:100%; padding:16px; border-radius:13px; border:none; margin-top:13px; font-size:14px; font-weight:600; cursor:pointer; transition:all .15s;
+  .btn{ width:100%; padding:13px; border-radius:13px; border:none; margin-top:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all .15s;
     display:flex; align-items:center; justify-content:center; gap:8px; background:var(--verde); color:#06140d; font-family:'Inter',sans-serif; }
   .btn:active{ transform:scale(0.98); }
   .btn:disabled{ background:rgba(244,243,235,0.07); color:var(--tenue2); }
   .btn.secundario{ background:transparent; border:1px solid var(--panel-line); color:var(--tenue); margin-top:8px; }
   .btn svg{ width:16px; height:16px; }
 
-  .area-marcacion{ flex:1; overflow-y:auto; padding-bottom:130px; }
-  .barra-inferior{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px;
-    padding:14px 20px max(20px, env(safe-area-inset-bottom)); background:linear-gradient(180deg, transparent, var(--bg-0) 25%); z-index:20; }
+  .area-marcacion{ flex:1; min-height:0; overflow-y:auto; }
+  .barra-inferior{ flex-shrink:0; padding-top:10px; }
 
   video, canvas{ border-radius:14px; width:100%; }
   .camara-wrap{ position:relative; margin-bottom:14px; }
@@ -101,7 +101,7 @@
     animation:girar 1.4s linear infinite;
   }
 
-  .pantalla{ display:none; flex:1; flex-direction:column; }
+  .pantalla{ display:none; flex:1; min-height:0; flex-direction:column; }
   .pantalla.show{ display:flex; animation:caida .35s ease both; }
   .centro{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
   .aro{ width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:16px; animation:popin .4s cubic-bezier(.2,1.4,.4,1); }
@@ -119,13 +119,13 @@
   .input-documento{ width:100%; padding:14px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; font-size:20px; text-align:center; letter-spacing:2px; }
   .detalle-doc{ min-height:18px; font-size:12.5px; color:var(--verde); text-align:center; margin-top:9px; font-weight:600; }
   .detalle-doc.err{ color:var(--rojo); }
-  .teclado-numerico{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:12px; }
-  .tecla{ padding:16px 0; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; font-size:19px; font-weight:600; text-align:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+  .teclado-numerico{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:8px; }
+  .tecla{ padding:11px 0; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:600; text-align:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
   .tecla:active{ background:var(--panel-line); }
   .tecla.tecla-borrar{ color:var(--rojo); }
 
   .pie{ margin-top:auto; padding-top:18px; text-align:center; font-size:9.5px; color:var(--tenue2); line-height:1.6; }
-  .link-discreto{ text-align:center; font-size:11px; color:var(--tenue2); margin-top:10px; text-decoration:underline; cursor:pointer; }
+  .link-discreto{ text-align:center; font-size:11px; color:var(--tenue2); margin-top:7px; text-decoration:underline; cursor:pointer; }
 </style>
 </head>
 <body>
