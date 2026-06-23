@@ -874,15 +874,19 @@ async function procesarFrameEnrolar(){
   const personaEnrolando = getPersonalCompleto().find(p=> p.nombre === nombreEnrolando);
   const foto = capturarFotoVideo();
   cerrarCamara();
+
   if(personaEnrolando && foto){
-    enviarAlServidorConRespuesta({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto }).then(resp=>{
-      if(!resp || !resp.ok || !resp.fotoURL){
-        console.warn('No se pudo guardar la foto de enrolamiento en Drive:', resp && resp.error);
-        document.getElementById('estadoCamara').textContent = '';
-        mostrarResultado('err', 'Rostro enrolado, pero la foto no se guardó', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia, pero hubo un problema guardando su foto en Drive.<br><span style="font-size:11px">${escapeHtml((resp && resp.error) || 'Sin detalle del error')}</span>`, 'Avisa a soporte con este mensaje');
-      }
-    });
+    document.getElementById('estadoCamara').textContent = 'Guardando foto…';
+    const resp = await enviarAlServidorConRespuesta({ accion:'guardarFotoPersonal', documento: personaEnrolando.documento, foto });
+    document.getElementById('estadoCamara').textContent = '';
+    if(!resp || !resp.ok || !resp.fotoURL){
+      console.warn('No se pudo guardar la foto de enrolamiento en Drive:', resp && resp.error);
+      mostrarResultado('err', 'Rostro enrolado, pero la foto no se guardó', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia, pero hubo un problema guardando su foto en Drive.<br><span style="font-size:11px">${escapeHtml((resp && resp.error) || 'Sin detalle del error')}</span>`, 'Avisa a soporte con este mensaje');
+      setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 4000);
+      return;
+    }
   }
+
   mostrarResultado('ok', 'Empleado enrolado', `<b>${escapeHtml(nombreEnrolando)}</b> ya puede marcar asistencia`, '');
   setTimeout(()=> mostrarPantalla('pantallaMarcacion'), 2000);
 }
