@@ -96,6 +96,7 @@ function borrarFotoAnterior(fotoURL) {
 // Busca la fila de un documento en la hoja Personal y guarda ahí la foto
 // tomada al enrolar su rostro (columna FotoURL).
 function guardarFotoPersonal(documento, fotoDataUrl, nombre, cargo) {
+  Logger.log("guardarFotoPersonal recibido: documento=%s nombre=%s cargo=%s", documento, nombre, cargo);
   const hoja = obtenerOhCrearHojaPersonal();
   const datos = hoja.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
@@ -103,8 +104,8 @@ function guardarFotoPersonal(documento, fotoDataUrl, nombre, cargo) {
       borrarFotoAnterior(datos[i][4]);
       const fotoURL = guardarFoto(fotoDataUrl, documento, "Enrolamiento");
       hoja.getRange(i + 1, 5).setValue(fotoURL);
-      if (!String(datos[i][1] || "").trim() && nombre) hoja.getRange(i + 1, 2).setValue(sanitizarCelda(nombre));
-      if (!String(datos[i][2] || "").trim() && cargo) hoja.getRange(i + 1, 3).setValue(sanitizarCelda(cargo));
+      if (nombre) hoja.getRange(i + 1, 2).setValue(sanitizarCelda(nombre));
+      if (cargo) hoja.getRange(i + 1, 3).setValue(sanitizarCelda(cargo));
       SpreadsheetApp.flush();
       return fotoURL;
     }
