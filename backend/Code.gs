@@ -16,6 +16,15 @@
 const SHEET_ID = "1ZjIJ_AHty-ltlFDJP_0MV4mIXAhs1oNKhKcYWNMlbC8";
 const HOJA_MARCACIONES = "Marcaciones";
 
+// Token compartido entre el frontend y este backend: evita que cualquiera
+// que encuentre la URL pública del Apps Script pueda escribir/leer datos.
+// Debe coincidir con CONFIG.TOKEN en index.html y reporte.html.
+const TOKEN = "PalmaGrande2024Asist";
+
+function tokenValido(token) {
+  return String(token || "") === TOKEN;
+}
+
 // Evita inyección de fórmulas: si el valor empieza con =,+,-,@ o tab,
 // Sheets lo interpretaría como fórmula al mostrarlo.
 function sanitizarCelda(valor) {
@@ -127,8 +136,21 @@ function doPost(e) {
   try {
     const datos = JSON.parse(e.postData.contents);
 
+    if (!tokenValido(datos.token)) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Token inválido" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (datos.accion === 'registrarPersonal') {
       const hojaPersonal = obtenerOhCrearHojaPersonal();
+      const yaExistentes = hojaPersonal.getDataRange().getValues();
+      const docNuevo = String(datos.documento || "").trim();
+      for (let i = 1; i < yaExistentes.length; i++) {
+        if (String(yaExistentes[i][0]).trim() === docNuevo) {
+          return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Ya existe una persona registrada con ese documento" }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
       hojaPersonal.appendRow([
         sanitizarCelda(datos.documento || ""),
         sanitizarCelda(datos.nombre),
@@ -198,6 +220,11 @@ function normalizarHora(valor) {
 
 function doGet(e) {
   const accion = e.parameter && e.parameter.accion;
+
+  if (!tokenValido(e.parameter && e.parameter.token)) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Token inválido" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 
   if (accion === 'marcasHoy') {
     const documento = String(e.parameter.documento || "").trim();
