@@ -166,6 +166,16 @@ function normalizarFecha(valor) {
   return String(valor);
 }
 
+// Misma normalización que normalizarFecha pero para la columna "Hora":
+// Sheets puede interpretar el texto "HH:mm:ss" como un valor de hora real
+// y devolverlo como objeto Date al leerlo con getValues().
+function normalizarHora(valor) {
+  if (Object.prototype.toString.call(valor) === "[object Date]") {
+    return Utilities.formatDate(valor, "America/Bogota", "HH:mm:ss");
+  }
+  return String(valor);
+}
+
 function doGet(e) {
   const accion = e.parameter && e.parameter.accion;
 
@@ -224,7 +234,7 @@ function calcularResumenDashboard(fechaParam) {
 
   for (let i = 1; i < datos.length; i++) {
     const fila = datos[i];
-    const fechaFila = fila[0], hora = fila[1], nombre = fila[2], documento = fila[3],
+    const fechaFila = fila[0], hora = normalizarHora(fila[1]), nombre = fila[2], documento = fila[3],
       cargo = fila[4], finca = fila[5], tipo = fila[6];
     if (normalizarFecha(fechaFila) !== fecha) continue;
 
@@ -317,7 +327,7 @@ function calcularResumenDiario() {
     if (normalizarFecha(fecha) !== hoy) continue;
     const clave = nombre + "|" + finca;
     if (!marcasHoy[clave]) marcasHoy[clave] = { cargo, documento };
-    marcasHoy[clave][tipo] = hora;
+    marcasHoy[clave][tipo] = normalizarHora(hora);
   }
 
   const filasNuevas = [];
