@@ -173,6 +173,10 @@ function doPost(e) {
       new Date()
     ]);
 
+    // Apenas se marca la Salida del día, ya hay jornada completa: se
+    // actualiza la hoja "Resumen" en el momento, sin esperar un trigger.
+    if (datos.tipo === 'Salida') calcularResumenDiario();
+
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);
 
