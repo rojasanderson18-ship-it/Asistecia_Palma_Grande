@@ -3,162 +3,545 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reporte de Asistencia | Dirección Agronómico — Palma Grande S.A.S.</title>
+<title>Dashboard de Asistencia | Palma Grande S.A.S.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg-0:#06140e; --bg-1:#0d2317; --panel:#0f2a1c; --panel-line:rgba(244,243,235,0.07);
-    --verde:#5fb98a; --verde-glow:rgba(95,185,138,0.35); --dorado:#cfa854; --rojo:#c4574a;
-    --texto:#f4f3eb; --tenue:#8da591; --tenue2:#5e7868;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    font-family:'Inter', system-ui, sans-serif;
-    background:radial-gradient(circle at 20% -10%, rgba(95,185,138,0.10), transparent 40%),
-               linear-gradient(165deg, var(--bg-1) 0%, var(--bg-0) 75%);
-    color:var(--texto); min-height:100vh; padding:24px;
-  }
-  .contenedor{ max-width:1100px; margin:0 auto; }
-  h1{ font-family:'Fraunces', serif; font-weight:600; font-size:28px; margin-bottom:4px; }
-  .subtitulo{ color:var(--tenue); font-size:14px; margin-bottom:22px; }
-  .panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; padding:18px; margin-bottom:18px; }
-  .filtros{ display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
-  .campo label{ display:block; font-size:12px; color:var(--tenue); margin-bottom:6px; }
-  .campo input{ padding:10px 12px; border-radius:8px; border:1px solid var(--panel-line); background:var(--bg-1); color:var(--texto); font-family:'JetBrains Mono', monospace; }
-  button{ font-family:'Inter', sans-serif; font-weight:600; border:none; border-radius:8px; padding:11px 18px; cursor:pointer; }
-  .btn-primario{ background:var(--verde); color:#06140d; }
-  .btn-secundario{ background:transparent; color:var(--texto); border:1px solid var(--panel-line); }
-  .kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:18px; }
-  .kpi{ background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; padding:16px; }
-  .kpi .num{ font-family:'Fraunces', serif; font-size:32px; font-weight:600; color:var(--verde); }
-  .kpi .etq{ font-size:12.5px; color:var(--tenue); margin-top:4px; }
-  .kpi.alerta .num{ color:var(--dorado); }
-  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
-  th{ text-align:left; padding:10px 8px; color:var(--tenue); font-weight:600; border-bottom:1px solid var(--panel-line); }
-  td{ padding:9px 8px; border-bottom:1px solid var(--panel-line); }
-  .foto-mini{ width:38px; height:38px; border-radius:8px; object-fit:cover; background:var(--bg-1); }
-  .badge{ padding:3px 9px; border-radius:6px; font-size:12px; font-weight:600; }
-  .badge.completa{ background:rgba(95,185,138,0.15); color:var(--verde); }
-  .badge.incompleta{ background:rgba(207,168,84,0.15); color:var(--dorado); }
-  .finca-pill{ display:inline-block; background:var(--bg-1); border:1px solid var(--panel-line); padding:6px 12px; border-radius:20px; margin:3px; font-size:13px; }
-  .vacio{ text-align:center; color:var(--tenue); padding:30px; }
-  .pie{ text-align:center; color:var(--tenue2); font-size:11.5px; margin-top:18px; }
-  @media print{
-    body{ background:#fff; color:#111; padding:0; }
-    .no-imprimir{ display:none !important; }
-    .panel{ border:1px solid #ccc; background:#fff; }
-    .kpi .num{ color:#1a6b41; }
-    th{ color:#444; }
-  }
+/* ── TOKENS ── */
+:root{
+  --dk:#122B1A; --dm:#1B4028; --dg:#2E7D32; --lg:#4CAF50; --xl:#E8F5E9; --xb:#C8E6C9;
+  --re:#C62828; --rl:#FFEBEE; --or:#E65100; --orl:#FFF3E0; --bl:#1565C0; --bll:#E3F2FD;
+  --bg:#F5F7F6; --wh:#FFFFFF;
+  --tx:#111827; --t1:#4B5563; --t2:#9CA3AF; --bd:#E5E7EB;
+  --sh:0 1px 4px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+  --sidebar-w:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);-webkit-font-smoothing:antialiased;}
+
+/* ════════════════════════════════
+   LAYOUT
+════════════════════════════════ */
+.layout{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--dk);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;
+  z-index:50;overflow-y:auto;
+}
+.sb-brand{
+  padding:20px 18px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;gap:10px;
+}
+.sb-logo{
+  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+}
+.sb-logo svg{width:25px;height:25px;}
+.sb-brand-txt .empresa{font-size:12px;font-weight:800;color:#fff;line-height:1.2;}
+.sb-brand-txt .sub{font-size:10px;color:rgba(255,255,255,.42);margin-top:2px;}
+.sb-nav{flex:1;padding:10px 0;}
+.sb-sec{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.28);padding:14px 18px 5px;}
+.sb-item{
+  display:flex;align-items:center;gap:10px;padding:9px 18px;
+  font-size:13px;font-weight:500;color:rgba(255,255,255,.6);
+  border-left:3px solid transparent;text-decoration:none;
+  transition:all .15s;cursor:pointer;
+}
+.sb-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.88);}
+.sb-item.activo{background:rgba(255,255,255,.1);color:#fff;border-left-color:var(--lg);font-weight:700;}
+.sb-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;}
+.sb-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.07);font-size:10.5px;color:rgba(255,255,255,.3);line-height:1.7;}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;}
+
+/* TOP BAR */
+.topbar{
+  background:var(--wh);border-bottom:1px solid var(--bd);
+  padding:13px 28px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:40;box-shadow:var(--sh);
+}
+.tb-left h1{font-size:18px;font-weight:800;}
+.tb-left p{font-size:11.5px;color:var(--t2);margin-top:1px;}
+.btn-exp{
+  display:flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;border:none;
+  background:var(--dg);color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;transition:opacity .15s;
+}
+.btn-exp:hover{opacity:.88;}
+.btn-exp svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.2;}
+
+/* CONTENT */
+.content{padding:22px 28px 40px;flex:1;}
+
+/* FILTROS */
+.filtros-card{
+  background:var(--wh);border-radius:13px;border:1px solid var(--bd);
+  box-shadow:var(--sh);padding:16px 20px;margin-bottom:22px;
+}
+.filtros-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+.campo{display:flex;flex-direction:column;gap:5px;}
+.campo label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t2);}
+.campo input,.campo select{
+  padding:8px 12px;border-radius:8px;border:1.5px solid var(--bd);
+  background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:500;outline:none;min-width:125px;
+  transition:border-color .2s;
+}
+.campo input:focus,.campo select:focus{border-color:var(--dg);}
+.btn-filtrar{
+  padding:8px 20px;border-radius:8px;border:none;
+  background:var(--dg);color:#fff;font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;white-space:nowrap;
+}
+.btn-filtrar:hover{opacity:.88;}
+.btn-filtrar:disabled{background:var(--t2);cursor:not-allowed;}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:22px;}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr);}}
+.kpi{background:var(--wh);border-radius:12px;border:1px solid var(--bd);box-shadow:var(--sh);padding:15px;}
+.kpi-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.kpi-ico svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;}
+.kpi-ico.vd{background:var(--xl);color:var(--dg);}
+.kpi-ico.am{background:var(--orl);color:var(--or);}
+.kpi-ico.ro{background:var(--rl);color:var(--re);}
+.kpi-ico.az{background:var(--bll);color:var(--bl);}
+.kpi-num{font-size:28px;font-weight:900;line-height:1;margin-bottom:4px;}
+.kpi-num.vd{color:var(--dg);}
+.kpi-num.am{color:var(--or);}
+.kpi-num.ro{color:var(--re);}
+.kpi-num.az{color:var(--bl);}
+.kpi-lbl{font-size:11px;color:var(--t2);font-weight:600;line-height:1.3;}
+
+/* GRID 2 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+@media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+
+/* CARD */
+.card{background:var(--wh);border-radius:13px;border:1px solid var(--bd);box-shadow:var(--sh);overflow:hidden;}
+.card-hdr{padding:13px 18px 11px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.card-tit{font-size:14px;font-weight:700;}
+.card-sub{font-size:11px;color:var(--t2);margin-top:1px;}
+
+/* GRÁFICA */
+.chart-body{display:flex;flex-direction:column;gap:10px;padding:16px 18px;}
+.bar-row{display:flex;align-items:center;gap:10px;}
+.bar-lbl{font-size:12px;font-weight:600;color:var(--t1);width:52px;flex-shrink:0;text-align:right;}
+.bar-track{flex:1;height:24px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative;}
+.bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--dm),var(--dg));transition:width 1s ease;}
+.bar-val{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  font-size:11.5px;font-weight:800;color:#fff;pointer-events:none;
+}
+.bar-val.over{color:var(--t1);}
+
+/* TABLA */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{
+  text-align:left;padding:9px 14px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--t2);border-bottom:2px solid var(--bd);background:var(--bg);white-space:nowrap;
+}
+td{padding:10px 14px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#FAFBFA;}
+.foto-mini{width:34px;height:34px;border-radius:7px;object-fit:cover;background:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--dg);}
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;}
+.badge.completa{background:var(--xl);color:var(--dg);}
+.badge.incompleta{background:var(--orl);color:var(--or);}
+.tn{font-variant-numeric:tabular-nums;font-weight:600;}
+.tb{font-weight:700;}
+.tc-am{color:var(--or);font-weight:700;}
+.tc-ro{color:var(--re);font-weight:700;}
+
+/* ESTADO */
+.cargando{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:12px;}
+.spinner{width:32px;height:32px;border:3px solid var(--bd);border-top-color:var(--dg);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.vacio{padding:28px;text-align:center;color:var(--t2);font-size:13px;}
+
+/* PIE */
+.pie{text-align:center;font-size:11px;color:var(--t2);padding:16px;border-top:1px solid var(--bd);background:var(--wh);}
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .topbar,.content{padding-left:14px;padding-right:14px;}
+  .kpis{grid-template-columns:repeat(2,1fr);}
+}
+@media print{
+  .sidebar,.topbar,.filtros-card,.no-print{display:none!important;}
+  .main{margin-left:0;}
+  .content{padding:0;}
+  body{background:#fff;}
+  .card{box-shadow:none;border:1px solid #ddd;}
+  .kpi{break-inside:avoid;}
+}
 </style>
 </head>
 <body>
-<div class="contenedor">
-  <h1>Reporte de Asistencia</h1>
-  <div class="subtitulo">Dirección Agronómico · Palma Grande S.A.S.</div>
+<div class="layout">
 
-  <div class="panel no-imprimir">
-    <div class="filtros">
-      <div class="campo">
-        <label>Fecha</label>
-        <input type="date" id="fechaInput">
-      </div>
-      <button class="btn-primario" id="btnConsultar">Consultar</button>
-      <button class="btn-secundario" id="btnPdf">🖨️ Exportar PDF</button>
+<!-- ══════ SIDEBAR ══════ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <svg viewBox="0 0 48 48">
+        <rect x="21" y="28" width="5" height="13" rx="2.5" fill="#fff"/>
+        <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#fff" transform="rotate(-30 24 21)"/>
+        <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#fff" transform="rotate(30 24 21)"/>
+        <ellipse cx="24" cy="18" rx="2.8" ry="10" fill="#fff"/>
+        <ellipse cx="24" cy="21" rx="2.5" ry="8" fill="#fff" transform="rotate(-65 24 21)"/>
+        <ellipse cx="24" cy="21" rx="2.5" ry="8" fill="#fff" transform="rotate(65 24 21)"/>
+        <circle cx="24" cy="28" r="3" fill="rgba(255,200,50,.9)"/>
+      </svg>
+    </div>
+    <div class="sb-brand-txt">
+      <div class="empresa">PALMA GRANDE S.A.S.</div>
+      <div class="sub">Dirección Agronómica</div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Principal</div>
+    <a class="sb-item activo" href="#">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a class="sb-item" href="#">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Asistencia
+    </a>
+    <a class="sb-item" href="#">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Empleados
+    </a>
+    <a class="sb-item" href="#">
+      <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Fincas
+    </a>
+    <div class="sb-sec">Reportes</div>
+    <a class="sb-item" href="#">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reportes
+    </a>
+    <a class="sb-item no-print" href="#" id="sbPdf">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Exportar PDF
+    </a>
+    <div class="sb-sec">Sistema</div>
+    <a class="sb-item" href="index.html">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Dispositivo kiosko
+    </a>
+    <a class="sb-item" href="#">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Configuración
+    </a>
+  </nav>
+  <div class="sb-foot">
+    Palma Grande S.A.S.<br>
+    Asistencia Biométrica<br>
+    <span id="sbFecha"></span>
+  </div>
+</aside>
+
+<!-- ══════ MAIN ══════ -->
+<main class="main">
+
+  <div class="topbar">
+    <div class="tb-left">
+      <h1>Dashboard de Asistencia</h1>
+      <p>Control inteligente · Palma Grande S.A.S.</p>
+    </div>
+    <div class="no-print">
+      <button class="btn-exp" id="btnPdf">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Exportar PDF
+      </button>
     </div>
   </div>
 
-  <div id="zonaResultado">
-    <div class="vacio">Consultando…</div>
-  </div>
+  <div class="content">
 
-  <div class="pie">Palma Grande S.A.S. · Reporte generado el <span id="fechaGeneracion"></span></div>
+    <!-- FILTROS -->
+    <div class="filtros-card no-print">
+      <div class="filtros-row">
+        <div class="campo">
+          <label>Fecha inicio</label>
+          <input type="date" id="fechaInicio">
+        </div>
+        <div class="campo">
+          <label>Fecha fin</label>
+          <input type="date" id="fechaFin">
+        </div>
+        <div class="campo">
+          <label>Finca</label>
+          <select id="filtroFinca">
+            <option value="">Todas</option>
+            <option>Finca 1</option>
+            <option>Finca 2</option>
+            <option>Finca 3</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Cargo</label>
+          <select id="filtroCargo">
+            <option value="">Todos</option>
+            <option>Operario de campo / cosechero</option>
+            <option>Supervisor</option>
+            <option>Conductor</option>
+            <option>Mecánico / taller</option>
+            <option>Administrativo</option>
+            <option>Aplicador (fertilización/sanidad)</option>
+          </select>
+        </div>
+        <button class="btn-filtrar" id="btnFiltrar">FILTRAR</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-ico vd"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div class="kpi-num vd" id="kpiPresentes">—</div>
+        <div class="kpi-lbl">Presentes</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ico am"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="kpi-num am" id="kpiTardanzas">—</div>
+        <div class="kpi-lbl">Tardanzas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ico ro"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="23" y2="14"/><line x1="23" y1="8" x2="17" y2="14"/></svg></div>
+        <div class="kpi-num ro" id="kpiAusentes">—</div>
+        <div class="kpi-lbl">Ausentes</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ico az"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="kpi-num az" id="kpiHoras">—</div>
+        <div class="kpi-lbl">Horas trabajadas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ico vd"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+        <div class="kpi-num vd" id="kpiExtra">—</div>
+        <div class="kpi-lbl">Horas extra</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ico ro"><svg viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div>
+        <div class="kpi-num ro" id="kpiDeficit">—</div>
+        <div class="kpi-lbl">Déficit de horas</div>
+      </div>
+    </div>
+
+    <!-- GRÁFICA + RESUMEN DIARIO -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-tit">% Asistencia por finca</div>
+            <div class="card-sub">Basado en el período consultado</div>
+          </div>
+        </div>
+        <div class="chart-body" id="chartFincas">
+          <div class="vacio">Consulta para ver datos</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-tit">Resumen diario</div>
+            <div class="card-sub">Totales por jornada</div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>Horas trab.</th><th>Déficit</th></tr>
+            </thead>
+            <tbody id="tbodyResumen">
+              <tr><td colspan="6" class="vacio">Consulta para ver datos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETALLE -->
+    <div class="card">
+      <div class="card-hdr">
+        <div>
+          <div class="card-tit">Detalle de empleados</div>
+          <div class="card-sub" id="detalleSub">Todas las marcaciones del período</div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Foto</th><th>Nombre</th><th>Documento</th><th>Cargo</th><th>Finca</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="tbodyDetalle">
+            <tr><td colspan="9" class="vacio">Consulta para ver datos</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+  <div class="pie">Palma Grande S.A.S. · Reporte generado el <span id="fechaGen"></span></div>
+</main>
 </div>
 
 <script>
-const CONFIG = {
-  GS_URL: "https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec"
-};
+const GS_URL="https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec";
 
-function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str == null ? '' : String(str);
-  return div.innerHTML;
-}
-function hoyISO(){
-  const d = new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function isoADDMMYYYY(iso){
-  const [y,m,d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
+function esc(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+function hoyISO(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function addDays(iso,n){const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function diffDays(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
+function isoA(iso){const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
 
-const fechaInput = document.getElementById('fechaInput');
-fechaInput.value = hoyISO();
-document.getElementById('fechaGeneracion').textContent = new Date().toLocaleString('es-CO');
+/* Init */
+const hoy=hoyISO();
+document.getElementById('fechaInicio').value=addDays(hoy,-6);
+document.getElementById('fechaFin').value=hoy;
+document.getElementById('fechaGen').textContent=new Date().toLocaleString('es-CO');
+document.getElementById('sbFecha').textContent=new Date().toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long'});
+
+async function fetchDia(ddmmyyyy){
+  const r=await fetch(`${GS_URL}?accion=resumenDashboard&fecha=${encodeURIComponent(ddmmyyyy)}&_=${Date.now()}`,{cache:'no-store'});
+  if(!r.ok)throw new Error(r.status);
+  return r.json();
+}
 
 async function consultar(){
-  const zona = document.getElementById('zonaResultado');
-  zona.innerHTML = '<div class="vacio">Consultando…</div>';
-  const fechaDDMMYYYY = isoADDMMYYYY(fechaInput.value);
-  try{
-    const resp = await fetch(`${CONFIG.GS_URL}?accion=resumenDashboard&fecha=${encodeURIComponent(fechaDDMMYYYY)}&_=${Date.now()}`, { cache:'no-store' });
-    const datos = await resp.json();
-    if(!datos || !datos.ok){ zona.innerHTML = '<div class="vacio">No se pudo cargar el reporte.</div>'; return; }
-    pintarReporte(datos);
-  }catch(err){
-    zona.innerHTML = `<div class="vacio">Error de conexión: ${escapeHtml(err.message)}</div>`;
+  const ini=document.getElementById('fechaInicio').value;
+  const fin=document.getElementById('fechaFin').value;
+  if(!ini||!fin||ini>fin){alert('Verifica las fechas');return;}
+  const dias=diffDays(ini,fin)+1;
+  if(dias>31){alert('Máximo 31 días por consulta');return;}
+
+  const btn=document.getElementById('btnFiltrar');
+  btn.disabled=true;btn.textContent='Consultando…';
+
+  document.getElementById('tbodyDetalle').innerHTML=
+    '<tr><td colspan="9"><div class="cargando"><div class="spinner"></div><p>Cargando datos…</p></div></td></tr>';
+  document.getElementById('tbodyResumen').innerHTML=
+    '<tr><td colspan="6"><div class="cargando"><div class="spinner"></div></div></td></tr>';
+
+  const filtFinca=document.getElementById('filtroFinca').value;
+  const filtCargo=document.getElementById('filtroCargo').value;
+
+  const fechas=[];
+  for(let i=0;i<dias;i++)fechas.push(addDays(ini,i));
+
+  const resultados=[];
+  for(let i=0;i<fechas.length;i+=5){
+    const lote=fechas.slice(i,i+5);
+    const res=await Promise.all(lote.map(f=>fetchDia(isoA(f)).catch(()=>null)));
+    res.forEach((r,j)=>resultados.push({fecha:lote[j],data:r}));
   }
+
+  btn.disabled=false;btn.textContent='FILTRAR';
+
+  let totP=0,totT=0,totA=0,totH=0,totE=0,totD=0;
+  const porFinca={};
+  const resumen=[];
+  const detalle=[];
+
+  for(const {fecha,data} of resultados){
+    if(!data||!data.ok)continue;
+    const filas=(data.filas||[]).filter(f=>
+      (!filtFinca||f.finca===filtFinca)&&(!filtCargo||f.cargo===filtCargo)
+    );
+    let dP=0,dT=data.tardanzas||0,dH=0,dD=0,dE=0;
+    filas.forEach(f=>{
+      if(f.entrada)dP++;
+      const h=parseFloat(f.horasLaboradas)||0;dH+=h;
+      if(h>0){const j=8.75;dE+=Math.max(0,h-j);dD+=Math.max(0,j-h);}
+      if(f.finca){
+        if(!porFinca[f.finca])porFinca[f.finca]={p:0,t:0};
+        porFinca[f.finca].t++;
+        if(f.entrada)porFinca[f.finca].p++;
+      }
+      detalle.push({...f,fechaISO:fecha});
+    });
+    const dA=Math.max(0,(data.totalPersonas||0)-dP);
+    totP+=dP;totT+=dT;totA+=dA;
+    totH+=dH;totE+=dE;totD+=dD;
+    resumen.push({fecha,p:dP,t:dT,a:dA,h:dH.toFixed(1),d:dD.toFixed(1)});
+  }
+
+  /* KPIs */
+  document.getElementById('kpiPresentes').textContent=totP;
+  document.getElementById('kpiTardanzas').textContent=totT;
+  document.getElementById('kpiAusentes').textContent=totA;
+  document.getElementById('kpiHoras').textContent=(Math.round(totH*10)/10)+'h';
+  document.getElementById('kpiExtra').textContent=(Math.round(totE*10)/10)+'h';
+  document.getElementById('kpiDeficit').textContent=(Math.round(totD*10)/10)+'h';
+
+  /* Gráfica */
+  const chart=document.getElementById('chartFincas');
+  const fincas=Object.keys(porFinca);
+  if(!fincas.length){chart.innerHTML='<div class="vacio">Sin datos de finca</div>';}
+  else chart.innerHTML=fincas.map(f=>{
+    const pf=porFinca[f];
+    const pct=pf.t?Math.round(pf.p/pf.t*100):0;
+    return`<div class="bar-row">
+      <div class="bar-lbl">${esc(f)}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%"></div>
+        <span class="bar-val ${pct<25?'over':''}">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  /* Resumen diario */
+  const tbR=document.getElementById('tbodyResumen');
+  if(!resumen.length){tbR.innerHTML='<tr><td colspan="6" class="vacio">Sin datos</td></tr>';}
+  else tbR.innerHTML=resumen.map(r=>`<tr>
+    <td class="tb">${isoA(r.fecha)}</td>
+    <td class="tn">${r.p}</td>
+    <td class="tn ${r.t>0?'tc-am':''}">${r.t}</td>
+    <td class="tn ${r.a>0?'tc-ro':''}">${r.a}</td>
+    <td class="tn">${r.h} h</td>
+    <td class="tn ${parseFloat(r.d)>0?'tc-ro':''}">${r.d} h</td>
+  </tr>`).join('');
+
+  /* Detalle */
+  document.getElementById('detalleSub').textContent=
+    `${detalle.length} registros · ${isoA(ini)} al ${isoA(fin)}`;
+  const tbD=document.getElementById('tbodyDetalle');
+  if(!detalle.length){tbD.innerHTML='<tr><td colspan="9" class="vacio">Sin marcaciones</td></tr>';}
+  else tbD.innerHTML=detalle.map(f=>`<tr>
+    <td>${f.fotoURL
+      ?`<img class="foto-mini" src="${esc(f.fotoURL)}" alt="" loading="lazy">`
+      :`<div class="foto-mini" style="background:var(--xl)">${esc((f.nombre||'?').split(' ').map(p=>p[0]).join('').slice(0,2))}</div>`
+    }</td>
+    <td class="tb">${esc(f.nombre||'—')}</td>
+    <td class="tn">${esc(f.documento||'—')}</td>
+    <td>${esc(f.cargo||'—')}</td>
+    <td>${esc(f.finca||'—')}</td>
+    <td class="tn">${esc(f.entrada||'—')}</td>
+    <td class="tn">${esc(f.salida||'—')}</td>
+    <td class="tn">${esc(f.horasLaboradas||'—')}</td>
+    <td>${f.entrada&&f.salida?'<span class="badge completa">Completa</span>':'<span class="badge incompleta">Incompleta</span>'}</td>
+  </tr>`).join('');
 }
 
-function pintarReporte(datos){
-  const zona = document.getElementById('zonaResultado');
-  const incompletas = datos.totalPersonas - datos.jornadasCompletas;
+document.getElementById('btnFiltrar').onclick=consultar;
+document.getElementById('btnPdf').onclick=()=>window.print();
+document.getElementById('sbPdf').onclick=()=>window.print();
 
-  const pillsFinca = Object.keys(datos.porFinca).map(finca =>
-    `<span class="finca-pill">${escapeHtml(finca)}: <b>${datos.porFinca[finca]}</b></span>`
-  ).join('');
-
-  const filasHtml = datos.filas.length ? datos.filas.map(f => `
-    <tr>
-      <td>${f.fotoURL ? `<img class="foto-mini" src="${escapeHtml(f.fotoURL)}" alt="">` : '—'}</td>
-      <td>${escapeHtml(f.nombre)}</td>
-      <td>${escapeHtml(f.documento)}</td>
-      <td>${escapeHtml(f.cargo)}</td>
-      <td>${escapeHtml(f.finca)}</td>
-      <td>${escapeHtml(f.entrada) || '—'}</td>
-      <td>${escapeHtml(f.salida) || '—'}</td>
-      <td>${escapeHtml(f.horasLaboradas) || '—'}</td>
-      <td>${f.entrada && f.salida ? '<span class="badge completa">Completa</span>' : '<span class="badge incompleta">Incompleta</span>'}</td>
-    </tr>
-  `).join('') : '<tr><td colspan="9" class="vacio">Sin marcaciones para esta fecha</td></tr>';
-
-  zona.innerHTML = `
-    <div class="kpis">
-      <div class="kpi"><div class="num">${datos.totalPersonas}</div><div class="etq">Personas con marcación</div></div>
-      <div class="kpi"><div class="num">${datos.jornadasCompletas}</div><div class="etq">Jornadas completas</div></div>
-      <div class="kpi ${incompletas>0?'alerta':''}"><div class="num">${incompletas}</div><div class="etq">Jornadas incompletas</div></div>
-      <div class="kpi ${datos.tardanzas>0?'alerta':''}"><div class="num">${datos.tardanzas}</div><div class="etq">Tardanzas (después 6:15 am)</div></div>
-      <div class="kpi"><div class="num">${datos.totalHoras || 0}h</div><div class="etq">Total horas laboradas</div></div>
-    </div>
-    <div class="panel">
-      <div style="font-size:13px; color:var(--tenue); margin-bottom:8px;">Por finca</div>
-      ${pillsFinca || '<span class="vacio">Sin datos</span>'}
-    </div>
-    <div class="panel">
-      <div style="font-size:13px; color:var(--tenue); margin-bottom:10px;">Detalle del ${escapeHtml(datos.fecha)}</div>
-      <table>
-        <thead><tr><th>Foto</th><th>Nombre</th><th>Documento</th><th>Cargo</th><th>Finca</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Estado</th></tr></thead>
-        <tbody>${filasHtml}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-document.getElementById('btnConsultar').onclick = consultar;
-document.getElementById('btnPdf').onclick = ()=> window.print();
 consultar();
 </script>
 </body>
