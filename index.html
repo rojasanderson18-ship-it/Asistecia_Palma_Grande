@@ -13,166 +13,200 @@
 <script src="lib/face-api/face-api.min.js"></script>
 <style>
 :root{
-  --vd:#1a3d28; --vm:#2e7d32; --vc:#e8f5e9; --vb:#c3e6c6;
-  --bg:#f0f4f1; --w:#fff;
-  --tx:#1c1c1e; --t1:#6b7280; --t2:#9ca3af; --br:#e5e7eb;
+  --vd:#1a3d28; --vm:#2e7d32; --vl:#e8f5e9; --vb:#c3e6c6;
+  --bg:#f4f6f4; --w:#fff;
+  --tx:#111827; --t1:#6b7280; --t2:#9ca3af; --br:#e5e7eb;
   --do:#d97706; --dob:#fef3c7;
   --ro:#dc2626; --rob:#fee2e2;
-  --sh:0 2px 8px rgba(0,0,0,0.08);
+  --sh:0 1px 4px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);}
 body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justify-content:center;-webkit-font-smoothing:antialiased;}
-.app{width:100%;max-width:430px;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);}
+.app{width:100%;max-width:430px;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);position:relative;}
 
-/* HEADER */
-.hdr{background:var(--vd);padding:13px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
-.hdr-ico{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0;flex-shrink:0;}
-.hdr-ico svg{width:18px;height:18px;}
+/* ── HEADER ── */
+.hdr{background:var(--vd);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.hdr-menu{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+.hdr-menu svg{width:18px;height:18px;}
+.hdr-logo{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hdr-logo svg{width:24px;height:24px;fill:#fff;}
 .hdr-info{flex:1;min-width:0;}
-.hdr-empresa{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.1px;}
+.hdr-empresa{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.1px;line-height:1.2;}
 .hdr-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:1px;}
+.hdr-bell{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;position:relative;}
+.hdr-bell svg{width:18px;height:18px;}
+.bell-badge{position:absolute;top:5px;right:5px;width:16px;height:16px;border-radius:50%;background:#e53935;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--vd);}
 
-/* SCROLL */
-.scroll{flex:1;overflow-y:auto;padding:12px 13px 28px;display:flex;flex-direction:column;gap:10px;}
+/* ── SCROLL ── */
+.scroll{flex:1;overflow-y:auto;padding:12px 14px 80px;display:flex;flex-direction:column;gap:10px;}
 
-/* BADGE GEO */
-.geo-badge{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;background:var(--vc);color:var(--vm);border:1px solid var(--vb);}
+/* ── BADGE GEO ── */
+.geo-badge{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;font-size:13px;font-weight:600;background:var(--vl);color:var(--vm);border:1px solid var(--vb);}
 .geo-badge.fuera{background:var(--rob);color:var(--ro);border-color:#fca5a5;}
-.geo-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0;position:relative;}
-.geo-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid currentColor;animation:pulso 1.8s ease-out infinite;}
-@keyframes pulso{0%{transform:scale(.7);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+.geo-badge svg{width:16px;height:16px;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes popin{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
-@keyframes fade{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fade{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulso{0%{transform:scale(.7);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 
-/* CÁMARA */
-.cam-wrap{position:relative;border-radius:16px;overflow:hidden;background:#111;aspect-ratio:4/3;}
+/* ── CÁMARA ── */
+.cam-wrap{position:relative;border-radius:16px;overflow:hidden;background:#111;aspect-ratio:4/3;flex-shrink:0;}
 .cam-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;}
 .cam-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);}
-.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-.cam-marco{width:52%;aspect-ratio:1;border-radius:50%;border:2.5px solid #4caf50;box-shadow:0 0 0 4000px rgba(0,0,0,.38);position:relative;}
-.cam-marco::before{content:'';position:absolute;inset:-2px;border-radius:50%;border:2.5px solid transparent;border-top-color:#4caf50;border-right-color:#4caf50;animation:spin 1.4s linear infinite;}
-.cam-reconocido{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(20,70,30,.85);color:#fff;font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px;white-space:nowrap;backdrop-filter:blur(4px);display:none;}
-.cam-estado{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:5px 14px;border-radius:20px;white-space:nowrap;}
-.cam-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(160deg,#e8f5e9,#f0f7f1);}
-.cam-placeholder svg{opacity:.2;}
-.cam-placeholder span{font-size:12px;color:var(--t1);}
+.cam-marco{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);
+  width:48%;aspect-ratio:1;
+}
+.cam-marco::before,.cam-marco::after,
+.cam-marco-b::before,.cam-marco-b::after{
+  content:'';position:absolute;width:22px;height:22px;border-color:#fff;border-style:solid;
+}
+.cam-marco::before{top:0;left:0;border-width:3px 0 0 3px;border-radius:3px 0 0 0;}
+.cam-marco::after{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 3px 0 0;}
+.cam-marco-b{position:absolute;bottom:0;left:0;width:100%;height:100%;}
+.cam-marco-b::before{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 3px;}
+.cam-marco-b::after{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 3px 0;}
+.cam-estado{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,.55));
+  color:#fff;font-size:12.5px;font-weight:600;padding:20px 14px 10px;
+  text-align:center;
+}
 
-/* CARD */
+/* ── CARDS ── */
 .card{background:var(--w);border-radius:14px;box-shadow:var(--sh);}
 
-/* DOC */
-.doc-row{display:flex;align-items:center;gap:12px;padding:14px 16px;}
-.doc-ico{width:38px;height:38px;border-radius:50%;background:var(--vc);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.doc-ico svg{width:19px;height:19px;stroke:var(--vm);fill:none;stroke-width:1.8;}
-.doc-mid{flex:1;min-width:0;}
-.doc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--t2);font-weight:600;margin-bottom:2px;}
-.doc-num{font-size:21px;font-weight:700;letter-spacing:.5px;color:var(--tx);font-variant-numeric:tabular-nums;min-height:27px;}
-.doc-num.vacio{font-size:14px;color:var(--t2);font-weight:400;letter-spacing:0;}
-.doc-check{width:28px;height:28px;border-radius:50%;background:var(--vc);display:none;align-items:center;justify-content:center;flex-shrink:0;}
-.doc-check.show{display:flex;}
-.doc-check svg{width:14px;height:14px;stroke:var(--vm);fill:none;stroke-width:2.5;}
-.doc-nombre{padding:0 16px 12px;font-size:13px;font-weight:600;color:var(--vm);}
-.doc-nombre.err{color:var(--ro);}
+/* ── CONFIANZA ── */
+.conf-card{padding:13px 16px;}
+.conf-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.conf-ico{width:34px;height:34px;border-radius:9px;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.conf-ico svg{width:17px;height:17px;stroke:var(--vm);fill:none;stroke-width:2;}
+.conf-lbl{flex:1;font-size:13.5px;font-weight:500;color:var(--tx);}
+.conf-pct{font-size:15px;font-weight:800;color:var(--vm);}
+.conf-bar{height:6px;border-radius:6px;background:#e5e7eb;overflow:hidden;}
+.conf-fill{height:100%;border-radius:6px;background:var(--vm);transition:width .4s ease;}
+
+/* ── STATUS CARD ── */
+.st-card{padding:0;}
+.st-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--br);}
+.st-row:last-child{border-bottom:none;}
+.st-row-ico{width:30px;height:30px;border-radius:8px;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.st-row-ico svg{width:15px;height:15px;stroke:var(--vm);fill:none;stroke-width:2;}
+.st-row-lbl{flex:1;font-size:13px;color:var(--t1);}
+.st-row-val{font-size:13px;font-weight:600;color:var(--vm);}
+.st-row-val.ro{color:var(--ro);}
+.st-row-val.gr{color:var(--t1);}
+
+/* ── DOCUMENTO ── */
+.field-lbl{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:5px;}
+.doc-field{background:var(--w);border-radius:12px;box-shadow:var(--sh);display:flex;align-items:center;gap:10px;padding:13px 14px;}
+.doc-field-ico{width:32px;height:32px;border-radius:50%;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.doc-field-ico svg{width:17px;height:17px;stroke:var(--vm);fill:none;stroke-width:1.8;}
+.doc-val{flex:1;font-size:16px;font-weight:600;color:var(--tx);font-variant-numeric:tabular-nums;min-height:22px;}
+.doc-val.empty{font-size:14px;color:var(--t2);font-weight:400;}
+.doc-chk{width:28px;height:28px;border-radius:50%;background:var(--vm);display:none;align-items:center;justify-content:center;flex-shrink:0;}
+.doc-chk.show{display:flex;}
+.doc-chk svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;}
+.doc-sub{font-size:12px;font-weight:600;color:var(--vm);margin-top:5px;}
+.doc-sub.err{color:var(--ro);}
 
 /* TECLADO */
-.teclado-wrap{padding:8px 14px 14px;}
+.teclado-wrap{padding:8px 0 0;}
 .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.tecla{aspect-ratio:1;border-radius:50%;border:1.5px solid var(--br);background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;transition:background .1s,transform .1s;max-width:66px;width:100%;margin:0 auto;}
-.tecla:active{background:var(--br);transform:scale(.92);}
+.tecla{aspect-ratio:1;border-radius:50%;border:1.5px solid var(--br);background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;max-width:64px;width:100%;margin:0 auto;transition:background .1s,transform .1s;}
+.tecla:active{background:var(--br);transform:scale(.91);}
 .tecla.del{border-color:transparent;background:transparent;color:var(--ro);font-size:14px;}
 
 /* TIPO */
-.tipo-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;}
-.tipo-left{display:flex;align-items:center;gap:10px;}
-.tipo-ico{width:34px;height:34px;border-radius:9px;background:var(--vc);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tipo-field{background:var(--w);border-radius:12px;box-shadow:var(--sh);display:flex;align-items:center;gap:10px;padding:13px 14px;}
+.tipo-ico{width:32px;height:32px;border-radius:8px;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tipo-ico svg{width:16px;height:16px;stroke:var(--vm);fill:none;stroke-width:2;}
-.tipo-lbl{font-size:13px;color:var(--t1);font-weight:500;}
-.tipo-val{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;background:var(--vc);color:var(--vm);}
-.tipo-val.do{background:var(--dob);color:var(--do);}
-.tipo-val.ro{background:var(--rob);color:var(--ro);}
-.tipo-val svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5;}
+.tipo-txt{flex:1;font-size:14px;font-weight:500;color:var(--tx);}
+.tipo-txt.ph{color:var(--t2);}
+.tipo-chev{color:var(--t1);}
+.tipo-chev svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;}
 
 /* BTN REGISTRAR */
-.btn-reg{width:100%;padding:17px;border-radius:13px;border:none;background:var(--vd);color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:opacity .15s,transform .1s;box-shadow:0 4px 16px rgba(26,61,40,.28);}
+.btn-reg{width:100%;padding:17px;border-radius:13px;border:none;background:var(--vd);color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:opacity .15s,transform .1s;box-shadow:0 4px 16px rgba(26,61,40,.3);}
 .btn-reg:active{transform:scale(.98);opacity:.9;}
-.btn-reg:disabled{background:#cdd5cf;color:#8fa690;box-shadow:none;cursor:not-allowed;}
-.btn-reg svg{width:20px;height:20px;fill:currentColor;flex-shrink:0;}
+.btn-reg:disabled{background:#c5ccc7;color:#8fa690;box-shadow:none;cursor:not-allowed;}
+.btn-reg svg{width:22px;height:22px;fill:currentColor;flex-shrink:0;}
 
 /* ÚLTIMA MARCACIÓN */
-.ultima{padding:13px 16px;}
-.ultima-tit{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--t2);font-weight:600;margin-bottom:10px;}
-.ultima-row{display:flex;align-items:center;gap:10px;}
-.ultima-ico{width:38px;height:38px;border-radius:10px;background:var(--vc);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.ultima-ico svg{width:18px;height:18px;stroke:var(--vm);fill:none;stroke-width:2;}
-.ultima-tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;background:var(--vc);color:var(--vm);display:inline-block;margin-bottom:3px;}
-.ultima-hora{font-size:12px;color:var(--t1);}
-.ultima-geo{font-size:11px;color:var(--vm);font-weight:500;display:flex;align-items:center;gap:3px;margin-top:1px;}
-.ultima-geo.fuera{color:var(--ro);}
+.ultima-tit{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.ultima-card{background:var(--w);border-radius:14px;box-shadow:var(--sh);padding:14px;}
+.ul-row{display:flex;align-items:center;gap:12px;}
+.ul-ico{width:42px;height:42px;border-radius:50%;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ul-ico svg{width:20px;height:20px;stroke:var(--vm);fill:none;stroke-width:2;}
+.ul-info{flex:1;min-width:0;}
+.ul-nombre{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px;}
+.ul-fila{display:flex;align-items:center;gap:6px;}
+.ul-tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;background:var(--vl);color:var(--vm);}
+.ul-hora{font-size:12px;color:var(--t1);}
+.ul-hace{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--t2);margin-left:auto;flex-shrink:0;}
+.ul-hace svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;}
 
-/* STATUS BAR */
-.status{display:flex;background:var(--w);border-radius:12px;box-shadow:var(--sh);padding:10px 14px;}
-.st-item{flex:1;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t1);font-weight:500;min-width:0;}
-.st-item+.st-item{border-left:1px solid var(--br);padding-left:10px;margin-left:2px;}
-.st-item svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;}
-.st-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ok{color:var(--vm)!important;}
-.er{color:var(--ro)!important;}
+/* BOTTOM NAV */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--w);border-top:1px solid var(--br);display:flex;padding:8px 0 env(safe-area-inset-bottom,0);z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.07);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;border:none;background:transparent;}
+.nav-item svg{width:22px;height:22px;stroke:var(--t2);fill:none;stroke-width:1.8;transition:stroke .15s;}
+.nav-item span{font-size:10.5px;font-weight:500;color:var(--t2);transition:color .15s;}
+.nav-item.activo svg{stroke:var(--vm);}
+.nav-item.activo span{color:var(--vm);font-weight:700;}
 
 /* PANTALLAS */
 .pantalla{display:none;flex-direction:column;flex:1;}
 .pantalla.show{display:flex;animation:fade .3s ease both;}
 
 /* CONFIRMACIÓN */
-.conf{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 13px 10px;animation:fade .35s ease both;}
-.conf-ico{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:12px;animation:popin .4s cubic-bezier(.2,1.4,.4,1);}
-.conf-ico.ok{background:#e8f5e9;border:2px solid #4caf50;}
-.conf-ico.err{background:var(--rob);border:2px solid var(--ro);}
-.conf-ico.warn{background:var(--dob);border:2px solid var(--do);}
-.conf-tit{font-size:20px;font-weight:700;margin-bottom:4px;}
-.conf-badge{font-size:12px;font-weight:700;padding:4px 14px;border-radius:8px;background:var(--vc);color:var(--vm);margin-bottom:18px;display:inline-block;}
-.conf-badge.ro{background:var(--rob);color:var(--ro);}
-.conf-tabla{width:100%;background:var(--w);border-radius:14px;box-shadow:var(--sh);overflow:hidden;margin-bottom:16px;}
+.res-scroll{flex:1;overflow-y:auto;padding:20px 14px 80px;}
+.conf-wrap{display:flex;flex-direction:column;align-items:center;animation:fade .35s ease both;}
+.c-ico{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:12px;animation:popin .4s cubic-bezier(.2,1.4,.4,1);}
+.c-ico.ok{background:#e8f5e9;border:2px solid #4caf50;}
+.c-ico.err{background:var(--rob);border:2px solid var(--ro);}
+.c-ico.warn{background:var(--dob);border:2px solid var(--do);}
+.c-tit{font-size:20px;font-weight:800;margin-bottom:4px;}
+.c-bdg{font-size:12px;font-weight:700;padding:4px 14px;border-radius:8px;background:var(--vl);color:var(--vm);margin-bottom:18px;display:inline-block;}
+.c-bdg.ro{background:var(--rob);color:var(--ro);}
+.c-tabla{width:100%;background:var(--w);border-radius:14px;box-shadow:var(--sh);overflow:hidden;margin-bottom:16px;}
 .cf{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--br);}
 .cf:last-child{border-bottom:none;}
-.cf-ico{width:30px;height:30px;border-radius:8px;background:var(--vc);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:12px;}
+.cf-ico{width:30px;height:30px;border-radius:8px;background:var(--vl);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:12px;}
 .cf-ico svg{width:14px;height:14px;stroke:var(--vm);fill:none;stroke-width:2;}
 .cf-l{font-size:11px;color:var(--t2);font-weight:500;}
 .cf-v{font-size:13px;font-weight:600;color:var(--tx);}
-.conf-aviso{font-size:12px;color:var(--do);font-weight:500;text-align:center;margin-bottom:14px;padding:10px 14px;border-radius:10px;background:var(--dob);width:100%;}
-.conf-det{font-size:13px;color:var(--t1);text-align:center;margin-bottom:16px;padding:0 8px;}
-.btn-ok{width:100%;padding:16px;border-radius:13px;border:none;background:var(--vd);color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;letter-spacing:.3px;cursor:pointer;transition:opacity .15s;box-shadow:0 4px 14px rgba(26,61,40,.25);}
+.c-av{font-size:12px;color:var(--do);font-weight:500;text-align:center;margin-bottom:14px;padding:10px 14px;border-radius:10px;background:var(--dob);width:100%;}
+.c-det{font-size:13px;color:var(--t1);text-align:center;margin-bottom:16px;}
+.btn-ok{width:100%;padding:16px;border-radius:13px;border:none;background:var(--vd);color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(26,61,40,.25);}
 .btn-ok:active{opacity:.9;}
 .btn-sec{width:100%;padding:14px;border-radius:13px;border:1.5px solid var(--br);background:transparent;color:var(--t1);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;}
 
 /* PIN */
 .pin-c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;}
 .pin-tit{font-size:18px;font-weight:700;}
-input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;border:1.5px solid var(--br);background:var(--w);color:var(--tx);font-size:22px;text-align:center;letter-spacing:8px;}
+input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;border:1.5px solid var(--br);background:var(--w);color:var(--tx);font-size:22px;text-align:center;letter-spacing:8px;font-family:'Inter',sans-serif;}
 
-/* AGREGAR/ENROLAR */
-.page-hdr{display:flex;align-items:center;gap:12px;padding:0 0 10px;}
+/* FORMULARIOS */
+.page-scroll{flex:1;overflow-y:auto;padding:14px 14px 80px;display:flex;flex-direction:column;gap:10px;}
+.page-hdr{display:flex;align-items:center;gap:12px;}
 .btn-back{width:36px;height:36px;border-radius:50%;background:var(--w);border:1px solid var(--br);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
 .btn-back svg{width:18px;height:18px;stroke:var(--tx);fill:none;stroke-width:2;}
-.page-tit{font-size:15px;font-weight:700;}
-.form-c{background:var(--w);border-radius:14px;box-shadow:var(--sh);padding:16px;margin-bottom:12px;}
-.fl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);font-weight:600;margin-bottom:6px;margin-top:12px;}
+.page-tit{font-size:16px;font-weight:700;}
+.form-c{background:var(--w);border-radius:14px;box-shadow:var(--sh);padding:16px;}
+.fl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);font-weight:600;margin-bottom:6px;margin-top:14px;}
 .fl:first-child{margin-top:0;}
 .fi{width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--br);background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-size:14px;}
 .fi:focus{outline:none;border-color:var(--vm);}
 .grilla{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
-.persona{background:var(--w);border:1.5px solid var(--br);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .18s;}
-.persona.activo{border-color:var(--vm);background:var(--vc);}
-.inicial{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--t1);transition:all .18s;}
+.persona{background:var(--w);border:1.5px solid var(--br);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s;}
+.persona.activo{border-color:var(--vm);background:var(--vl);}
+.inicial{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--t1);}
 .persona.activo .inicial{background:var(--vm);color:#fff;}
 .nom{font-size:11.5px;font-weight:600;line-height:1.3;color:var(--tx);}
 .persona.activo .nom{color:var(--vm);}
-
-.link-d{text-align:center;font-size:11.5px;color:var(--t2);cursor:pointer;padding:5px;text-decoration:underline;}
-.pie-txt{text-align:center;font-size:10px;color:var(--t2);padding:6px 0;line-height:1.6;}
-
-/* hide real input */
+.link-d{text-align:center;font-size:11.5px;color:var(--t2);cursor:pointer;padding:4px;text-decoration:underline;}
+.pie-txt{text-align:center;font-size:10px;color:var(--t2);padding:4px 0;line-height:1.6;}
 #documentoInput{display:none;}
 </style>
 </head>
@@ -181,15 +215,32 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
 
 <!-- HEADER -->
 <div class="hdr">
-  <button class="hdr-ico">
+  <button class="hdr-menu">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
+  <div class="hdr-logo">
+    <!-- Palm tree SVG icon -->
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.15)"/>
+      <!-- trunk -->
+      <rect x="18.5" y="20" width="3" height="12" rx="1.5" fill="#fff"/>
+      <!-- fronds -->
+      <ellipse cx="20" cy="16" rx="2" ry="7" fill="#fff" transform="rotate(-30 20 16)"/>
+      <ellipse cx="20" cy="16" rx="2" ry="7" fill="#fff" transform="rotate(30 20 16)"/>
+      <ellipse cx="20" cy="14" rx="2" ry="7" fill="#fff" transform="rotate(0 20 14)"/>
+      <ellipse cx="20" cy="16" rx="2" ry="6" fill="#fff" transform="rotate(-60 20 16)"/>
+      <ellipse cx="20" cy="16" rx="2" ry="6" fill="#fff" transform="rotate(60 20 16)"/>
+      <!-- fruit cluster -->
+      <circle cx="20" cy="21" r="2.2" fill="rgba(255,200,50,0.9)"/>
+    </svg>
+  </div>
   <div class="hdr-info">
-    <div class="hdr-empresa">Marcar GRANDE S.A.S.</div>
+    <div class="hdr-empresa">PALMA GRANDE S.A.S.</div>
     <div class="hdr-sub">Control de Asistencia</div>
   </div>
-  <button class="hdr-ico">
+  <button class="hdr-bell">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <span class="bell-badge">2</span>
   </button>
 </div>
 
@@ -199,37 +250,66 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
 
     <!-- Geocerca -->
     <div class="geo-badge" id="geoBadge">
-      <span class="geo-dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       <span id="geoTxt">Verificando ubicación…</span>
     </div>
 
-    <!-- Cámara integrada -->
+    <!-- Cámara -->
     <div class="cam-wrap" id="camWrap">
       <video id="video" autoplay muted playsinline></video>
       <canvas id="overlay"></canvas>
-      <div class="cam-overlay">
-        <div class="cam-marco" id="camMarco"></div>
+      <div class="cam-marco" id="camMarco">
+        <div class="cam-marco-b"></div>
       </div>
-      <div class="cam-reconocido" id="camReconocido"></div>
       <div class="cam-estado" id="camEstado">Iniciando cámara…</div>
     </div>
 
-    <!-- Documento -->
-    <div class="card">
-      <div class="doc-row">
-        <div class="doc-ico">
-          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <!-- Confianza facial -->
+    <div class="card conf-card">
+      <div class="conf-top">
+        <div class="conf-ico">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <div class="doc-mid">
-          <div class="doc-lbl">Documento</div>
-          <div class="doc-num vacio" id="docDisplay">Ingresa tu número</div>
-          <input type="text" id="documentoInput" inputmode="numeric" maxlength="15" readonly>
-        </div>
-        <div class="doc-check" id="docCheck">
-          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
+        <span class="conf-lbl">Confianza facial</span>
+        <span class="conf-pct" id="confPct">—</span>
       </div>
-      <div class="doc-nombre" id="docNombre" style="display:none;"></div>
+      <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Estado -->
+    <div class="card st-card">
+      <div class="st-row">
+        <div class="st-row-ico"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <span class="st-row-lbl">Ubicación</span>
+        <span class="st-row-val" id="stUbicacion">Verificando…</span>
+      </div>
+      <div class="st-row">
+        <div class="st-row-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
+        <span class="st-row-lbl">Geocerca</span>
+        <span class="st-row-val" id="stGeocerca">Verificando…</span>
+      </div>
+      <div class="st-row">
+        <div class="st-row-ico"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+        <span class="st-row-lbl">Internet</span>
+        <span class="st-row-val" id="stInternet">Conectado</span>
+      </div>
+      <div class="st-row">
+        <div class="st-row-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <span class="st-row-lbl">Hora del servidor</span>
+        <span class="st-row-val gr" id="stHora">--:--:--</span>
+      </div>
+    </div>
+
+    <!-- Documento -->
+    <div>
+      <div class="field-lbl">Documento</div>
+      <div class="doc-field">
+        <div class="doc-field-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="doc-val empty" id="docVal">Ingresa tu número</div>
+        <input type="text" id="documentoInput" inputmode="numeric" maxlength="15" readonly>
+        <div class="doc-chk" id="docChk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="doc-sub" id="docSub" style="display:none;"></div>
       <div class="teclado-wrap">
         <div class="teclado" id="teclado">
           <div class="tecla" data-k="1">1</div><div class="tecla" data-k="2">2</div><div class="tecla" data-k="3">3</div>
@@ -241,56 +321,42 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
     </div>
 
     <!-- Tipo -->
-    <div class="card tipo-row">
-      <div class="tipo-left">
-        <div class="tipo-ico">
-          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-        <span class="tipo-lbl">Tipo de marcación</span>
-      </div>
-      <div class="tipo-val" id="tipoVal">
-        —
-        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    <div>
+      <div class="field-lbl">Tipo de marcación</div>
+      <div class="tipo-field">
+        <div class="tipo-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div class="tipo-txt ph" id="tipoTxt">Seleccionar…</div>
+        <div class="tipo-chev"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
       </div>
     </div>
 
-    <!-- Botón registrar -->
+    <!-- Botón -->
     <button class="btn-reg" id="btnMarcar" disabled>
-      <svg viewBox="0 0 24 24"><path d="M12 2C9.2 2 7 4.2 7 7c0 2.4 1.5 4.4 3.7 5.2l-.3 2.3h3.2l-.3-2.3C15.5 11.4 17 9.4 17 7c0-2.8-2.2-5-5-5zm-1.5 14h3l.5 4h-4l.5-4z"/></svg>
-      Registrar asistencia
+      <!-- fingerprint icon -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg>
+      REGISTRAR ASISTENCIA
     </button>
 
     <!-- Última marcación -->
-    <div class="card ultima" id="ultimaCard" style="display:none;">
+    <div id="ultimaSection" style="display:none;">
       <div class="ultima-tit">Última marcación</div>
-      <div class="ultima-row">
-        <div class="ultima-ico">
-          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </div>
-        <div>
-          <span class="ultima-tag" id="ulTipo">—</span>
-          <div class="ultima-hora" id="ulHora">—</div>
-          <div class="ultima-geo" id="ulGeo">
-            <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Dentro del predio
+      <div class="ultima-card">
+        <div class="ul-row">
+          <div class="ul-ico">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </div>
+          <div class="ul-info">
+            <div class="ul-nombre" id="ulNombre">—</div>
+            <div class="ul-fila">
+              <span class="ul-tag" id="ulTipo">—</span>
+              <span class="ul-hora" id="ulHora">—</span>
+              <div class="ul-hace">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="ulHace">—</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Status bar -->
-    <div class="status">
-      <div class="st-item" id="stNet">
-        <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-        <span>Internet</span>
-      </div>
-      <div class="st-item" id="stGps">
-        <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <span id="stGpsTxt">GPS…</span>
-      </div>
-      <div class="st-item">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span id="stHora">--:--</span>
       </div>
     </div>
 
@@ -304,13 +370,13 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
 
 <!-- ===== PANTALLA RESULTADO ===== -->
 <div class="pantalla" id="pantallaResultado">
-  <div class="scroll" id="resultadoContenido"></div>
+  <div class="res-scroll" id="resultadoContenido"></div>
 </div>
 
 <!-- ===== PANTALLA PIN ===== -->
 <div class="pantalla" id="pantallaPin">
   <div class="pin-c">
-    <div class="conf-ico ok" style="margin-bottom:6px;">
+    <div class="c-ico ok" style="margin-bottom:6px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2" width="28" height="28"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
     <div class="pin-tit">Acceso Gerencia</div>
@@ -323,7 +389,7 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
 
 <!-- ===== PANTALLA AGREGAR ===== -->
 <div class="pantalla" id="pantallaAgregar">
-  <div class="scroll">
+  <div class="page-scroll">
     <div class="page-hdr">
       <button class="btn-back" id="btnCancelarAgregar2"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span class="page-tit">Agregar personal</span>
@@ -351,7 +417,7 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
 
 <!-- ===== PANTALLA ENROLAR ===== -->
 <div class="pantalla" id="pantallaEnrolar">
-  <div class="scroll">
+  <div class="page-scroll">
     <div class="page-hdr">
       <button class="btn-back" id="btnVolverMarcacion"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span class="page-tit">Enrolar empleado</span>
@@ -363,9 +429,29 @@ input[type=password]{width:100%;max-width:220px;padding:14px;border-radius:12px;
   </div>
 </div>
 
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <button class="nav-item activo" id="navMarcar">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Marcar</span>
+  </button>
+  <button class="nav-item" id="navHistorial">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Historial</span>
+  </button>
+  <button class="nav-item" id="navReporte">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>Reporte</span>
+  </button>
+  <button class="nav-item" id="navMenu">
+    <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/></svg>
+    <span>Menú</span>
+  </button>
+</nav>
+
 <script>
 /* ── CONFIG ── */
-const CONFIG = {
+const CONFIG={
   GS_URL:"https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec",
   PIN_GERENCIA:"2105",
   FINCA:{id:2,nombre:"Finca 2",lat:2.722853,lng:-72.735464,radioMetros:100},
@@ -418,25 +504,31 @@ document.getElementById('nombreFinca').textContent=CONFIG.FINCA.nombre;
 
 /* RELOJ */
 function tickReloj(){
-  const a=new Date(),h=a.getHours(),m=String(a.getMinutes()).padStart(2,'0');
-  document.getElementById('stHora').textContent=(h%12||12)+':'+m+(h>=12?' p.m.':' a.m.');
+  const a=new Date();
+  const h=String(a.getHours()).padStart(2,'0'),m=String(a.getMinutes()).padStart(2,'0'),s=String(a.getSeconds()).padStart(2,'0');
+  const h12=a.getHours()%12||12,ampm=a.getHours()>=12?'p. m.':'a. m.';
+  document.getElementById('stHora').textContent=`${h12}:${m}:${s} ${ampm}`;
 }
 setInterval(tickReloj,1000);tickReloj();
 
-/* GPS */
+/* GPS + STATUS */
 let gpsOk=false,gpsCoords=null;
 function setGeo(ok,txt){
-  const b=document.getElementById('geoBadge'),t=document.getElementById('geoTxt');
-  t.textContent=txt;b.className='geo-badge'+(ok?'':' fuera');
-  document.getElementById('stGpsTxt').textContent=txt;
-  document.getElementById('stGps').className='st-item '+(ok?'ok':'er');
+  const b=document.getElementById('geoBadge');
+  document.getElementById('geoTxt').textContent=txt;
+  b.className='geo-badge'+(ok?'':' fuera');
+  document.getElementById('stUbicacion').textContent=txt;
+  document.getElementById('stUbicacion').className='st-row-val'+(ok?'':' ro');
+  document.getElementById('stGeocerca').textContent=ok?'Válida':'Fuera de rango';
+  document.getElementById('stGeocerca').className='st-row-val'+(ok?'':' ro');
 }
 function chkGps(){
   if(!navigator.geolocation){setGeo(false,'Sin GPS');return;}
-  navigator.geolocation.getCurrentPosition(p=>{
-    gpsCoords={lat:p.coords.latitude,lng:p.coords.longitude};
-    const R=6371000,tr=x=>x*Math.PI/180,dLa=tr(CONFIG.FINCA.lat-p.coords.latitude),dLo=tr(CONFIG.FINCA.lng-p.coords.longitude);
-    const a=Math.sin(dLa/2)**2+Math.cos(tr(p.coords.latitude))*Math.cos(tr(CONFIG.FINCA.lat))*Math.sin(dLo/2)**2;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    gpsCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    const R=6371000,tr=x=>x*Math.PI/180;
+    const dLa=tr(CONFIG.FINCA.lat-pos.coords.latitude),dLo=tr(CONFIG.FINCA.lng-pos.coords.longitude);
+    const a=Math.sin(dLa/2)**2+Math.cos(tr(pos.coords.latitude))*Math.cos(tr(CONFIG.FINCA.lat))*Math.sin(dLo/2)**2;
     const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     gpsOk=d<=CONFIG.FINCA.radioMetros;
     setGeo(gpsOk,gpsOk?'Dentro del predio':'Fuera de geocerca');
@@ -444,7 +536,10 @@ function chkGps(){
 }
 chkGps();setInterval(chkGps,60000);
 
-/* TIPO MARCACIÓN */
+window.addEventListener('online',()=>{document.getElementById('stInternet').textContent='Conectado';document.getElementById('stInternet').className='st-row-val';});
+window.addEventListener('offline',()=>{document.getElementById('stInternet').textContent='Sin conexión';document.getElementById('stInternet').className='st-row-val ro';});
+
+/* TIPO */
 let tipoCalc=null;
 async function getTipo(doc){
   if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR'))return{tipo:'Entrada',completo:false};
@@ -464,44 +559,45 @@ async function getTipo(doc){
 
 /* DOCUMENTO */
 const docInput=document.getElementById('documentoInput');
-const docDisp=document.getElementById('docDisplay');
-const docNom=document.getElementById('docNombre');
-const docChk=document.getElementById('docCheck');
+const docValEl=document.getElementById('docVal');
+const docSubEl=document.getElementById('docSub');
+const docChkEl=document.getElementById('docChk');
 let nombreSel=null;
 
 async function updDoc(){
   docInput.value=docInput.value.replace(/\D/g,'');
   const doc=docInput.value.trim();
-  const tv=document.getElementById('tipoVal');
+  const tipoTxt=document.getElementById('tipoTxt');
   if(!doc){
-    docDisp.textContent='Ingresa tu número';docDisp.className='doc-num vacio';
-    docNom.style.display='none';docChk.classList.remove('show');
-    nombreSel=null;tipoCalc=null;tv.textContent='— ▾';tv.className='tipo-val';
+    docValEl.textContent='Ingresa tu número';docValEl.className='doc-val empty';
+    docSubEl.style.display='none';docChkEl.classList.remove('show');
+    nombreSel=null;tipoCalc=null;
+    tipoTxt.textContent='Seleccionar…';tipoTxt.className='tipo-txt ph';
     document.getElementById('btnMarcar').disabled=true;return;
   }
-  docDisp.textContent=doc.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-  docDisp.className='doc-num';
+  docValEl.textContent=doc.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  docValEl.className='doc-val';
   const p=getPorDoc(doc);
   if(!p){
     nombreSel=null;tipoCalc=null;
-    docNom.textContent='Documento no encontrado';docNom.className='doc-nombre err';docNom.style.display='block';
-    docChk.classList.remove('show');tv.textContent='—';tv.className='tipo-val';
+    docSubEl.textContent='Documento no encontrado';docSubEl.className='doc-sub err';docSubEl.style.display='block';
+    docChkEl.classList.remove('show');tipoTxt.textContent='Seleccionar…';tipoTxt.className='tipo-txt ph';
     document.getElementById('btnMarcar').disabled=true;return;
   }
   nombreSel=p.nombre;
-  docNom.textContent=p.nombre;docNom.className='doc-nombre';docNom.style.display='block';
-  docChk.classList.add('show');
+  docSubEl.textContent=p.nombre;docSubEl.className='doc-sub';docSubEl.style.display='block';
+  docChkEl.classList.add('show');
   document.getElementById('btnMarcar').disabled=true;
-  tv.textContent='Verificando…';tv.className='tipo-val';
+  tipoTxt.textContent='Verificando…';tipoTxt.className='tipo-txt ph';
   const res=await getTipo(doc);
   if(docInput.value.trim()!==doc)return;
   if(res.completo){
-    tipoCalc=null;tv.textContent='Completa ▾';tv.className='tipo-val ro';
-    docNom.textContent='Ya registraste tu entrada y salida hoy';docNom.className='doc-nombre err';
+    tipoCalc=null;tipoTxt.textContent='Jornada completa';tipoTxt.className='tipo-txt';
+    docSubEl.textContent='Ya registraste tu jornada completa hoy';docSubEl.className='doc-sub err';
     document.getElementById('btnMarcar').disabled=true;return;
   }
   tipoCalc=res.tipo;
-  tv.textContent=tipoCalc+' ▾';tv.className='tipo-val'+(tipoCalc==='Salida'||tipoCalc==='Fin almuerzo'?' do':'');
+  tipoTxt.textContent=tipoCalc;tipoTxt.className='tipo-txt';
   document.getElementById('btnMarcar').disabled=false;
 }
 docInput.addEventListener('input',updDoc);
@@ -516,22 +612,30 @@ document.getElementById('teclado').addEventListener('click',e=>{
 });
 
 /* ÚLTIMA MARCACIÓN */
-function saveUltima(tipo,hora,dentro){
-  localStorage.setItem('ultima_marc',JSON.stringify({tipo,hora,dentro}));
+function fmtHace(ts){
+  const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(m/60),mn=m%60;
+  if(h>0)return`Hace ${h}h ${mn}m`;
+  return`Hace ${m}m`;
+}
+function saveUltima(nombre,tipo,hora,dentro,ts){
+  localStorage.setItem('ultima_marc',JSON.stringify({nombre,tipo,hora,dentro,ts}));
   showUltima();
 }
 function showUltima(){
   const d=JSON.parse(localStorage.getItem('ultima_marc')||'null');
-  const c=document.getElementById('ultimaCard');
-  if(!d){c.style.display='none';return;}
-  c.style.display='block';
+  const s=document.getElementById('ultimaSection');
+  if(!d){s.style.display='none';return;}
+  s.style.display='block';
+  document.getElementById('ulNombre').textContent=d.nombre||'—';
   document.getElementById('ulTipo').textContent=d.tipo;
-  document.getElementById('ulHora').textContent=d.hora;
-  const g=document.getElementById('ulGeo');
-  g.innerHTML=(d.dentro?'📍 Dentro del predio':'📍 Fuera de geocerca');
-  g.className='ultima-geo'+(d.dentro?'':' fuera');
+  document.getElementById('ulHora').textContent='• '+d.hora;
+  document.getElementById('ulHace').textContent=fmtHace(d.ts);
 }
 showUltima();
+setInterval(()=>{
+  const d=JSON.parse(localStorage.getItem('ultima_marc')||'null');
+  if(d)document.getElementById('ulHace').textContent=fmtHace(d.ts);
+},60000);
 
 /* MODELOS */
 const MODEL_URL='models';
@@ -544,27 +648,72 @@ async function loadModels(){
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
     ]);
     modOk=true;
-    document.getElementById('camEstado').style.display='none';
   }catch(e){modErr=e.message||'Error modelos';}
 }
 loadModels();
 setTimeout(()=>{if(!modOk&&!modErr)modErr='Tiempo agotado';},15000);
 
-/* CÁMARA — arranca al cargar */
+/* CÁMARA */
 const video=document.getElementById('video');
 const overlay=document.getElementById('overlay');
 let stream=null,modoActual=null,nombreEnrolando=null;
+let loopActivo=false;
 
 async function iniciarCamara(){
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:480,height:480}});
     video.srcObject=stream;
-    document.getElementById('camEstado').style.display='none';
+    video.addEventListener('loadeddata',()=>{
+      document.getElementById('camEstado').textContent='Buscando rostro…';
+      if(!loopActivo)loopDeteccion();
+    },{once:true});
   }catch(e){
     document.getElementById('camEstado').textContent='Sin acceso a cámara';
   }
 }
 iniciarCamara();
+
+/* Loop detección continua para barra de confianza */
+let lastDist=null;
+async function loopDeteccion(){
+  loopActivo=true;
+  while(true){
+    await new Promise(r=>setTimeout(r,600));
+    if(!modOk||!stream)continue;
+    if(modoActual==='procesando')continue;
+    try{
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4})).withFaceLandmarks().withFaceDescriptor();
+      if(!det){
+        document.getElementById('camEstado').textContent='Buscando rostro…';
+        setConf(0,false);lastDist=null;continue;
+      }
+      document.getElementById('camEstado').textContent='Rostro detectado';
+      // Si hay persona seleccionada, calcular confianza vs su rostro
+      if(nombreSel){
+        const r=getRostros()[nombreSel];
+        if(r){
+          const dist=faceapi.euclideanDistance(det.descriptor,r);
+          lastDist=dist;
+          const pct=Math.max(0,Math.round((1-dist)*100));
+          setConf(pct,dist<=CONFIG.UMBRAL_FACIAL);
+        }else{setConf(0,false);}
+      }else{
+        // Sin persona seleccionada: mostrar que hay rostro pero sin %
+        setConf(null,false);
+      }
+    }catch{continue;}
+  }
+}
+
+function setConf(pct,ok){
+  const pe=document.getElementById('confPct'),fi=document.getElementById('confFill');
+  if(pct===null){pe.textContent='—';fi.style.width='0%';fi.style.background='var(--t2)';return;}
+  if(pct===0&&!ok){pe.textContent='—';fi.style.width='0%';return;}
+  pe.textContent=pct+'%';
+  fi.style.width=pct+'%';
+  fi.style.background=ok?'var(--vm)':pct>50?'var(--do)':'var(--ro)';
+  pe.style.color=ok?'var(--vm)':pct>50?'var(--do)':'var(--ro)';
+}
 
 function capFoto(){
   try{
@@ -578,90 +727,95 @@ function capFoto(){
 function mostrarPantalla(id){
   document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('show'));
   document.getElementById(id).classList.add('show');
+  // Actualizar nav
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('activo'));
+  if(id==='pantallaMarcacion')document.getElementById('navMarcar').classList.add('activo');
 }
 
 /* MARCAR */
 let errM=0;
 document.getElementById('btnMarcar').onclick=async()=>{
   if(!nombreSel)return;
-  modoActual='marcar';errM=0;
-  if(!modOk&&!modErr){showRes('warn','Cargando modelos…','Espera unos segundos e intenta de nuevo.','');return;}
+  if(!modOk){showRes('warn','Cargando modelos…','Espera unos segundos e intenta de nuevo.','');return;}
   if(modErr){showRes('err','No cargaron los modelos',`Error: ${modErr}`,'Verifica conexión');return;}
-  procesarMarcar();
-};
+  modoActual='procesando';errM=0;
+  document.getElementById('btnMarcar').disabled=true;
+  document.getElementById('btnMarcar').textContent='Verificando…';
 
-async function procesarMarcar(){
-  if(modoActual!=='marcar')return;
   let det;
   try{
-    det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
-      .withFaceLandmarks().withFaceDescriptor();
-    errM=0;
+    det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
   }catch(e){
-    errM++;
-    if(errM>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),'Intenta con otro navegador');return;}
-    setTimeout(procesarMarcar,400);return;
+    modoActual=null;
+    document.getElementById('btnMarcar').disabled=false;
+    resetBtnReg();
+    showRes('err','Error analizando rostro',xh(e.message||String(e)),'Intenta de nuevo');return;
   }
+
+  modoActual=null;
+
   if(!det){
-    const el=document.getElementById('camEstado');
-    el.style.display='block';el.textContent='Buscando rostro…';
-    setTimeout(procesarMarcar,400);return;
+    document.getElementById('btnMarcar').disabled=false;
+    resetBtnReg();
+    showRes('err','No se detectó ningún rostro','Asegúrate de estar frente a la cámara con buena iluminación.','');return;
   }
-  document.getElementById('camEstado').style.display='none';
 
   const rostros=getRostros(),ref=rostros[nombreSel];
-  if(!ref){showRes('err','Sin rostro de referencia',`<b>${xh(nombreSel)}</b> no está enrolado.`,'Pide a Gerencia que lo enrole primero');return;}
+  if(!ref){
+    document.getElementById('btnMarcar').disabled=false;
+    resetBtnReg();
+    showRes('err','Sin rostro de referencia',`<b>${xh(nombreSel)}</b> no está enrolado.`,'Pide a Gerencia que lo enrole primero');return;
+  }
 
   const dist=faceapi.euclideanDistance(det.descriptor,ref);
   const ok=dist<=CONFIG.UMBRAL_FACIAL;
-  if(!ok){showRes('err','Rostro no coincide',`Seleccionaste <b>${xh(nombreSel)}</b> pero el rostro no coincide.`,'Vuelve a intentar');return;}
-
-  // Mostrar badge reconocido
-  const conf=Math.round((1-dist)*100);
-  const br=document.getElementById('camReconocido');
-  br.textContent='Rostro reconocido '+conf+'%';br.style.display='block';
-  setTimeout(()=>br.style.display='none',2500);
+  if(!ok){
+    document.getElementById('btnMarcar').disabled=false;
+    resetBtnReg();
+    showRes('err','Rostro no coincide',`Seleccionaste <b>${xh(nombreSel)}</b> pero el rostro no coincide.`,'Vuelve a intentar');return;
+  }
 
   const tipo=tipoCalc||'Entrada',hora=new Date();
   const pm=getPorDoc(docInput.value.trim());
+  const conf=Math.round((1-dist)*100);
   const payload={accion:'marcar',nombre:nombreSel,documento:pm?pm.documento:'',finca:CONFIG.FINCA.nombre,tipo,cargo:getCargo(nombreSel),fechaHora:hora.toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:dist};
   enviar(payload);
-  saveUltima(tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk);
+
+  saveUltima(nombreSel,tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk,Date.now());
   showConf({nombre:nombreSel,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:conf+'%',gpsOk});
 
   setTimeout(()=>{
     modoActual=null;nombreSel=null;tipoCalc=null;docInput.value='';
-    docDisp.textContent='Ingresa tu número';docDisp.className='doc-num vacio';
-    docNom.style.display='none';docChk.classList.remove('show');
-    document.getElementById('tipoVal').textContent='—';document.getElementById('tipoVal').className='tipo-val';
-    document.getElementById('btnMarcar').disabled=true;
+    docValEl.textContent='Ingresa tu número';docValEl.className='doc-val empty';
+    docSubEl.style.display='none';docChkEl.classList.remove('show');
+    document.getElementById('tipoTxt').textContent='Seleccionar…';document.getElementById('tipoTxt').className='tipo-txt ph';
+    resetBtnReg();
     mostrarPantalla('pantallaMarcacion');
   },4500);
+};
+
+function resetBtnReg(){
+  const b=document.getElementById('btnMarcar');
+  b.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg> REGISTRAR ASISTENCIA`;
 }
 
+/* CONFIRMACIÓN */
 function showConf(d){
   const filas=[
     {p:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',l:'Nombre',v:xh(d.nombre)},
-    {p:'<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/>',l:'Documento',v:String(d.documento).replace(/\B(?=(\d{3})+(?!\d))/g,'.')},
+    {p:'<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/>',l:'Documento',v:String(d.documento).replace(/\B(?=(\d{3})+(?!\d))/g,'.')},
     {p:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',l:'Fecha',v:d.fecha},
     {p:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',l:'Hora',v:d.hora},
     {p:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',l:'Ubicación',v:d.ubicacion},
-    {p:'<circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.33-.12-6.18 1.81-8 5"/></circle>',l:'Confianza facial',v:d.confianza},
+    {p:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',l:'Confianza facial',v:d.confianza},
   ];
   document.getElementById('resultadoContenido').innerHTML=`
-    <div class="conf">
-      <div class="conf-ico ok">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5" width="30" height="30"><polyline points="20 6 9 17 4 12"/></svg>
-      </div>
-      <div class="conf-tit">Asistencia registrada</div>
-      <span class="conf-badge">${xh(d.tipo)}</span>
-      <div class="conf-tabla">
-        ${filas.map(f=>`<div class="cf">
-          <div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#2e7d32" width="14" height="14">${f.p}</svg></div>
-          <div><div class="cf-l">${f.l}</div><div class="cf-v">${f.v}</div></div>
-        </div>`).join('')}
-      </div>
-      ${!d.gpsOk?'<div class="conf-aviso">⚠️ Marcado fuera de geocerca — revisión Gerencia</div>':''}
+    <div class="conf-wrap">
+      <div class="c-ico ok"><svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.5" width="30" height="30"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="c-tit">Asistencia registrada</div>
+      <span class="c-bdg">${xh(d.tipo)}</span>
+      <div class="c-tabla">${filas.map(f=>`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#2e7d32" width="14" height="14">${f.p}</svg></div><div><div class="cf-l">${f.l}</div><div class="cf-v">${f.v}</div></div></div>`).join('')}</div>
+      ${!d.gpsOk?'<div class="c-av">⚠️ Marcado fuera de geocerca — revisión Gerencia</div>':''}
       <button class="btn-ok" onclick="mostrarPantalla('pantallaMarcacion')">Aceptar</button>
     </div>`;
   mostrarPantalla('pantallaResultado');
@@ -671,13 +825,11 @@ function showRes(tipo,tit,det,av){
   const col={ok:'#2e7d32',err:'#dc2626',warn:'#d97706'};
   const ico={ok:'<polyline points="20 6 9 17 4 12"/>',err:'<path d="M18 6L6 18M6 6l12 12"/>',warn:'<path d="M12 9v4M12 17h.01"/>'};
   document.getElementById('resultadoContenido').innerHTML=`
-    <div class="conf">
-      <div class="conf-ico ${tipo==='ok'?'ok':tipo==='warn'?'warn':'err'}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="${col[tipo]||col.err}" stroke-width="2.5" width="30" height="30">${ico[tipo]||ico.err}</svg>
-      </div>
-      <div class="conf-tit">${tit}</div>
-      <div class="conf-det">${det}</div>
-      ${av?`<div class="conf-aviso">${av}</div>`:''}
+    <div class="conf-wrap">
+      <div class="c-ico ${tipo==='ok'?'ok':tipo==='warn'?'warn':'err'}"><svg viewBox="0 0 24 24" fill="none" stroke="${col[tipo]||col.err}" stroke-width="2.5" width="30" height="30">${ico[tipo]||ico.err}</svg></div>
+      <div class="c-tit">${tit}</div>
+      <div class="c-det">${det}</div>
+      ${av?`<div class="c-av">${av}</div>`:''}
       <button class="btn-ok" onclick="mostrarPantalla('pantallaMarcacion')">Aceptar</button>
     </div>`;
   mostrarPantalla('pantallaResultado');
@@ -695,14 +847,12 @@ function enviarConResp(p){
 }
 let reint=false;
 async function reintentarCola(){
-  if(reint)return;
-  const c=JSON.parse(localStorage.getItem('cola')||'[]');if(!c.length)return;
+  if(reint)return;const c=JSON.parse(localStorage.getItem('cola')||'[]');if(!c.length)return;
   reint=true;const pen=[];
   for(const i of c){try{await fetch(CONFIG.GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(i)});}catch{pen.push(i);}}
   localStorage.setItem('cola',JSON.stringify(pen));reint=false;
 }
-window.addEventListener('online',reintentarCola);
-setInterval(reintentarCola,120000);setTimeout(reintentarCola,3000);
+window.addEventListener('online',reintentarCola);setInterval(reintentarCola,120000);setTimeout(reintentarCola,3000);
 
 /* ENROLAMIENTO */
 function pintarGrilla(id,cb){
@@ -726,8 +876,6 @@ document.getElementById('btnPinConfirmar').onclick=()=>{
     if(pinDest==='enrolar'){
       pintarGrilla('grillaEnrolar',nombre=>{
         nombreEnrolando=nombre;modoActual='enrolar';errE=0;
-        mostrarPantalla('pantallaResultado');
-        document.getElementById('resultadoContenido').innerHTML=`<div class="conf" style="justify-content:center;"><div style="font-size:14px;color:var(--t1);text-align:center;">Capturando rostro de<br><b>${xh(nombre)}</b>…<br><br><div style="font-size:12px;color:var(--t2);">Mira directamente a la cámara en la pantalla anterior</div></div></div>`;
         procesarEnrolar();
       });
       mostrarPantalla('pantallaEnrolar');
@@ -739,7 +887,7 @@ document.getElementById('btnPinConfirmar').onclick=()=>{
     }
   }else{alert('PIN incorrecto');}
 };
-document.getElementById('btnVolverMarcacion').onclick=()=>mostrarPantalla('pantallaMarcacion');
+document.getElementById('btnVolverMarcacion').onclick=()=>{modoActual=null;mostrarPantalla('pantallaMarcacion');};
 document.getElementById('btnCancelarAgregar').onclick=()=>mostrarPantalla('pantallaMarcacion');
 document.getElementById('btnCancelarAgregar2').onclick=()=>mostrarPantalla('pantallaMarcacion');
 
@@ -756,7 +904,7 @@ document.getElementById('btnGuardarPersonal').onclick=async()=>{
   const btn=document.getElementById('btnGuardarPersonal');btn.disabled=true;
   const r=await enviarConResp({accion:'registrarPersonal',documento:doc,nombre:nom,cargo:car,fechaHora:new Date().toISOString()});
   btn.disabled=false;
-  if(!r||!r.ok){showRes('err','No se pudo registrar',`<b>${xh(nom)}</b> no se guardó en el Sheet.<br><span style="font-size:11px">${xh((r&&r.error)||'Sin conexión')}</span>`,'Verifica conexión');return;}
+  if(!r||!r.ok){showRes('err','No se pudo registrar',`<b>${xh(nom)}</b> no se guardó en el Sheet.<br><small>${xh((r&&r.error)||'Sin conexión')}</small>`,'Verifica conexión');return;}
   const ex=getPE();ex.push({documento:doc,nombre:nom,cargo:car});savePE(ex);
   showRes('ok','Personal agregado',`<b>${xh(nom)}</b><br>${xh(car)} · Doc. ${xh(doc)}`,'Ahora puedes enrolar su rostro');
   setTimeout(()=>mostrarPantalla('pantallaMarcacion'),2200);
@@ -764,17 +912,13 @@ document.getElementById('btnGuardarPersonal').onclick=async()=>{
 
 let errE=0;
 async function procesarEnrolar(){
-  if(!modOk){
-    if(modErr){mostrarPantalla('pantallaResultado');showRes('err','No cargaron los modelos',modErr,'');return;}
-    setTimeout(procesarEnrolar,500);return;
-  }
+  if(!modOk){if(modErr){showRes('err','No cargaron los modelos',modErr,'');return;}setTimeout(procesarEnrolar,500);return;}
   let det;
   try{
     det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
     errE=0;
   }catch(e){
-    errE++;
-    if(errE>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),'Intenta con otro navegador');return;}
+    errE++;if(errE>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),'');return;}
     setTimeout(procesarEnrolar,400);return;
   }
   if(modoActual!=='enrolar')return;
@@ -783,21 +927,20 @@ async function procesarEnrolar(){
   saveRostro(nombreEnrolando,det.descriptor);
   const pe=getPC().find(p=>p.nombre===nombreEnrolando);
   const foto=capFoto();
-
-  if(!pe||!foto){
-    showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero no se guardó la foto.`,'Avisa a soporte');
-    setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;
-  }
+  if(!pe||!foto){showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero no se guardó la foto.`,'Avisa a soporte');setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;}
   const r=await enviarConResp({accion:'guardarFotoPersonal',documento:pe.documento,foto,nombre:pe.nombre,cargo:pe.cargo});
-  if(!r||!r.ok||!r.fotoURL){
-    showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero hubo un error en Drive.<br><span style="font-size:11px">${xh((r&&r.error)||'Sin detalle')}</span>`,'Avisa a soporte');
-    setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;
-  }
+  if(!r||!r.ok||!r.fotoURL){showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero hubo un error en Drive.<br><small>${xh((r&&r.error)||'Sin detalle')}</small>`,'Avisa a soporte');setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;}
   showRes('ok','Empleado enrolado',`<b>${xh(nombreEnrolando)}</b> ya puede marcar asistencia`,'');
   setTimeout(()=>mostrarPantalla('pantallaMarcacion'),2000);
 }
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* NAV */
+document.getElementById('navMarcar').onclick=()=>mostrarPantalla('pantallaMarcacion');
+document.getElementById('navHistorial').onclick=()=>showRes('warn','Próximamente','El historial de marcaciones estará disponible en una próxima actualización.','');
+document.getElementById('navReporte').onclick=()=>{window.open('reporte.html','_blank');};
+document.getElementById('navMenu').onclick=()=>{document.getElementById('pinInput').value='';pinDest='enrolar';mostrarPantalla('pantallaPin');};
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
