@@ -122,7 +122,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justi
 ════════════════════════════════ */
 .cam-wrap{
   position:relative;background:#0D0D0D;
-  height:155px;overflow:hidden;
+  height:220px;overflow:hidden;
 }
 .cam-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;}
 .cam-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);}
@@ -162,31 +162,32 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justi
 .cam-dot{width:7px;height:7px;border-radius:50%;background:#69F0AE;flex-shrink:0;}
 
 /* ════════════════════════════════
-   ESTADO RECONOCIMIENTO
+   BARRA DE ESTADO (compacta, una línea)
 ════════════════════════════════ */
-.reconocimiento{
-  background:var(--wh);border-radius:14px;box-shadow:var(--sh);
-  border:1px solid var(--bd);overflow:hidden;
+.status-bar{
+  background:var(--wh);border-radius:10px;box-shadow:var(--sh);
+  border:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 4px;
+  flex-shrink:0;
 }
-.rec-row{
-  display:flex;align-items:center;gap:10px;padding:8px 13px;
-  border-bottom:1px solid var(--bd);
+.st-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:7px 4px;border-right:1px solid var(--bd);
 }
-.rec-row:last-child{border-bottom:none;}
-.rec-ico{
-  width:26px;height:26px;border-radius:7px;flex-shrink:0;
-  background:var(--xl);display:flex;align-items:center;justify-content:center;
-}
-.rec-ico svg{width:12px;height:12px;stroke:var(--dg);fill:none;stroke-width:2;}
-.rec-lbl{font-size:11.5px;color:var(--t1);flex:1;}
+.st-item:last-child{border-right:none;}
+.st-lbl{font-size:9.5px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
+.st-val{font-size:11.5px;font-weight:800;}
+.st-val.ok{color:var(--dg);}
+.st-val.er{color:var(--re);}
+.st-val.na{color:var(--t2);}
+
+/* Barra confianza */
+.conf-track{height:3px;background:var(--bd);border-radius:99px;overflow:hidden;margin-top:3px;width:40px;}
+.conf-fill{height:100%;border-radius:99px;background:var(--dg);transition:width .5s,background .4s;}
 .rec-val{font-size:12px;font-weight:700;}
 .rec-val.ok{color:var(--dg);}
 .rec-val.er{color:var(--re);}
 .rec-val.na{color:var(--t2);}
-
-/* Barra confianza */
-.conf-track{height:4px;background:var(--bd);border-radius:99px;overflow:hidden;margin-top:4px;}
-.conf-fill{height:100%;border-radius:99px;background:var(--dg);transition:width .5s,background .4s;}
 
 /* ════════════════════════════════
    TIPO + BOTONES ACCIÓN
@@ -473,31 +474,24 @@ input[type=password]:focus{border-color:var(--dg);}
     </div>
 
     <!-- ESTADO RECONOCIMIENTO -->
-    <div class="reconocimiento">
-      <div class="rec-row">
-        <div class="rec-ico"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <span class="rec-lbl">Confianza facial</span>
-        <div style="text-align:right;">
-          <span class="rec-val na" id="confPct">—</span>
-          <div class="conf-track" style="width:80px;margin-top:4px;">
-            <div class="conf-fill" id="confFill" style="width:0%"></div>
-          </div>
-        </div>
+    <!-- BARRA DE ESTADO -->
+    <div class="status-bar">
+      <div class="st-item">
+        <span class="st-lbl">Confianza</span>
+        <span class="st-val na" id="confPct">—</span>
+        <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
       </div>
-      <div class="rec-row">
-        <div class="rec-ico"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-        <span class="rec-lbl">Ubicación</span>
-        <span class="rec-val na" id="stUbicacion">Verificando…</span>
+      <div class="st-item">
+        <span class="st-lbl">Ubicación</span>
+        <span class="st-val na" id="stUbicacion">—</span>
       </div>
-      <div class="rec-row">
-        <div class="rec-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
-        <span class="rec-lbl">Geocerca</span>
-        <span class="rec-val na" id="stGeocerca">Verificando…</span>
+      <div class="st-item">
+        <span class="st-lbl">Geocerca</span>
+        <span class="st-val na" id="stGeocerca">—</span>
       </div>
-      <div class="rec-row">
-        <div class="rec-ico"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
-        <span class="rec-lbl">Internet</span>
-        <span class="rec-val ok" id="stInternet">Conectado</span>
+      <div class="st-item">
+        <span class="st-lbl">Internet</span>
+        <span class="st-val ok" id="stInternet">OK</span>
       </div>
     </div>
 
@@ -717,10 +711,10 @@ function setGeo(ok,txt){
   const strip=document.getElementById('geoBadge');
   document.getElementById('geoTxt').textContent=ok?'Dentro del predio':'Fuera de geocerca';
   strip.className='geo-strip '+(ok?'ok':'er');
-  document.getElementById('stUbicacion').textContent=ok?'Dentro del predio':'Fuera de rango';
-  document.getElementById('stUbicacion').className='rec-val '+(ok?'ok':'er');
-  document.getElementById('stGeocerca').textContent=ok?'Válida':'Inválida';
-  document.getElementById('stGeocerca').className='rec-val '+(ok?'ok':'er');
+  document.getElementById('stUbicacion').textContent=ok?'Dentro':'Fuera';
+  document.getElementById('stUbicacion').className='st-val '+(ok?'ok':'er');
+  document.getElementById('stGeocerca').textContent=ok?'OK':'Fuera';
+  document.getElementById('stGeocerca').className='st-val '+(ok?'ok':'er');
 }
 function chkGps(){
   if(!navigator.geolocation){setGeo(false,'Sin GPS');return;}
@@ -736,8 +730,8 @@ function chkGps(){
 }
 chkGps();setInterval(chkGps,60000);
 
-window.addEventListener('online',()=>{document.getElementById('stInternet').textContent='Conectado';document.getElementById('stInternet').className='rec-val ok';});
-window.addEventListener('offline',()=>{document.getElementById('stInternet').textContent='Sin conexión';document.getElementById('stInternet').className='rec-val er';});
+window.addEventListener('online',()=>{document.getElementById('stInternet').textContent='OK';document.getElementById('stInternet').className='st-val ok';});
+window.addEventListener('offline',()=>{document.getElementById('stInternet').textContent='Sin red';document.getElementById('stInternet').className='st-val er';});
 
 /* TIPO */
 let tipoCalc=null;
@@ -998,9 +992,9 @@ async function loopDeteccion(){
 
 function setConf(pct,ok){
   const pe=document.getElementById('confPct'),fi=document.getElementById('confFill');
-  if(pct===null){pe.textContent='—';pe.className='rec-val na';fi.style.width='0%';return;}
-  if(pct===0&&!ok){pe.textContent='—';pe.className='rec-val na';fi.style.width='0%';return;}
-  pe.textContent=pct+'%';pe.className='rec-val '+(ok?'ok':'er');
+  if(pct===null){pe.textContent='—';pe.className='st-val na';fi.style.width='0%';return;}
+  if(pct===0&&!ok){pe.textContent='—';pe.className='st-val na';fi.style.width='0%';return;}
+  pe.textContent=pct+'%';pe.className='st-val '+(ok?'ok':'er');
   fi.style.width=pct+'%';
   fi.style.background=ok?'var(--dg)':pct>50?'var(--or)':'var(--re)';
 }
