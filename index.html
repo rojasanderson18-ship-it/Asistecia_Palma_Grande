@@ -244,7 +244,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justi
 .ul-hace{font-size:11.5px;font-weight:700;color:var(--t2);flex-shrink:0;text-align:right;}
 
 /* Footer */
-.app-footer{display:flex;align-items:center;justify-content:space-between;padding:4px 2px;}
+.app-footer{display:flex;align-items:center;justify-content:space-between;padding:5px 14px 6px;flex-shrink:0;border-top:1px solid var(--bd);background:var(--bg);}
 .footer-links{display:flex;gap:12px;}
 .link-d{font-size:11px;color:var(--t2);cursor:pointer;padding:3px 0;transition:color .15s;}
 .link-d:hover{color:var(--dg);}
@@ -526,15 +526,15 @@ input[type=password]:focus{border-color:var(--dg);}
       </div>
     </div>
 
-    <!-- Footer -->
-    <div class="app-footer">
-      <div class="footer-links">
-        <span class="link-d" id="btnEnrolar">Enrolar empleado</span>
-        <span class="link-d" id="btnAgregarPersonal">Agregar personal</span>
-      </div>
-      <span class="version">V 1.0.0</span>
-    </div>
+  </div>
 
+  <!-- Footer fijo al fondo, fuera del scroll -->
+  <div class="app-footer">
+    <div class="footer-links">
+      <span class="link-d" id="btnEnrolar">Enrolar empleado</span>
+      <span class="link-d" id="btnAgregarPersonal">Agregar personal</span>
+    </div>
+    <span class="version">V 1.0.0</span>
   </div>
 </div>
 
