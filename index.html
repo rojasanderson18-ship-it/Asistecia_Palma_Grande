@@ -122,7 +122,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justi
 ════════════════════════════════ */
 .cam-wrap{
   position:relative;background:#0D0D0D;
-  height:220px;overflow:hidden;
+  height:260px;overflow:hidden;
 }
 .cam-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;}
 .cam-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);}
@@ -892,13 +892,6 @@ let autoFillActivo=false;
 let autoFillPending=false;
 let reconocido=false; // pausa el loop tras captura exitosa
 
-function maskDoc(doc){
-  // Muestra solo los últimos 3 dígitos: ••• 456
-  const s=doc.replace(/\D/g,'');
-  if(s.length<=3)return s;
-  return '••• '+s.slice(-3);
-}
-
 async function autoFill(nombre,dist){
   if(autoFillPending)return;
   autoFillPending=true;
@@ -1044,7 +1037,7 @@ document.getElementById('btnMarcar').onclick=async()=>{
     showRes('err','Sin rostro de referencia',`<b>${xh(nombreSel)}</b> no está enrolado.`,'Pide a Gerencia que lo enrole primero');return;
   }
 
-  const dist=faceapi.euclideanDistance(det.descriptor,ref);
+  const dist=faceapi.euclideanDistance(det.descriptor,new Float32Array(ref));
   if(dist>CONFIG.UMBRAL_FACIAL){
     btn.disabled=false;resetBtnReg();
     showRes('err','No se pudo validar el rostro',
@@ -1059,12 +1052,6 @@ document.getElementById('btnMarcar').onclick=async()=>{
   enviar(payload);
   saveUltima(nombreSel,tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk,Date.now());
   showConf({nombre:nombreSel,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:conf+'%',finca:CONFIG.FINCA.nombre,gpsOk});
-
-  setTimeout(()=>{
-    modoActual=null;resetAutoFill();
-    resetBtnReg();
-    mostrarPantalla('pantallaMarcacion');
-  },5000);
 };
 
 function resetBtnReg(){
@@ -1096,12 +1083,17 @@ function showConf(d){
       <div class="cd-timer">Volverá al inicio en unos segundos</div>
     </div>`;
   mostrarPantalla('pantallaResultado');
-  document.getElementById('btnConfOk').onclick=()=>{if(cdInterval)clearInterval(cdInterval);mostrarPantalla('pantallaMarcacion');};
+  function volverInicio(){
+    if(cdInterval)clearInterval(cdInterval);
+    modoActual=null;resetAutoFill();resetBtnReg();
+    mostrarPantalla('pantallaMarcacion');
+  }
+  document.getElementById('btnConfOk').onclick=volverInicio;
   if(cdInterval)clearInterval(cdInterval);
   cdInterval=setInterval(()=>{
     secs--;const el=document.getElementById('cdNum');
     if(el)el.textContent=secs;
-    if(secs<=0){clearInterval(cdInterval);mostrarPantalla('pantallaMarcacion');}
+    if(secs<=0){clearInterval(cdInterval);volverInicio();}
   },1000);
 }
 
