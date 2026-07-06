@@ -907,8 +907,9 @@ async function autoFill(nombre,dist){
   nombreSel=nombre;
   autoFillActivo=true;
   docInput.value=p.documento;
-  docValEl.textContent=maskDoc(p.documento); // oculta la cédula
+  docValEl.textContent=p.documento.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   docValEl.className='doc-number';
+  document.getElementById('teclado').style.display='none';
   docSubEl.textContent=p.nombre+' · '+p.cargo+' · Reconocido automáticamente';
   docSubEl.className='doc-info';docSubEl.style.display='block';
   docChkEl.classList.add('show');
@@ -936,6 +937,7 @@ function resetAutoFill(){
   docInput.value='';
   docValEl.textContent='Ingrese su número de documento';docValEl.className='doc-number ph';
   docSubEl.style.display='none';docChkEl.classList.remove('show');
+  document.getElementById('teclado').style.display='';
   document.getElementById('tipoTxt').textContent='Seleccionar…';document.getElementById('tipoTxt').className='tipo-txt ph';
   document.getElementById('btnMarcar').disabled=true;document.getElementById('btnMarcar').className='btn-accion';
 }
