@@ -682,7 +682,7 @@ const CONFIG={
     {documento:"4428130",nombre:"Tulio Antonio Olaya Gonzalez",cargo:"Mecanico Integral"}
   ],
   HORARIO:{entrada:6.0,salida:14.75,salidaSabado:11.75},
-  UMBRAL_FACIAL:0.55
+  UMBRAL_FACIAL:0.45
 };
 
 function xh(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
@@ -951,7 +951,7 @@ async function loopDeteccion(){
     if(modoActual==='procesando')continue;
     if(reconocido)continue; // captura ya hecha, espera que se marque o salga el rostro
     try{
-      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4})).withFaceLandmarks().withFaceDescriptor();
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
       if(!det){
         document.getElementById('camEstado').textContent='Buscando rostro…';
         setConf(0,false);lastDist=null;
@@ -1196,20 +1196,42 @@ document.getElementById('btnGuardarPersonal').onclick=async()=>{
   setTimeout(()=>mostrarPantalla('pantallaMarcacion'),2200);
 };
 
+const CAPTURAS_ENROLAR=5; // promedio de N capturas para mayor precisión
 let errE=0;
+
+function promediarDescriptores(lista){
+  const len=lista[0].length,avg=new Float32Array(len);
+  for(const d of lista)for(let i=0;i<len;i++)avg[i]+=d[i];
+  for(let i=0;i<len;i++)avg[i]/=lista.length;
+  return avg;
+}
+
 async function procesarEnrolar(){
   if(!modOk){if(modErr){showRes('err','No cargaron los modelos',modErr,[]);return;}setTimeout(procesarEnrolar,500);return;}
-  let det;
-  try{
-    det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-    errE=0;
-  }catch(e){
-    errE++;if(errE>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),[]);return;}
-    setTimeout(procesarEnrolar,400);return;
+  const descriptores=[];
+  const estEl=document.getElementById('camEstado');
+
+  while(descriptores.length<CAPTURAS_ENROLAR){
+    if(modoActual!=='enrolar')return;
+    if(estEl)estEl.textContent=`Captura ${descriptores.length+1} de ${CAPTURAS_ENROLAR}…`;
+    await new Promise(r=>setTimeout(r,400));
+    let det;
+    try{
+      det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      errE=0;
+    }catch(e){
+      errE++;if(errE>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),[]);return;}
+      continue;
+    }
+    if(!det)continue;
+    descriptores.push(det.descriptor);
   }
+
   if(modoActual!=='enrolar')return;
-  if(!det){setTimeout(procesarEnrolar,400);return;}
-  saveRostro(nombreEnrolando,det.descriptor);
+  if(estEl)estEl.textContent='Guardando…';
+  const descriptorFinal=promediarDescriptores(descriptores);
+  saveRostro(nombreEnrolando,descriptorFinal);
+
   const pe=getPC().find(p=>p.nombre===nombreEnrolando);
   const foto=capFoto();
   if(!pe||!foto){showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero no se guardó la foto.`,[]);setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;}
