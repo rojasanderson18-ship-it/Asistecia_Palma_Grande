@@ -92,6 +92,13 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justi
 .doc-chk.show{display:flex;}
 .doc-chk svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;}
 #documentoInput{display:none;}
+.btn-borrar-rec{
+  display:none;width:100%;margin:0;padding:11px 16px;
+  background:none;border:none;border-top:1px solid var(--bd);
+  color:var(--re);font-size:13px;font-weight:700;letter-spacing:.5px;
+  cursor:pointer;text-align:center;
+}
+.btn-borrar-rec.show{display:block;}
 
 /* Sub-mensaje */
 .doc-info{padding:8px 16px 10px;font-size:13px;font-weight:600;color:var(--dg);}
@@ -434,6 +441,7 @@ input[type=password]:focus{border-color:var(--dg);}
         <div class="doc-chk" id="docChk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       </div>
       <div class="doc-info" id="docSub" style="display:none;"></div>
+      <button class="btn-borrar-rec" id="btnBorrarRec" onclick="resetAutoFill()">✕ &nbsp;BORRAR Y USAR TECLADO</button>
       <div class="keypad" id="teclado">
         <div class="key" data-k="1">1</div><div class="key" data-k="2">2</div><div class="key" data-k="3">3</div>
         <div class="key" data-k="4">4</div><div class="key" data-k="5">5</div><div class="key" data-k="6">6</div>
@@ -910,6 +918,7 @@ async function autoFill(nombre,dist){
   docValEl.textContent=p.documento.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   docValEl.className='doc-number';
   document.getElementById('teclado').style.display='none';
+  document.getElementById('btnBorrarRec').classList.add('show');
   docSubEl.textContent=p.nombre+' · '+p.cargo+' · Reconocido automáticamente';
   docSubEl.className='doc-info';docSubEl.style.display='block';
   docChkEl.classList.add('show');
@@ -938,6 +947,7 @@ function resetAutoFill(){
   docValEl.textContent='Ingrese su número de documento';docValEl.className='doc-number ph';
   docSubEl.style.display='none';docChkEl.classList.remove('show');
   document.getElementById('teclado').style.display='';
+  document.getElementById('btnBorrarRec').classList.remove('show');
   document.getElementById('tipoTxt').textContent='Seleccionar…';document.getElementById('tipoTxt').className='tipo-txt ph';
   document.getElementById('btnMarcar').disabled=true;document.getElementById('btnMarcar').className='btn-accion';
 }
