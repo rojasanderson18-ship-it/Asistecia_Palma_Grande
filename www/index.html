@@ -946,12 +946,12 @@ function abrirTeclado(){
 async function loopDeteccion(){
   loopActivo=true;
   while(true){
-    await new Promise(r=>setTimeout(r,600));
+    await new Promise(r=>setTimeout(r,250));
     if(!modOk||!stream)continue;
-    if(modoActual==='procesando')continue;
-    if(reconocido)continue; // captura ya hecha, espera que se marque o salga el rostro
+    if(modoActual==='procesando'||modoActual==='enrolar')continue;
+    if(reconocido)continue;
     try{
-      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:160,scoreThreshold:0.45})).withFaceLandmarks().withFaceDescriptor();
       if(!det){
         document.getElementById('camEstado').textContent='Buscando rostro…';
         setConf(0,false);lastDist=null;
@@ -1160,7 +1160,10 @@ document.getElementById('btnPinConfirmar').onclick=()=>{
 /* MENÚ ADMIN */
 document.getElementById('menuEnrolar').onclick=()=>{
   pintarGrilla('grillaEnrolar',nombre=>{
-    nombreEnrolando=nombre;modoActual='enrolar';errE=0;procesarEnrolar();
+    nombreEnrolando=nombre;modoActual='enrolar';errE=0;
+    // Ir a pantalla marcación para que el empleado vea la cámara
+    mostrarPantalla('pantallaMarcacion');
+    procesarEnrolar();
   });
   mostrarPantalla('pantallaEnrolar');
 };
@@ -1196,7 +1199,7 @@ document.getElementById('btnGuardarPersonal').onclick=async()=>{
   setTimeout(()=>mostrarPantalla('pantallaMarcacion'),2200);
 };
 
-const CAPTURAS_ENROLAR=5; // promedio de N capturas para mayor precisión
+const CAPTURAS_ENROLAR=3;
 let errE=0;
 
 function promediarDescriptores(lista){
@@ -1206,29 +1209,42 @@ function promediarDescriptores(lista){
   return avg;
 }
 
+function setProgreso(n,total){
+  const estEl=document.getElementById('camEstado');
+  if(estEl)estEl.textContent=`Enrolando: ${n}/${total} — quédate quieto`;
+  // Barra de confianza como indicador de progreso
+  const fi=document.getElementById('confFill'),pe=document.getElementById('confPct');
+  if(fi){fi.style.width=Math.round((n/total)*100)+'%';fi.style.background='var(--bl)';}
+  if(pe){pe.textContent=`${n}/${total}`;pe.className='st-val';}
+}
+
 async function procesarEnrolar(){
   if(!modOk){if(modErr){showRes('err','No cargaron los modelos',modErr,[]);return;}setTimeout(procesarEnrolar,500);return;}
   const descriptores=[];
-  const estEl=document.getElementById('camEstado');
+  setProgreso(0,CAPTURAS_ENROLAR);
 
   while(descriptores.length<CAPTURAS_ENROLAR){
     if(modoActual!=='enrolar')return;
-    if(estEl)estEl.textContent=`Captura ${descriptores.length+1} de ${CAPTURAS_ENROLAR}…`;
-    await new Promise(r=>setTimeout(r,400));
+    await new Promise(r=>setTimeout(r,300));
     let det;
     try{
-      det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
       errE=0;
     }catch(e){
       errE++;if(errE>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),[]);return;}
       continue;
     }
-    if(!det)continue;
+    if(!det){
+      const estEl=document.getElementById('camEstado');
+      if(estEl)estEl.textContent='No detecto rostro — acércate a la cámara';
+      continue;
+    }
     descriptores.push(det.descriptor);
+    setProgreso(descriptores.length,CAPTURAS_ENROLAR);
   }
 
   if(modoActual!=='enrolar')return;
-  if(estEl)estEl.textContent='Guardando…';
+  document.getElementById('camEstado').textContent='Guardando…';
   const descriptorFinal=promediarDescriptores(descriptores);
   saveRostro(nombreEnrolando,descriptorFinal);
 
