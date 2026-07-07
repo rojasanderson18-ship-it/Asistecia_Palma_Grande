@@ -849,8 +849,11 @@ setInterval(()=>{
 
 /* MODELOS */
 const MODEL_URL='models';
-let modOk=false,modErr=null;
+let modOk=false,modErr=null,modCargando=false;
 async function loadModels(){
+  if(modCargando)return;
+  modCargando=true;modOk=false;modErr=null;
+  document.getElementById('camEstado').textContent='Cargando modelos IA…';
   try{
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -858,10 +861,18 @@ async function loadModels(){
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
     ]);
     modOk=true;
-  }catch(e){modErr=e.message||'Error modelos';}
+    document.getElementById('camEstado').textContent='Buscando rostro…';
+  }catch(e){
+    modErr=e.message||'Error modelos';
+    document.getElementById('camEstado').textContent='Error cargando modelos';
+  }
+  modCargando=false;
 }
 loadModels();
-setTimeout(()=>{if(!modOk&&!modErr)modErr='Tiempo agotado';},15000);
+setTimeout(()=>{
+  if(!modOk&&!modErr&&!modCargando)modErr='Tiempo agotado';
+  if(modErr){document.getElementById('camEstado').textContent='Error: '+modErr;}
+},45000);
 
 /* CÁMARA */
 const video=document.getElementById('video');
@@ -1009,8 +1020,10 @@ function mostrarPantalla(id){
 /* MARCAR */
 document.getElementById('btnMarcar').onclick=async()=>{
   if(!nombreSel)return;
-  if(!modOk){showRes('warn','Cargando modelos…','Espera unos segundos e intenta de nuevo.','');return;}
-  if(modErr){showRes('err','No cargaron los modelos',`Error: ${modErr}`,'');return;}
+  if(!modOk){
+    if(modErr){modErr=null;loadModels();}
+    showRes('warn','Modelos cargando…','Espera unos segundos y toca REGISTRAR nuevamente.','');return;
+  }
   modoActual='procesando';
   const btn=document.getElementById('btnMarcar');
   btn.disabled=true;btn.textContent='Verificando rostro…';
@@ -1219,7 +1232,14 @@ function setProgreso(n,total){
 }
 
 async function procesarEnrolar(){
-  if(!modOk){if(modErr){showRes('err','No cargaron los modelos',modErr,[]);return;}setTimeout(procesarEnrolar,500);return;}
+  if(!modOk){
+    if(modErr){
+      // Reintentar carga de modelos automáticamente
+      modErr=null;loadModels();
+      document.getElementById('camEstado').textContent='Reintentando carga de modelos…';
+    }
+    setTimeout(procesarEnrolar,800);return;
+  }
   const descriptores=[];
   setProgreso(0,CAPTURAS_ENROLAR);
 
