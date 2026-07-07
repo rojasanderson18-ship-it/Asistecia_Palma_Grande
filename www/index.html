@@ -707,10 +707,6 @@ input[type=password]:focus{border-color:var(--dg);}
           <div class="fl">Salida sábado</div>
           <div class="time-pick" id="cfgSalidaSab"></div>
         </div>
-        <div>
-          <div class="fl">Inicio almuerzo</div>
-          <div class="time-pick" id="cfgAlmuerzo"></div>
-        </div>
       </div>
     </div>
 
@@ -853,11 +849,8 @@ async function getTipo(doc){
     return{tipo:'Entrada',completo:false};
   }catch{
     const a=new Date(),h=a.getHours()+a.getMinutes()/60;
-    const alm=CONFIG.HORARIO.almuerzo||12;
     const sal=CONFIG.HORARIO.salida||14.75;
-    if(h<alm)return{tipo:'Entrada',completo:false};
-    if(h<sal)return{tipo:'Inicio almuerzo',completo:false};
-    return{tipo:'Salida',completo:false};
+    return{tipo:h<sal?'Entrada':'Salida',completo:false};
   }
 }
 
@@ -1417,7 +1410,6 @@ function aplicarConfig(cfg){
   if(cfg.entrada!=null)CONFIG.HORARIO.entrada=cfg.entrada;
   if(cfg.salida!=null)CONFIG.HORARIO.salida=cfg.salida;
   if(cfg.salidaSab!=null)CONFIG.HORARIO.salidaSabado=cfg.salidaSab;
-  if(cfg.almuerzo!=null)CONFIG.HORARIO.almuerzo=cfg.almuerzo;
   if(cfg.umbral!=null)CONFIG.UMBRAL_FACIAL=parseFloat(cfg.umbral);
 }
 // Aplicar al inicio
@@ -1464,7 +1456,7 @@ function getTimePick(id){
 
 function abrirConfig(){
   // Construir pickers si aún no existen
-  ['cfgEntrada','cfgSalida','cfgSalidaSab','cfgAlmuerzo'].forEach(id=>{
+  ['cfgEntrada','cfgSalida','cfgSalidaSab'].forEach(id=>{
     if(!document.getElementById(id).querySelector('select'))buildTimePick(id);
   });
   const cfg=getCfgGuardada()||{};
@@ -1475,7 +1467,6 @@ function abrirConfig(){
   setTimePick('cfgEntrada',cfg.entrada!=null?cfg.entrada:CONFIG.HORARIO.entrada);
   setTimePick('cfgSalida',cfg.salida!=null?cfg.salida:CONFIG.HORARIO.salida);
   setTimePick('cfgSalidaSab',cfg.salidaSab!=null?cfg.salidaSab:CONFIG.HORARIO.salidaSabado);
-  setTimePick('cfgAlmuerzo',cfg.almuerzo!=null?cfg.almuerzo:(CONFIG.HORARIO.almuerzo||12));
   const u=cfg.umbral!=null?cfg.umbral:CONFIG.UMBRAL_FACIAL;
   document.getElementById('cfgUmbral').value=u;
   document.getElementById('cfgUmbralVal').textContent=parseFloat(u).toFixed(2);
@@ -1511,7 +1502,6 @@ document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
     entrada:getTimePick('cfgEntrada'),
     salida:getTimePick('cfgSalida'),
     salidaSab:getTimePick('cfgSalidaSab'),
-    almuerzo:getTimePick('cfgAlmuerzo'),
     umbral:parseFloat(document.getElementById('cfgUmbral').value)
   };
   localStorage.setItem('app_config',JSON.stringify(cfg));
