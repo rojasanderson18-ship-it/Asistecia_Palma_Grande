@@ -450,6 +450,16 @@ input[type=password]:focus{border-color:var(--dg);}
       </div>
     </div>
 
+    <!-- BANNER ENROLAMIENTO -->
+    <div id="bannerEnrolar" style="display:none;background:var(--bl);border-radius:10px;padding:10px 14px;display:none;align-items:center;gap:10px;">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.6px;">Modo enrolamiento</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:1px;" id="bannerEnrolarNombre">—</div>
+      </div>
+      <button onclick="cancelarEnrolar()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;padding:5px 10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">CANCELAR</button>
+    </div>
+
     <!-- CÁMARA -->
     <div class="blk" id="bloqueCamera">
       <div class="blk-hdr">
@@ -1231,42 +1241,59 @@ function setProgreso(n,total){
   if(pe){pe.textContent=`${n}/${total}`;pe.className='st-val';}
 }
 
+function mostrarBannerEnrolar(nombre){
+  const b=document.getElementById('bannerEnrolar');
+  b.style.display='flex';
+  document.getElementById('bannerEnrolarNombre').textContent=nombre;
+}
+function ocultarBannerEnrolar(){
+  document.getElementById('bannerEnrolar').style.display='none';
+}
+function cancelarEnrolar(){
+  modoActual=null;nombreEnrolando=null;
+  ocultarBannerEnrolar();
+  mostrarPantalla('pantallaMarcacion');
+}
+
 async function procesarEnrolar(){
   if(!modOk){
-    if(modErr){
-      // Reintentar carga de modelos automáticamente
-      modErr=null;loadModels();
+    if(modErr){modErr=null;loadModels();
       document.getElementById('camEstado').textContent='Reintentando carga de modelos…';
     }
     setTimeout(procesarEnrolar,800);return;
   }
+  mostrarBannerEnrolar(nombreEnrolando);
   const descriptores=[];
   setProgreso(0,CAPTURAS_ENROLAR);
 
   while(descriptores.length<CAPTURAS_ENROLAR){
-    if(modoActual!=='enrolar')return;
+    if(modoActual!=='enrolar'){ocultarBannerEnrolar();return;}
     await new Promise(r=>setTimeout(r,300));
     let det;
     try{
       det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
       errE=0;
     }catch(e){
-      errE++;if(errE>=8){showRes('err','Error analizando rostro',xh(e.message||String(e)),[]);return;}
+      errE++;if(errE>=8){
+        modoActual=null;ocultarBannerEnrolar();
+        showRes('err','Error analizando rostro',xh(e.message||String(e)),[]);return;
+      }
       continue;
     }
     if(!det){
-      const estEl=document.getElementById('camEstado');
-      if(estEl)estEl.textContent='No detecto rostro — acércate a la cámara';
+      document.getElementById('camEstado').textContent='No detecto rostro — acércate a la cámara';
       continue;
     }
     descriptores.push(det.descriptor);
     setProgreso(descriptores.length,CAPTURAS_ENROLAR);
   }
 
-  if(modoActual!=='enrolar')return;
+  if(modoActual!=='enrolar'){ocultarBannerEnrolar();return;}
   document.getElementById('camEstado').textContent='Guardando…';
   const descriptorFinal=promediarDescriptores(descriptores);
   saveRostro(nombreEnrolando,descriptorFinal);
+  modoActual=null; // liberar el loop de reconocimiento
+  ocultarBannerEnrolar();
 
   const pe=getPC().find(p=>p.nombre===nombreEnrolando);
   const foto=capFoto();
@@ -1274,7 +1301,7 @@ async function procesarEnrolar(){
   const r=await enviarConResp({accion:'guardarFotoPersonal',documento:pe.documento,foto,nombre:pe.nombre,cargo:pe.cargo});
   if(!r||!r.ok||!r.fotoURL){showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero hubo un error en Drive.`,[]);setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;}
   showRes('ok','Empleado enrolado',`<b>${xh(nombreEnrolando)}</b> ya puede marcar asistencia`,[]);
-  setTimeout(()=>mostrarPantalla('pantallaMarcacion'),2000);
+  setTimeout(()=>mostrarPantalla('pantallaMarcacion'),3000);
 }
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
