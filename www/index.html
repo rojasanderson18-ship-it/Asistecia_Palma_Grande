@@ -21,6 +21,16 @@
   --sh:0 1px 4px rgba(0,0,0,.08),0 2px 10px rgba(0,0,0,.05);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1B4028;color:#fff;padding:11px 20px;border-radius:12px;
+  font-size:13px;font-weight:700;letter-spacing:.2px;
+  box-shadow:0 4px 18px rgba(0,0,0,.22);
+  opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;
+  white-space:nowrap;z-index:999;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 html,body{height:100%;background:var(--bg);}
 body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justify-content:center;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;}
 .app{width:100%;max-width:440px;height:100dvh;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
@@ -1507,12 +1517,22 @@ document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
   localStorage.setItem('app_config',JSON.stringify(cfg));
   aplicarConfig(cfg);
   mostrarPantalla('pantallaMenu');
+  showToast('✓ Configuración guardada');
   setTimeout(()=>chkGps(),500); // re-evaluar geocerca con nuevas coords
 });
 
 document.getElementById('btnVolverDesdeConfig').addEventListener('click',()=>mostrarPantalla('pantallaMenu'));
 document.getElementById('btnCancelarConfig').addEventListener('click',()=>mostrarPantalla('pantallaMenu'));
 document.getElementById('menuConfig').onclick=()=>abrirConfig();
+
+/* TOAST */
+const toastEl=document.createElement('div');toastEl.className='toast';document.body.appendChild(toastEl);
+let toastTimer=null;
+function showToast(msg){
+  toastEl.textContent=msg;toastEl.classList.add('show');
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2500);
+}
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
