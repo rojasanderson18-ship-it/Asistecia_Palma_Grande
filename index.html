@@ -604,6 +604,14 @@ input[type=password]:focus{border-color:var(--dg);}
       </div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
+    <div class="menu-item" id="menuConfig">
+      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      <div class="menu-item-txt">
+        <div class="menu-item-lbl">Configuración</div>
+        <div class="menu-item-sub">Finca, geocerca, horarios</div>
+      </div>
+      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
     <button class="btn-sec" id="menuCerrar" style="margin-top:8px;">Cerrar sesión</button>
   </div>
 </div>
@@ -635,6 +643,73 @@ input[type=password]:focus{border-color:var(--dg);}
     </div>
     <button class="btn-ok" id="btnGuardarPersonal">Guardar empleado</button>
     <button class="btn-sec" id="btnCancelarAgregar">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA CONFIGURACIÓN
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaConfig">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeConfig"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Configuración</span>
+    </div>
+
+    <!-- FINCA -->
+    <div class="form-c">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Datos de la finca</div>
+      <div class="fl">Nombre de la finca</div>
+      <input type="text" id="cfgNombreFinca" placeholder="Ej: Finca 2" class="fi">
+      <div class="fl">Latitud</div>
+      <input type="number" id="cfgLat" step="0.000001" placeholder="Ej: 2.722853" class="fi">
+      <div class="fl">Longitud</div>
+      <input type="number" id="cfgLng" step="0.000001" placeholder="Ej: -72.735464" class="fi">
+      <div class="fl">Radio geocerca (metros)</div>
+      <input type="number" id="cfgRadio" min="50" max="5000" placeholder="Ej: 100" class="fi">
+      <button class="btn-sec" id="btnUsarUbicacion" style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Usar mi ubicación actual como centro
+      </button>
+    </div>
+
+    <!-- HORARIO -->
+    <div class="form-c">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Horario laboral</div>
+      <div style="font-size:11.5px;color:var(--t2);margin-bottom:10px;line-height:1.5;">Estos horarios se usan cuando no hay conexión para determinar el tipo de marcación automáticamente.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <div class="fl">Entrada</div>
+          <input type="time" id="cfgEntrada" class="fi">
+        </div>
+        <div>
+          <div class="fl">Salida L-V</div>
+          <input type="time" id="cfgSalida" class="fi">
+        </div>
+        <div>
+          <div class="fl">Salida sábado</div>
+          <input type="time" id="cfgSalidaSab" class="fi">
+        </div>
+        <div>
+          <div class="fl">Inicio almuerzo</div>
+          <input type="time" id="cfgAlmuerzo" class="fi">
+        </div>
+      </div>
+    </div>
+
+    <!-- RECONOCIMIENTO -->
+    <div class="form-c">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Reconocimiento facial</div>
+      <div class="fl">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+        <input type="range" id="cfgUmbral" min="0.30" max="0.60" step="0.01" style="flex:1;accent-color:var(--dg);">
+        <span id="cfgUmbralVal" style="font-size:14px;font-weight:800;color:var(--dg);min-width:36px;text-align:right;">0.45</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-top:2px;"><span>Muy estricto</span><span>Permisivo</span></div>
+    </div>
+
+    <button class="btn-ok" id="btnGuardarConfig">Guardar configuración</button>
+    <button class="btn-sec" id="btnCancelarConfig">Cancelar</button>
   </div>
 </div>
 
@@ -761,7 +836,11 @@ async function getTipo(doc){
     return{tipo:'Entrada',completo:false};
   }catch{
     const a=new Date(),h=a.getHours()+a.getMinutes()/60;
-    return{tipo:h<12?'Entrada':'Salida',completo:false};
+    const alm=CONFIG.HORARIO.almuerzo||12;
+    const sal=CONFIG.HORARIO.salida||14.75;
+    if(h<alm)return{tipo:'Entrada',completo:false};
+    if(h<sal)return{tipo:'Inicio almuerzo',completo:false};
+    return{tipo:'Salida',completo:false};
   }
 }
 
@@ -1307,6 +1386,92 @@ async function procesarEnrolar(){
   showRes('ok','Empleado enrolado',`<b>${xh(nombreEnrolando)}</b> ya puede marcar asistencia`,[]);
   setTimeout(()=>mostrarPantalla('pantallaMarcacion'),3000);
 }
+
+/* ── CONFIGURACIÓN ── */
+function getCfgGuardada(){
+  try{return JSON.parse(localStorage.getItem('app_config')||'null');}catch{return null;}
+}
+function aplicarConfig(cfg){
+  if(!cfg)return;
+  if(cfg.nombreFinca){CONFIG.FINCA.nombre=cfg.nombreFinca;document.getElementById('nombreFinca').textContent=cfg.nombreFinca;}
+  if(cfg.lat!=null)CONFIG.FINCA.lat=parseFloat(cfg.lat);
+  if(cfg.lng!=null)CONFIG.FINCA.lng=parseFloat(cfg.lng);
+  if(cfg.radio)CONFIG.FINCA.radioMetros=parseInt(cfg.radio);
+  if(cfg.entrada!=null)CONFIG.HORARIO.entrada=cfg.entrada;
+  if(cfg.salida!=null)CONFIG.HORARIO.salida=cfg.salida;
+  if(cfg.salidaSab!=null)CONFIG.HORARIO.salidaSabado=cfg.salidaSab;
+  if(cfg.almuerzo!=null)CONFIG.HORARIO.almuerzo=cfg.almuerzo;
+  if(cfg.umbral!=null)CONFIG.UMBRAL_FACIAL=parseFloat(cfg.umbral);
+}
+// Aplicar al inicio
+aplicarConfig(getCfgGuardada());
+
+function decimalAHora(h){
+  const hh=Math.floor(h),mm=Math.round((h-hh)*60);
+  return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+function horaADecimal(s){
+  if(!s)return null;
+  const[hh,mm]=s.split(':').map(Number);return hh+mm/60;
+}
+
+function abrirConfig(){
+  const cfg=getCfgGuardada()||{};
+  document.getElementById('cfgNombreFinca').value=cfg.nombreFinca||CONFIG.FINCA.nombre;
+  document.getElementById('cfgLat').value=cfg.lat!=null?cfg.lat:CONFIG.FINCA.lat;
+  document.getElementById('cfgLng').value=cfg.lng!=null?cfg.lng:CONFIG.FINCA.lng;
+  document.getElementById('cfgRadio').value=cfg.radio!=null?cfg.radio:CONFIG.FINCA.radioMetros;
+  document.getElementById('cfgEntrada').value=decimalAHora(cfg.entrada!=null?cfg.entrada:CONFIG.HORARIO.entrada);
+  document.getElementById('cfgSalida').value=decimalAHora(cfg.salida!=null?cfg.salida:CONFIG.HORARIO.salida);
+  document.getElementById('cfgSalidaSab').value=decimalAHora(cfg.salidaSab!=null?cfg.salidaSab:CONFIG.HORARIO.salidaSabado);
+  document.getElementById('cfgAlmuerzo').value=decimalAHora(cfg.almuerzo!=null?cfg.almuerzo:(CONFIG.HORARIO.almuerzo||12));
+  const u=cfg.umbral!=null?cfg.umbral:CONFIG.UMBRAL_FACIAL;
+  document.getElementById('cfgUmbral').value=u;
+  document.getElementById('cfgUmbralVal').textContent=parseFloat(u).toFixed(2);
+  mostrarPantalla('pantallaConfig');
+}
+
+document.getElementById('cfgUmbral').addEventListener('input',function(){
+  document.getElementById('cfgUmbralVal').textContent=parseFloat(this.value).toFixed(2);
+});
+
+document.getElementById('btnUsarUbicacion').addEventListener('click',()=>{
+  if(!navigator.geolocation){alert('GPS no disponible');return;}
+  const btn=document.getElementById('btnUsarUbicacion');
+  btn.textContent='Obteniendo ubicación…';btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('cfgLat').value=pos.coords.latitude.toFixed(6);
+    document.getElementById('cfgLng').value=pos.coords.longitude.toFixed(6);
+    btn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Ubicación capturada ✓';
+    btn.disabled=false;
+  },()=>{btn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Usar mi ubicación actual como centro';btn.disabled=false;alert('No se pudo obtener la ubicación');},{enableHighAccuracy:true,timeout:8000});
+});
+
+document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
+  const nombre=document.getElementById('cfgNombreFinca').value.trim();
+  const lat=parseFloat(document.getElementById('cfgLat').value);
+  const lng=parseFloat(document.getElementById('cfgLng').value);
+  const radio=parseInt(document.getElementById('cfgRadio').value);
+  if(!nombre){alert('Escribe el nombre de la finca');return;}
+  if(isNaN(lat)||isNaN(lng)){alert('Las coordenadas no son válidas');return;}
+  if(isNaN(radio)||radio<50){alert('El radio mínimo es 50 metros');return;}
+  const cfg={
+    nombreFinca:nombre,lat,lng,radio,
+    entrada:horaADecimal(document.getElementById('cfgEntrada').value),
+    salida:horaADecimal(document.getElementById('cfgSalida').value),
+    salidaSab:horaADecimal(document.getElementById('cfgSalidaSab').value),
+    almuerzo:horaADecimal(document.getElementById('cfgAlmuerzo').value),
+    umbral:parseFloat(document.getElementById('cfgUmbral').value)
+  };
+  localStorage.setItem('app_config',JSON.stringify(cfg));
+  aplicarConfig(cfg);
+  mostrarPantalla('pantallaMenu');
+  setTimeout(()=>chkGps(),500); // re-evaluar geocerca con nuevas coords
+});
+
+document.getElementById('btnVolverDesdeConfig').addEventListener('click',()=>mostrarPantalla('pantallaMenu'));
+document.getElementById('btnCancelarConfig').addEventListener('click',()=>mostrarPantalla('pantallaMenu'));
+document.getElementById('menuConfig').onclick=()=>abrirConfig();
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
