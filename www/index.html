@@ -228,8 +228,6 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justi
 .btn-accion:disabled{background:#D1D5DB !important;color:#9CA3AF;box-shadow:none;cursor:not-allowed;}
 .btn-accion.entrada{background:linear-gradient(135deg,#1B5E20,var(--dg));box-shadow:0 4px 18px rgba(30,94,32,.35);}
 .btn-accion.salida{background:linear-gradient(135deg,#B71C1C,var(--re));box-shadow:0 4px 18px rgba(183,28,28,.3);}
-.btn-accion.almuerzo{background:linear-gradient(135deg,#E65100,#FF7043);box-shadow:0 4px 18px rgba(230,81,0,.3);}
-.btn-accion.fin-almuerzo{background:linear-gradient(135deg,#1565C0,#1E88E5);box-shadow:0 4px 18px rgba(21,101,192,.3);}
 .btn-accion svg{width:20px;height:20px;fill:currentColor;flex-shrink:0;}
 
 /* ════════════════════════════════
@@ -911,21 +909,15 @@ window.addEventListener('offline',()=>{document.getElementById('stInternet').tex
 
 /* TIPO */
 let tipoCalc=null;
-const TIPO_CLASS={
-  'Entrada':'entrada','Inicio almuerzo':'almuerzo',
-  'Fin almuerzo':'fin-almuerzo','Salida':'salida'
-};
+const TIPO_CLASS={'Entrada':'entrada','Salida':'salida'};
 async function getTipo(doc){
   if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR'))return{tipo:'Entrada',completo:false,marcas:[]};
   try{
     const r=await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`,{cache:'no-store'});
     const d=await r.json();const m=(d&&d.marcas)||[];
-    let tipo='Entrada';
     if(m.includes('Salida'))return{tipo:'Salida',completo:true,marcas:m};
-    if(m.includes('Fin almuerzo'))tipo='Salida';
-    else if(m.includes('Inicio almuerzo'))tipo='Fin almuerzo';
-    else if(m.includes('Entrada'))tipo='Inicio almuerzo';
-    return{tipo,completo:false,marcas:m};
+    if(m.includes('Entrada'))return{tipo:'Salida',completo:false,marcas:m};
+    return{tipo:'Entrada',completo:false,marcas:m};
   }catch{
     const a=new Date(),h=a.getHours()+a.getMinutes()/60;
     const sal=CONFIG.HORARIO.salida||14.75;
