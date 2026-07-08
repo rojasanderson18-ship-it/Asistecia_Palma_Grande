@@ -761,7 +761,7 @@ input[type=password]:focus{border-color:var(--dg);}
       <div class="fl" style="margin-bottom:6px;">Minutos de almuerzo (se descuentan al autorizar)</div>
       <div style="display:flex;align-items:center;gap:10px;">
         <input type="number" id="cfgAlmuerzoMin" min="15" max="90" step="5" style="width:80px;padding:10px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);font-size:16px;font-weight:700;text-align:center;color:var(--tx);outline:none;">
-        <span style="font-size:12px;color:var(--t2);">min (típico 30 min)</span>
+        <span style="font-size:12px;color:var(--t2);">min (12:00 – 1:00 p.m.)</span>
       </div>
       <div class="fl" style="margin-top:14px;">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
@@ -890,7 +890,7 @@ const CONFIG={
   ],
   HORARIO:{entrada:6.0,salida:14.75,salidaSabado:11.75},
   UMBRAL_FACIAL:0.45,
-  ALMUERZO_MIN:30
+  ALMUERZO_MIN:60
 };
 
 function xh(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
@@ -1781,7 +1781,7 @@ document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
     salida:getTimePick('cfgSalida'),
     salidaSab:getTimePick('cfgSalidaSab'),
     umbral:parseFloat(document.getElementById('cfgUmbral').value),
-    almuerzoMin:parseInt(document.getElementById('cfgAlmuerzoMin').value)||30
+    almuerzoMin:parseInt(document.getElementById('cfgAlmuerzoMin').value)||60
   };
   if(pinNuevo&&/^\d{4}$/.test(pinNuevo))cfg.pin=pinNuevo;
   else{const prev=getCfgGuardada();if(prev&&prev.pin)cfg.pin=prev.pin;}
