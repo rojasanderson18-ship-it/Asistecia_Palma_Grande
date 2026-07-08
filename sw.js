@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asistencia-palma-v4';
+const CACHE_NAME = 'asistencia-palma-v5';
 const ARCHIVOS_CACHE = [
   './index.html',
   './manifest.json',
