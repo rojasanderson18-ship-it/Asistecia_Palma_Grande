@@ -1251,13 +1251,33 @@ document.getElementById('btnMarcar').onclick=async()=>{
   ejecutarMarcacion(nombreSel,tipoCalc||'Entrada',Math.round((1-dist)*100),false);
 };
 
+function calcularPuntualidad(tipo,hora){
+  const h=hora.getHours()+hora.getMinutes()/60;
+  const GRACIA=15/60;
+  const esSabado=hora.getDay()===6;
+  if(tipo==='Entrada'){
+    const entrada=CONFIG.HORARIO.entrada||6.0;
+    if(h<=entrada+GRACIA)return{estado:'ok',msg:'A tiempo',minutos:0};
+    const min=Math.round((h-entrada)*60);
+    return{estado:'tarde',msg:`Tarde ${min} min`,minutos:min};
+  }
+  if(tipo==='Salida'){
+    const salida=esSabado?(CONFIG.HORARIO.salidaSabado||11.75):(CONFIG.HORARIO.salida||14.75);
+    if(h>=salida)return{estado:'ok',msg:'A tiempo',minutos:0};
+    const min=Math.round((salida-h)*60);
+    return{estado:'temprano',msg:`Salida ${min} min antes`,minutos:min};
+  }
+  return{estado:'ok',msg:'',minutos:0};
+}
+
 function ejecutarMarcacion(nombre,tipo,confPct,sinBiometria){
   const hora=new Date();
   const pm=getPorDoc(docInput.value.trim());
-  const payload={accion:'marcar',nombre,documento:pm?pm.documento:'',finca:CONFIG.FINCA.nombre,tipo,cargo:getCargo(nombre),fechaHora:hora.toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:sinBiometria?null:(1-confPct/100),sinBiometria:!!sinBiometria};
+  const punt=calcularPuntualidad(tipo,hora);
+  const payload={accion:'marcar',nombre,documento:pm?pm.documento:'',finca:CONFIG.FINCA.nombre,tipo,cargo:getCargo(nombre),fechaHora:hora.toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:sinBiometria?null:(1-confPct/100),sinBiometria:!!sinBiometria,puntualidad:punt.estado,minutosDeuda:punt.minutos};
   enviar(payload);updColaBadge();
   saveUltima(nombre,tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk,Date.now());
-  showConf({nombre,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:sinBiometria?'Autorizado supervisor':(confPct+'%'),finca:CONFIG.FINCA.nombre,gpsOk,sinBiometria});
+  showConf({nombre,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:sinBiometria?'Autorizado supervisor':(confPct+'%'),finca:CONFIG.FINCA.nombre,gpsOk,sinBiometria,punt});
 }
 
 function resetBtnReg(){
@@ -1278,14 +1298,18 @@ function showConf(d){
     {p:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',l:'Finca',v:xh(d.finca||'—')},
     {p:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',l:'Confianza facial',v:d.confianza},
   ];
+  const pColor=d.punt?{ok:'#2E7D32',tarde:'#C62828',temprano:'#E65100'}[d.punt.estado]||'#555':'#555';
+  const puntFila=d.punt&&d.punt.msg?`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="${pColor}" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="cf-l">Puntualidad</div><div class="cf-v" style="color:${pColor};font-weight:700">${xh(d.punt.msg)}</div></div></div>`:'';
   document.getElementById('resultadoContenido').innerHTML=`
     <div class="conf-wrap">
       <div class="c-ico ok"><svg viewBox="0 0 24 24" fill="none" stroke="#2E7D32" stroke-width="2.5" width="32" height="32"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="c-tit">¡Marcación registrada!</div>
       <span class="c-bdg">${xh(d.tipo)}</span>
-      <div class="c-tabla">${filas.map(f=>`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#2E7D32" width="13" height="13">${f.p}</svg></div><div><div class="cf-l">${f.l}</div><div class="cf-v">${f.v}</div></div></div>`).join('')}</div>
+      <div class="c-tabla">${filas.map(f=>`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#2E7D32" width="13" height="13">${f.p}</svg></div><div><div class="cf-l">${f.l}</div><div class="cf-v">${f.v}</div></div></div>`).join('')}${puntFila}</div>
       ${!d.gpsOk?'<div class="c-av">⚠️ Marcado fuera de geocerca — revisión Gerencia</div>':''}
       ${d.sinBiometria?'<div class="c-av" style="background:#FFF3E0;border-color:#FFB74D;">⚠️ Marcado sin verificación biométrica — autorizado por supervisor</div>':''}
+      ${d.punt&&d.punt.estado==='tarde'?`<div class="c-av" style="background:#FFEBEE;border-color:#EF9A9A;">⏰ Entrada tarde — debe ${d.punt.minutos} min</div>`:''}
+      ${d.punt&&d.punt.estado==='temprano'?`<div class="c-av" style="background:#FFF8E1;border-color:#FFD54F;">⏰ Salida anticipada — debe ${d.punt.minutos} min</div>`:''}
       <button class="btn-ok" id="btnConfOk">ACEPTAR (<span id="cdNum">${secs}</span>)</button>
       <div class="cd-timer">Volverá al inicio en unos segundos</div>
     </div>`;
