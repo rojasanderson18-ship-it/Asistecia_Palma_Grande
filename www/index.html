@@ -571,7 +571,12 @@ input[type=password]:focus{border-color:var(--dg);}
       <span class="link-d" id="btnEnrolar">Enrolar empleado</span>
       <span class="link-d" id="btnAgregarPersonal">Agregar personal</span>
     </div>
-    <span class="version">V 1.0.0</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="colaBadge" style="display:none;background:var(--or);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;cursor:pointer;" title="Marcaciones pendientes de enviar">
+        <span id="colaCnt">0</span> pendientes
+      </div>
+      <span class="version">V 1.0.0</span>
+    </div>
   </div>
 </div>
 
@@ -607,11 +612,23 @@ input[type=password]:focus{border-color:var(--dg);}
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       <span>Menú Administrativo</span>
     </div>
+    <!-- Aviso re-enrolamiento -->
+    <div id="avisoReenrolar" style="display:none;background:#FFF3E0;border:1px solid #FFB74D;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--or);font-weight:600;line-height:1.5;">
+      ⚠️ <span id="avisoReenrolarTxt"></span> Ingresa a Gestión de rostros para ver quiénes necesitan re-enrolarse.
+    </div>
     <div class="menu-item" id="menuEnrolar">
       <div class="menu-item-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <div class="menu-item-txt">
         <div class="menu-item-lbl">Enrolar empleado</div>
         <div class="menu-item-sub">Capturar rostro de referencia</div>
+      </div>
+      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="menu-item" id="menuRostros">
+      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg></div>
+      <div class="menu-item-txt">
+        <div class="menu-item-lbl">Gestión de rostros</div>
+        <div class="menu-item-sub" id="menuRostrosSub">Ver y eliminar rostros enrolados</div>
       </div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
@@ -674,6 +691,26 @@ input[type=password]:focus{border-color:var(--dg);}
 </div>
 
 <!-- ══════════════════════════════════════════
+     PANTALLA GESTIÓN DE ROSTROS
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaRostros">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeRostros"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Gestión de rostros</span>
+    </div>
+    <div id="rostrosResumen" style="background:var(--wh);border-radius:12px;border:1px solid var(--bd);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:13px;font-weight:700;" id="rostrosCount">—</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px;">empleados con rostro enrolado</div>
+      </div>
+      <button id="btnBorrarTodosRostros" style="background:var(--rl);border:1px solid #FFCDD2;color:var(--re);border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">Borrar todos</button>
+    </div>
+    <div id="listaRostros" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
      PANTALLA CONFIGURACIÓN
 ══════════════════════════════════════════ -->
 <div class="pantalla" id="pantallaConfig">
@@ -731,6 +768,16 @@ input[type=password]:focus{border-color:var(--dg);}
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-top:2px;"><span>Muy estricto</span><span>Permisivo</span></div>
     </div>
 
+    <!-- PIN -->
+    <div class="form-c">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Seguridad</div>
+      <div class="fl">PIN de gerencia (4 dígitos)</div>
+      <input type="password" id="cfgPin" maxlength="4" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
+      <div class="fl" style="margin-top:10px;">Confirmar PIN</div>
+      <input type="password" id="cfgPinConf" maxlength="4" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
+      <div style="font-size:11px;color:var(--t2);margin-top:6px;">Deja vacío para no cambiar el PIN actual.</div>
+    </div>
+
     <button class="btn-ok" id="btnGuardarConfig">Guardar configuración</button>
     <button class="btn-sec" id="btnCancelarConfig">Cancelar</button>
   </div>
@@ -749,6 +796,19 @@ input[type=password]:focus{border-color:var(--dg);}
       <div class="fl">Selecciona el empleado</div>
       <div class="grilla" id="grillaEnrolar"></div>
     </div>
+  </div>
+</div>
+
+<!-- Modal autorización supervisor -->
+<div id="modalSupervisor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--wh);border-radius:18px;padding:24px 20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Autorización requerida</div>
+    <div style="font-size:13px;color:var(--t1);margin-bottom:18px;line-height:1.55;" id="modalSupervisorTxt"></div>
+    <input type="password" id="modalPinInput" maxlength="4" inputmode="numeric" placeholder="PIN de gerencia"
+      style="width:100%;padding:13px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);color:var(--tx);font-size:22px;text-align:center;letter-spacing:8px;font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;">
+    <div style="font-size:11.5px;color:var(--re);font-weight:600;min-height:18px;margin-bottom:10px;" id="modalPinErr"></div>
+    <button class="btn-ok" id="modalPinOk">Autorizar marcación</button>
+    <button class="btn-sec" id="modalPinCancel" style="margin-top:10px;">Cancelar</button>
   </div>
 </div>
 
@@ -801,7 +861,15 @@ function getPC(){return[...CONFIG.PERSONAL_BASE,...getPE()].sort((a,b)=>a.nombre
 function getCargo(n){const p=getPC().find(p=>p.nombre===n);return p?p.cargo:'';}
 function getPorDoc(d){const s=String(d).trim();return getPC().find(p=>String(p.documento)===s);}
 function getRostros(){try{return JSON.parse(localStorage.getItem('rostros_enrolados')||'{}');}catch{return{};}}
-function saveRostro(n,d){const r=getRostros();r[n]=Array.from(d);localStorage.setItem('rostros_enrolados',JSON.stringify(r));}
+function getRostrosMeta(){try{return JSON.parse(localStorage.getItem('rostros_meta')||'{}');}catch{return{};}}
+function saveRostro(n,d){
+  const r=getRostros();r[n]=Array.from(d);localStorage.setItem('rostros_enrolados',JSON.stringify(r));
+  const m=getRostrosMeta();m[n]={v:2,fecha:new Date().toISOString()};localStorage.setItem('rostros_meta',JSON.stringify(m));
+}
+function deleteRostro(n){
+  const r=getRostros();delete r[n];localStorage.setItem('rostros_enrolados',JSON.stringify(r));
+  const m=getRostrosMeta();delete m[n];localStorage.setItem('rostros_meta',JSON.stringify(m));
+}
 
 document.getElementById('nombreFinca').textContent=CONFIG.FINCA.nombre;
 
@@ -848,19 +916,20 @@ const TIPO_CLASS={
   'Fin almuerzo':'fin-almuerzo','Salida':'salida'
 };
 async function getTipo(doc){
-  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR'))return{tipo:'Entrada',completo:false};
+  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR'))return{tipo:'Entrada',completo:false,marcas:[]};
   try{
     const r=await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`,{cache:'no-store'});
     const d=await r.json();const m=(d&&d.marcas)||[];
-    if(m.includes('Salida'))return{tipo:'Salida',completo:true};
-    if(m.includes('Fin almuerzo'))return{tipo:'Salida',completo:false};
-    if(m.includes('Inicio almuerzo'))return{tipo:'Fin almuerzo',completo:false};
-    if(m.includes('Entrada'))return{tipo:'Inicio almuerzo',completo:false};
-    return{tipo:'Entrada',completo:false};
+    let tipo='Entrada';
+    if(m.includes('Salida'))return{tipo:'Salida',completo:true,marcas:m};
+    if(m.includes('Fin almuerzo'))tipo='Salida';
+    else if(m.includes('Inicio almuerzo'))tipo='Fin almuerzo';
+    else if(m.includes('Entrada'))tipo='Inicio almuerzo';
+    return{tipo,completo:false,marcas:m};
   }catch{
     const a=new Date(),h=a.getHours()+a.getMinutes()/60;
     const sal=CONFIG.HORARIO.salida||14.75;
-    return{tipo:h<sal?'Entrada':'Salida',completo:false};
+    return{tipo:h<sal?'Entrada':'Salida',completo:false,marcas:[]};
   }
 }
 
@@ -1024,7 +1093,7 @@ async function autoFill(nombre,dist){
   docValEl.textContent=p.documento.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   docValEl.className='doc-number';
   document.getElementById('teclado').style.display='none';
-  docSubEl.textContent=p.nombre+' · '+p.cargo+' · Reconocido automáticamente';
+  docSubEl.textContent=p.nombre+' · '+p.cargo;
   docSubEl.className='doc-info';docSubEl.style.display='block';
   docChkEl.classList.add('show');
   const pct=Math.max(0,Math.round((1-dist)*100));
@@ -1036,11 +1105,14 @@ async function autoFill(nombre,dist){
   const res=await getTipo(p.documento);
   autoFillPending=false;
   if(nombreSel!==nombre)return;
+  // Mostrar marcaciones de hoy
+  const marcasLabel=res.marcas&&res.marcas.length?'Hoy: '+res.marcas.join(' · '):'Sin marcaciones hoy';
   if(res.completo){
     tipoCalc=null;tipoTxt.textContent='Jornada completa';tipoTxt.className='tipo-txt';
-    docSubEl.textContent='Ya completaste tu jornada hoy';docSubEl.className='doc-info er';
+    docSubEl.textContent='Ya completaste tu jornada hoy · '+marcasLabel;docSubEl.className='doc-info er';
     btn.disabled=true;btn.className='btn-accion';return;
   }
+  docSubEl.textContent=p.nombre+' · '+p.cargo+' · '+marcasLabel;
   tipoCalc=res.tipo;tipoTxt.textContent=tipoCalc;tipoTxt.className='tipo-txt';
   btn.disabled=false;updateBtnColor();
   btn.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg> REGISTRAR ${tipoCalc.toUpperCase()}`;
@@ -1124,6 +1196,18 @@ function capFoto(){
 function mostrarPantalla(id){
   document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('show'));
   document.getElementById(id).classList.add('show');
+  if(id==='pantallaMenu')actualizarMenuAdmin();
+}
+function actualizarMenuAdmin(){
+  updColaBadge();
+  const rostros=getRostros();const meta=getRostrosMeta();
+  const enrolados=getPC().filter(p=>rostros[p.nombre]);
+  const viejos=enrolados.filter(p=>!meta[p.nombre]||meta[p.nombre].v<2);
+  document.getElementById('menuRostrosSub').textContent=`${enrolados.length} de ${getPC().length} enrolados`;
+  const avisoEl=document.getElementById('avisoReenrolar');
+  const avisoTxt=document.getElementById('avisoReenrolarTxt');
+  if(viejos.length){avisoEl.style.display='block';avisoTxt.textContent=`${viejos.length} empleado(s) con enrolamiento antiguo (1 captura).`;}
+  else{avisoEl.style.display='none';}
 }
 
 /* MARCAR */
@@ -1155,8 +1239,13 @@ document.getElementById('btnMarcar').onclick=async()=>{
 
   const rostros=getRostros(),ref=rostros[nombreSel];
   if(!ref){
-    btn.disabled=false;resetBtnReg();
-    showRes('err','Sin rostro de referencia',`<b>${xh(nombreSel)}</b> no está enrolado.`,'Pide a Gerencia que lo enrole primero');return;
+    modoActual=null;btn.disabled=false;resetBtnReg();
+    // Ofrecer autorización supervisor en lugar de error puro
+    abrirModalSupervisor(
+      `<b>${xh(nombreSel)}</b> no tiene rostro enrolado. Un supervisor puede autorizar la marcación con su PIN.`,
+      ()=>ejecutarMarcacion(nombreSel,tipoCalc||'Entrada',null,true)
+    );
+    return;
   }
 
   const dist=faceapi.euclideanDistance(det.descriptor,new Float32Array(ref));
@@ -1167,14 +1256,17 @@ document.getElementById('btnMarcar').onclick=async()=>{
       ['Rostro no enrolado','Mala iluminación','Cámara borrosa','Documento incorrecto','Fuera del área permitida']);return;
   }
 
-  const tipo=tipoCalc||'Entrada',hora=new Date();
-  const pm=getPorDoc(docInput.value.trim());
-  const conf=Math.round((1-dist)*100);
-  const payload={accion:'marcar',nombre:nombreSel,documento:pm?pm.documento:'',finca:CONFIG.FINCA.nombre,tipo,cargo:getCargo(nombreSel),fechaHora:hora.toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:dist};
-  enviar(payload);
-  saveUltima(nombreSel,tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk,Date.now());
-  showConf({nombre:nombreSel,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:conf+'%',finca:CONFIG.FINCA.nombre,gpsOk});
+  ejecutarMarcacion(nombreSel,tipoCalc||'Entrada',Math.round((1-dist)*100),false);
 };
+
+function ejecutarMarcacion(nombre,tipo,confPct,sinBiometria){
+  const hora=new Date();
+  const pm=getPorDoc(docInput.value.trim());
+  const payload={accion:'marcar',nombre,documento:pm?pm.documento:'',finca:CONFIG.FINCA.nombre,tipo,cargo:getCargo(nombre),fechaHora:hora.toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:sinBiometria?null:(1-confPct/100),sinBiometria:!!sinBiometria};
+  enviar(payload);updColaBadge();
+  saveUltima(nombre,tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk,Date.now());
+  showConf({nombre,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:sinBiometria?'Autorizado supervisor':(confPct+'%'),finca:CONFIG.FINCA.nombre,gpsOk,sinBiometria});
+}
 
 function resetBtnReg(){
   const b=document.getElementById('btnMarcar');
@@ -1201,6 +1293,7 @@ function showConf(d){
       <span class="c-bdg">${xh(d.tipo)}</span>
       <div class="c-tabla">${filas.map(f=>`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#2E7D32" width="13" height="13">${f.p}</svg></div><div><div class="cf-l">${f.l}</div><div class="cf-v">${f.v}</div></div></div>`).join('')}</div>
       ${!d.gpsOk?'<div class="c-av">⚠️ Marcado fuera de geocerca — revisión Gerencia</div>':''}
+      ${d.sinBiometria?'<div class="c-av" style="background:#FFF3E0;border-color:#FFB74D;">⚠️ Marcado sin verificación biométrica — autorizado por supervisor</div>':''}
       <button class="btn-ok" id="btnConfOk">ACEPTAR (<span id="cdNum">${secs}</span>)</button>
       <div class="cd-timer">Volverá al inicio en unos segundos</div>
     </div>`;
@@ -1251,7 +1344,7 @@ async function reintentarCola(){
   if(reint)return;const c=JSON.parse(localStorage.getItem('cola')||'[]');if(!c.length)return;
   reint=true;const pen=[];
   for(const i of c){try{await fetch(CONFIG.GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(i)});}catch{pen.push(i);}}
-  localStorage.setItem('cola',JSON.stringify(pen));reint=false;
+  localStorage.setItem('cola',JSON.stringify(pen));reint=false;updColaBadge();
 }
 window.addEventListener('online',reintentarCola);setInterval(reintentarCola,120000);setTimeout(reintentarCola,3000);
 
@@ -1421,6 +1514,7 @@ function aplicarConfig(cfg){
   if(cfg.salida!=null)CONFIG.HORARIO.salida=cfg.salida;
   if(cfg.salidaSab!=null)CONFIG.HORARIO.salidaSabado=cfg.salidaSab;
   if(cfg.umbral!=null)CONFIG.UMBRAL_FACIAL=parseFloat(cfg.umbral);
+  if(cfg.pin)CONFIG.PIN_GERENCIA=cfg.pin;
 }
 // Aplicar al inicio
 aplicarConfig(getCfgGuardada());
@@ -1507,6 +1601,7 @@ document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
   if(!nombre){alert('Escribe el nombre de la finca');return;}
   if(isNaN(lat)||isNaN(lng)){alert('Las coordenadas no son válidas');return;}
   if(isNaN(radio)||radio<50){alert('El radio mínimo es 50 metros');return;}
+  const pinNuevo=document.getElementById('cfgPin').value;
   const cfg={
     nombreFinca:nombre,lat,lng,radio,
     entrada:getTimePick('cfgEntrada'),
@@ -1514,6 +1609,8 @@ document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
     salidaSab:getTimePick('cfgSalidaSab'),
     umbral:parseFloat(document.getElementById('cfgUmbral').value)
   };
+  if(pinNuevo&&/^\d{4}$/.test(pinNuevo))cfg.pin=pinNuevo;
+  else{const prev=getCfgGuardada();if(prev&&prev.pin)cfg.pin=prev.pin;}
   localStorage.setItem('app_config',JSON.stringify(cfg));
   aplicarConfig(cfg);
   mostrarPantalla('pantallaMenu');
@@ -1533,6 +1630,120 @@ function showToast(msg){
   if(toastTimer)clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2500);
 }
+
+/* COLA BADGE */
+function updColaBadge(){
+  const c=JSON.parse(localStorage.getItem('cola')||'[]');
+  const badge=document.getElementById('colaBadge');
+  const cnt=document.getElementById('colaCnt');
+  if(c.length>0){badge.style.display='block';cnt.textContent=c.length;}
+  else{badge.style.display='none';}
+}
+updColaBadge();
+document.getElementById('colaBadge').addEventListener('click',()=>{
+  const c=JSON.parse(localStorage.getItem('cola')||'[]');
+  if(c.length)showToast(`${c.length} marcación(es) pendientes de enviar`);
+});
+
+/* MODAL SUPERVISOR */
+let _modalOkCb=null;
+function abrirModalSupervisor(txt,cb){
+  _modalOkCb=cb;
+  document.getElementById('modalSupervisorTxt').innerHTML=txt;
+  document.getElementById('modalPinInput').value='';
+  document.getElementById('modalPinErr').textContent='';
+  document.getElementById('modalSupervisor').style.display='flex';
+  setTimeout(()=>document.getElementById('modalPinInput').focus(),100);
+}
+document.getElementById('modalPinOk').onclick=()=>{
+  const pin=document.getElementById('modalPinInput').value;
+  if(pin!==CONFIG.PIN_GERENCIA){document.getElementById('modalPinErr').textContent='PIN incorrecto';return;}
+  document.getElementById('modalSupervisor').style.display='none';
+  if(_modalOkCb){_modalOkCb();_modalOkCb=null;}
+};
+document.getElementById('modalPinCancel').onclick=()=>{
+  document.getElementById('modalSupervisor').style.display='none';_modalOkCb=null;
+};
+
+/* GESTIÓN DE ROSTROS */
+function abrirGestionRostros(){
+  const rostros=getRostros();const meta=getRostrosMeta();
+  const todos=getPC();
+  const enrolados=todos.filter(p=>rostros[p.nombre]);
+  document.getElementById('rostrosCount').textContent=enrolados.length;
+  // Aviso re-enrolamiento: los que no tienen meta.v===2
+  const viejos=enrolados.filter(p=>!meta[p.nombre]||meta[p.nombre].v<2);
+  const avisoEl=document.getElementById('avisoReenrolar');
+  const avisoTxt=document.getElementById('avisoReenrolarTxt');
+  if(viejos.length){
+    avisoEl.style.display='block';
+    avisoTxt.textContent=`${viejos.length} empleado(s) enrolado(s) con el sistema antiguo (1 sola captura).`;
+  }else{avisoEl.style.display='none';}
+  // Actualizar sub del menú
+  document.getElementById('menuRostrosSub').textContent=`${enrolados.length} de ${todos.length} enrolados`;
+  // Lista
+  const lista=document.getElementById('listaRostros');lista.innerHTML='';
+  todos.forEach(p=>{
+    const enrol=!!rostros[p.nombre];
+    const esViejo=enrol&&(!meta[p.nombre]||meta[p.nombre].v<2);
+    const fechaStr=meta[p.nombre]?new Date(meta[p.nombre].fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+    const div=document.createElement('div');
+    div.style.cssText='background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;';
+    div.innerHTML=`
+      <div style="width:36px;height:36px;border-radius:50%;background:${enrol?'var(--xl)':'var(--bg)'};border:1.5px solid ${enrol?'var(--dg)':'var(--bd)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="font-size:11px;font-weight:700;color:${enrol?'var(--dg)':'var(--t2)'}">${inic(p.nombre)}</span>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xh(p.nombre)}</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px;">${enrol?(esViejo?'⚠️ Enrolado (antiguo)':'✓ Enrolado · '+fechaStr):'Sin enrolar'}</div>
+      </div>
+      ${enrol?`<button data-nombre="${encodeURIComponent(p.nombre)}" style="background:var(--rl);border:1px solid #FFCDD2;color:var(--re);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Borrar</button>`:''}
+    `;
+    lista.appendChild(div);
+  });
+  // Delegación de eventos borrar
+  lista.onclick=e=>{
+    const btn=e.target.closest('button[data-nombre]');if(!btn)return;
+    const nombre=decodeURIComponent(btn.dataset.nombre);
+    if(!confirm(`¿Borrar el rostro de ${nombre}? Deberá enrolarse nuevamente.`))return;
+    deleteRostro(nombre);showToast('Rostro eliminado');abrirGestionRostros();
+  };
+  mostrarPantalla('pantallaRostros');
+}
+document.getElementById('menuRostros').onclick=abrirGestionRostros;
+document.getElementById('btnVolverDesdeRostros').onclick=()=>mostrarPantalla('pantallaMenu');
+document.getElementById('btnBorrarTodosRostros').onclick=()=>{
+  const n=Object.keys(getRostros()).length;
+  if(!n){showToast('No hay rostros enrolados');return;}
+  if(!confirm(`¿Borrar los ${n} rostros enrolados? Todos deberán enrolarse nuevamente.`))return;
+  localStorage.removeItem('rostros_enrolados');localStorage.removeItem('rostros_meta');
+  showToast('Todos los rostros eliminados');abrirGestionRostros();
+};
+
+/* CONFIG — PIN */
+// La función abrirConfig ya existe; se extiende leyendo el PIN guardado
+const _abrirConfigOrig=abrirConfig;
+abrirConfig=function(){
+  _abrirConfigOrig();
+  document.getElementById('cfgPin').value='';
+  document.getElementById('cfgPinConf').value='';
+};
+
+/* CONFIG — guardar PIN */
+const _btnGuardarOrig=document.getElementById('btnGuardarConfig').onclick;
+// Se reemplaza el listener de guardar para validar PIN (ver más abajo en la función ya definida)
+
+// Parchar el guardar para incluir PIN
+document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
+  const pin=document.getElementById('cfgPin').value;
+  const conf=document.getElementById('cfgPinConf').value;
+  if(pin){
+    if(!/^\d{4}$/.test(pin)){alert('El PIN debe ser exactamente 4 dígitos');return;}
+    if(pin!==conf){alert('Los PINs no coinciden');return;}
+    CONFIG.PIN_GERENCIA=pin;
+    // Se guarda también en localStorage dentro del cfg — ya lo maneja btnGuardarConfig original
+  }
+},true); // capture=true → corre antes del listener existente
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
