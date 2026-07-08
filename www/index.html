@@ -758,7 +758,12 @@ input[type=password]:focus{border-color:var(--dg);}
     <!-- RECONOCIMIENTO -->
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Reconocimiento facial</div>
-      <div class="fl">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
+      <div class="fl" style="margin-bottom:6px;">Minutos de almuerzo (se descuentan al autorizar)</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="number" id="cfgAlmuerzoMin" min="15" max="90" step="5" style="width:80px;padding:10px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);font-size:16px;font-weight:700;text-align:center;color:var(--tx);outline:none;">
+        <span style="font-size:12px;color:var(--t2);">min (típico 30 min)</span>
+      </div>
+      <div class="fl" style="margin-top:14px;">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
         <input type="range" id="cfgUmbral" min="0.30" max="0.60" step="0.01" style="flex:1;accent-color:var(--dg);">
         <span id="cfgUmbralVal" style="font-size:14px;font-weight:800;color:var(--dg);min-width:36px;text-align:right;">0.45</span>
@@ -778,6 +783,42 @@ input[type=password]:focus{border-color:var(--dg);}
 
     <button class="btn-ok" id="btnGuardarConfig">Guardar configuración</button>
     <button class="btn-sec" id="btnCancelarConfig">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA REPORTE DE DEUDA
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaReporte">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeReporte"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Reporte de deuda</span>
+    </div>
+
+    <!-- selector de fecha -->
+    <div style="display:flex;align-items:center;gap:8px;background:var(--wh);border-radius:12px;padding:10px 14px;border:1px solid var(--bd);box-shadow:var(--sh);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--dg)" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="date" id="repFecha" style="flex:1;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--tx);outline:none;">
+      <button id="btnRepCargar" style="background:var(--dg);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;">Cargar</button>
+    </div>
+
+    <!-- resumen rápido -->
+    <div id="repResumen" style="display:none;background:var(--wh);border-radius:12px;padding:12px 14px;border:1px solid var(--bd);box-shadow:var(--sh);">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:8px;">Resumen del día</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="text-align:center;"><div id="repCntTarde" style="font-size:22px;font-weight:900;color:var(--re);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Tarde</div></div>
+        <div style="text-align:center;"><div id="repCntTemprano" style="font-size:22px;font-weight:900;color:var(--or);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Salida ant.</div></div>
+        <div style="text-align:center;"><div id="repCntDeuda" style="font-size:22px;font-weight:900;color:var(--bl);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Min deuda</div></div>
+      </div>
+    </div>
+
+    <!-- estado carga -->
+    <div id="repEstado" style="text-align:center;font-size:13px;color:var(--t2);padding:24px 0;">Selecciona una fecha y toca Cargar</div>
+
+    <!-- tabla empleados -->
+    <div id="repTabla"></div>
+
   </div>
 </div>
 
@@ -848,7 +889,8 @@ const CONFIG={
     {documento:"4428130",nombre:"Tulio Antonio Olaya Gonzalez",cargo:"Mecanico Integral"}
   ],
   HORARIO:{entrada:6.0,salida:14.75,salidaSabado:11.75},
-  UMBRAL_FACIAL:0.45
+  UMBRAL_FACIAL:0.45,
+  ALMUERZO_MIN:30
 };
 
 function xh(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
@@ -1404,7 +1446,120 @@ document.getElementById('menuAgregar').onclick=()=>{
   document.getElementById('nuevoCargo').value='';
   mostrarPantalla('pantallaAgregar');
 };
-document.getElementById('menuReporte').onclick=()=>window.open('reporte.html','_blank');
+document.getElementById('menuReporte').onclick=()=>{
+  // preset fecha = hoy
+  const hoy=new Date();
+  document.getElementById('repFecha').value=hoy.toISOString().slice(0,10);
+  mostrarPantalla('pantallaReporte');
+  cargarReporte();
+};
+document.getElementById('btnVolverDesdeReporte').onclick=()=>mostrarPantalla('pantallaMenu');
+document.getElementById('btnRepCargar').onclick=cargarReporte;
+
+async function cargarReporte(){
+  const fechaVal=document.getElementById('repFecha').value;
+  if(!fechaVal)return;
+  const estEl=document.getElementById('repEstado');
+  const tabEl=document.getElementById('repTabla');
+  const resEl=document.getElementById('repResumen');
+  estEl.style.display='block';
+  estEl.textContent='Cargando...';
+  tabEl.innerHTML='';
+  resEl.style.display='none';
+
+  // Construir mapa de marcaciones del día desde el backend
+  // Usamos marcasHoy por persona para cada empleado O un endpoint resumenDia si existe
+  // Fallback: consultar cada empleado individualmente usando marcasHoy
+  const personal=getPC();
+  const fecha=fechaVal; // YYYY-MM-DD
+
+  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR')){
+    estEl.textContent='⚠️ Configura la URL del servidor primero.';return;
+  }
+
+  // Intentar endpoint resumenDia (más eficiente)
+  let datos=[];
+  try{
+    const r=await fetch(`${CONFIG.GS_URL}?accion=resumenDia&fecha=${fecha}&finca=${encodeURIComponent(CONFIG.FINCA.nombre)}&_=${Date.now()}`,{cache:'no-store'});
+    const j=await r.json();
+    if(j&&Array.isArray(j.empleados)){
+      datos=j.empleados;
+    }
+  }catch(e){/* endpoint no existe, usar fallback */}
+
+  // Si no vino nada del backend usamos marcas locales (cola offline)
+  if(!datos.length){
+    // Construir desde marcas en cola offline + simular
+    const cola=JSON.parse(localStorage.getItem('cola')||'[]');
+    const marcasFecha=cola.filter(m=>m.fechaHora&&m.fechaHora.startsWith(fecha));
+    const porNombre={};
+    marcasFecha.forEach(m=>{
+      if(!porNombre[m.nombre])porNombre[m.nombre]={nombre:m.nombre,marcas:[],minutosDeuda:0,puntualidad:[]};
+      porNombre[m.nombre].marcas.push(m.tipo);
+      if(m.minutosDeuda)porNombre[m.nombre].minutosDeuda+=m.minutosDeuda;
+      if(m.puntualidad&&m.puntualidad!=='ok')porNombre[m.nombre].puntualidad.push({tipo:m.tipo,estado:m.puntualidad,minutos:m.minutosDeuda||0});
+    });
+    datos=Object.values(porNombre);
+    if(!datos.length){estEl.textContent='No hay datos offline para esta fecha. Verifica la conexión al servidor.';return;}
+  }
+
+  estEl.style.display='none';
+  resEl.style.display='block';
+
+  let totalTarde=0,totalTemprano=0,totalMin=0;
+  datos.forEach(e=>{
+    const p=e.puntualidad||[];
+    p.forEach(x=>{if(x.estado==='tarde')totalTarde++;if(x.estado==='temprano')totalTemprano++;totalMin+=x.minutos||0;});
+    totalMin+=e.minutosDeuda||0;
+  });
+  // dedup — si el backend ya devuelve el total no sumemos puntualidad extra
+  document.getElementById('repCntTarde').textContent=totalTarde;
+  document.getElementById('repCntTemprano').textContent=totalTemprano;
+  document.getElementById('repCntDeuda').textContent=totalMin;
+
+  // Renderizar tabla
+  const html=datos.map(e=>{
+    const tieneDeuda=(e.minutosDeuda||0)>0;
+    const almTrab=e.almuerzoTrabajado||false;
+    const ALMUERZO_MIN=CONFIG.ALMUERZO_MIN||30;
+    return `<div class="rep-card" style="background:var(--wh);border-radius:14px;padding:14px;border:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--xl);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--dg);flex-shrink:0;">${xh(inic(e.nombre))}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xh(e.nombre)}</div>
+          <div style="font-size:11px;color:var(--t2);">${xh(e.cargo||getCargo(e.nombre)||'—')}</div>
+        </div>
+        ${tieneDeuda?`<div style="background:var(--rl);color:var(--re);font-size:12px;font-weight:800;border-radius:8px;padding:4px 9px;white-space:nowrap;">−${e.minutosDeuda} min</div>`:'<div style="background:#E8F5E9;color:var(--dg);font-size:12px;font-weight:800;border-radius:8px;padding:4px 9px;">✓ Al día</div>'}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${(e.marcas||[]).map(m=>`<span style="background:var(--xl);color:var(--dg);font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;">${xh(m)}</span>`).join('')}
+        ${!(e.marcas||[]).length?'<span style="color:var(--t2);font-size:11px;">Sin marcaciones</span>':''}
+      </div>
+      ${tieneDeuda?`<div style="border-top:1px solid var(--bd);padding-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="font-size:11.5px;color:var(--t1);font-weight:600;line-height:1.4;">
+          ${almTrab?`<span style="color:var(--dg);">✓ Trabajó almuerzo (+${ALMUERZO_MIN} min descontados)</span>`:`<span style="color:var(--t2);">¿Trabajó en almuerzo? (+${ALMUERZO_MIN} min)</span>`}
+        </div>
+        <button onclick="autorizarAlmuerzo('${e.nombre.replace(/'/g,"\\'")}')" style="background:${almTrab?'var(--dg)':'var(--bg)'};color:${almTrab?'#fff':'var(--t1)'};border:1.5px solid ${almTrab?'var(--dg)':'var(--bd)'};border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;">${almTrab?'Autorizado':'Autorizar'}</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+  tabEl.innerHTML=html||'<div style="text-align:center;color:var(--t2);font-size:13px;padding:20px 0;">Sin registros para esta fecha</div>';
+}
+
+function autorizarAlmuerzo(nombre){
+  abrirModalSupervisor(
+    `Autorizar tiempo de almuerzo trabajado para <b>${xh(nombre)}</b>. Se descontarán ${CONFIG.ALMUERZO_MIN||30} minutos de su deuda.`,
+    ()=>{
+      const fechaVal=document.getElementById('repFecha').value;
+      const ALMUERZO_MIN=CONFIG.ALMUERZO_MIN||30;
+      const payload={accion:'marcar',nombre,documento:'',finca:CONFIG.FINCA.nombre,tipo:'AlmuerzoTrabajado',cargo:getCargo(nombre),fechaHora:new Date().toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:null,sinBiometria:true,puntualidad:'ok',minutosDeuda:-ALMUERZO_MIN,fechaDeuda:fechaVal};
+      enviar(payload);updColaBadge();
+      mostrarToast(`Almuerzo autorizado para ${nombre}`);
+      // re-cargar
+      setTimeout(()=>cargarReporte(),800);
+    }
+  );
+}
 document.getElementById('menuCerrar').onclick=()=>mostrarPantalla('pantallaMarcacion');
 
 document.getElementById('btnVolverMarcacion').onclick=()=>{modoActual=null;mostrarPantalla('pantallaMenu');};
@@ -1531,6 +1686,7 @@ function aplicarConfig(cfg){
   if(cfg.salidaSab!=null)CONFIG.HORARIO.salidaSabado=cfg.salidaSab;
   if(cfg.umbral!=null)CONFIG.UMBRAL_FACIAL=parseFloat(cfg.umbral);
   if(cfg.pin)CONFIG.PIN_GERENCIA=cfg.pin;
+  if(cfg.almuerzoMin!=null)CONFIG.ALMUERZO_MIN=parseInt(cfg.almuerzoMin);
 }
 // Aplicar al inicio
 aplicarConfig(getCfgGuardada());
@@ -1590,6 +1746,7 @@ function abrirConfig(){
   const u=cfg.umbral!=null?cfg.umbral:CONFIG.UMBRAL_FACIAL;
   document.getElementById('cfgUmbral').value=u;
   document.getElementById('cfgUmbralVal').textContent=parseFloat(u).toFixed(2);
+  document.getElementById('cfgAlmuerzoMin').value=cfg.almuerzoMin!=null?cfg.almuerzoMin:CONFIG.ALMUERZO_MIN;
   mostrarPantalla('pantallaConfig');
 }
 
@@ -1623,7 +1780,8 @@ document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
     entrada:getTimePick('cfgEntrada'),
     salida:getTimePick('cfgSalida'),
     salidaSab:getTimePick('cfgSalidaSab'),
-    umbral:parseFloat(document.getElementById('cfgUmbral').value)
+    umbral:parseFloat(document.getElementById('cfgUmbral').value),
+    almuerzoMin:parseInt(document.getElementById('cfgAlmuerzoMin').value)||30
   };
   if(pinNuevo&&/^\d{4}$/.test(pinNuevo))cfg.pin=pinNuevo;
   else{const prev=getCfgGuardada();if(prev&&prev.pin)cfg.pin=prev.pin;}
