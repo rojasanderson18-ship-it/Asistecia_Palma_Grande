@@ -132,10 +132,15 @@ async function getTipo(doc) {
   if (marcasConocidas.includes('Salida')) return { tipo: 'Salida', completo: true, marcas: marcasConocidas };
   if (marcasConocidas.includes('Entrada')) return { tipo: 'Salida', completo: false, marcas: marcasConocidas };
 
-  // 4. Consultar backend si hay URL configurada
-  if (CONFIG.GS_URL) {
+  // 4. Consultar backend si hay URL configurada y deviceToken disponible
+  const deviceTok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
+  if (CONFIG.GS_URL && deviceTok) {
     try {
-      const r = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`, { cache: 'no-store' });
+      const r = await fetch(CONFIG.GS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ accion: 'marcasHoy', deviceToken: deviceTok, documento: doc }),
+      });
       const d = await r.json();
       const m = (d && d.marcas) ? d.marcas : [];
       if (m.length) _setMarcasHoyCache(doc, m);
@@ -184,18 +189,16 @@ function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   }
   const punt = calcularPuntualidad(tipo, hora);
   const payload = {
-    accion:'marcar', nombre,
+    accion: 'marcar',
     documento: doc,
-    finca: CONFIG.FINCA.nombre,
-    tipo, cargo: getCargo(nombre),
+    tipo,
     fechaHora: hora.toISOString(),
     lat: gpsCoords ? gpsCoords.lat : null,
     lng: gpsCoords ? gpsCoords.lng : null,
-    dentroGeocerca: gpsOk,
+    precisionGPS: gpsCoords ? gpsCoords.precision : null,
     distanciaFacial: sinBiometria ? null : (confPct != null ? (1 - confPct / 100) : null),
     sinBiometria: !!sinBiometria,
-    puntualidad: punt.estado,
-    minutosDeuda: punt.minutos
+    sinConexion: !navigator.onLine,
   };
   enviar(payload);
   updColaBadge();

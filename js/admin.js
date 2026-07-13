@@ -228,6 +228,11 @@ function abrirConfig() {
   document.getElementById('cfgPinActual').value = '';
   document.getElementById('cfgPinNuevo').value = '';
   document.getElementById('cfgPinConf').value = '';
+  const infoEl = document.getElementById('dispositivoInfo');
+  if (infoEl) {
+    const tok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
+    infoEl.textContent = tok ? '✓ Este dispositivo ya está autorizado' : 'Sin autorizar — usa el botón para autorizar';
+  }
   mostrarPantalla('pantallaConfig');
 }
 
@@ -244,6 +249,22 @@ document.getElementById('btnUsarUbicacion').addEventListener('click', () => {
     btn.textContent = '✓ Ubicación capturada'; btn.disabled = false;
   }, () => { btn.textContent = 'Usar mi ubicación actual'; btn.disabled = false; alert('No se pudo obtener la ubicación'); }, {enableHighAccuracy:true, timeout:8000});
 });
+/* ── Autorizar dispositivo ── */
+document.getElementById('btnAutorizarDispositivo').addEventListener('click', async () => {
+  const btn = document.getElementById('btnAutorizarDispositivo');
+  const infoEl = document.getElementById('dispositivoInfo');
+  btn.disabled = true;
+  const r = await autorizarDispositivo('Kiosco');
+  btn.disabled = false;
+  if (r.ok) {
+    if (infoEl) infoEl.textContent = r.nuevo ? '✓ Dispositivo autorizado correctamente' : '✓ Dispositivo ya estaba autorizado (token actualizado)';
+    showToast('✓ Dispositivo autorizado');
+  } else {
+    if (infoEl) infoEl.textContent = '✗ ' + (r.error || 'Error al autorizar');
+    showToast('Error: ' + (r.error || 'No se pudo autorizar'));
+  }
+});
+
 document.getElementById('btnGuardarConfig').addEventListener('click', async () => {
   const pinActual = document.getElementById('cfgPinActual').value;
   const pinNuevo  = document.getElementById('cfgPinNuevo').value;
@@ -332,9 +353,9 @@ async function cargarReporte() {
   }
   let datos = [];
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=resumenDia&fecha=${fechaVal}&finca=${encodeURIComponent(CONFIG.FINCA.nombre)}&_=${Date.now()}`, {cache:'no-store'});
-    const j = await r.json();
-    if (j && Array.isArray(j.empleados)) datos = j.empleados;
+    const j = await enviarConResp({ accion: 'resumenDashboard', token: getAdminToken(),
+                                     fecha: fechaVal, finca: CONFIG.FINCA.nombre });
+    if (j && Array.isArray(j.filas)) datos = j.filas;
   } catch {}
   if (!datos.length) {
     const cola = JSON.parse(localStorage.getItem('cola') || '[]');

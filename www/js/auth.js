@@ -91,6 +91,30 @@ function clearSupervisorToken() {
   _supervisorToken = null;
 }
 
+/* ── Device token del kiosco (persistente en localStorage) ── */
+function getDeviceToken() {
+  return localStorage.getItem('device_token') || null;
+}
+
+/* ── Autorizar este dispositivo como kiosco (requiere sesión admin activa) ── */
+/* nombre: etiqueta descriptiva del kiosco. Devuelve { ok, deviceToken, nuevo, error? } */
+async function autorizarDispositivo(nombre) {
+  if (!CONFIG.GS_URL) return { ok: false, error: 'Sin URL de servidor' };
+  if (!_adminToken) return { ok: false, error: 'Sesión expirada, vuelve a ingresar el PIN' };
+  try {
+    const deviceId = _getDeviceId();
+    const d = await _postGs({ accion: 'autorizarDispositivo', token: _adminToken,
+                               deviceId, nombre: nombre || 'Kiosco' });
+    if (d.ok && d.deviceToken) {
+      localStorage.setItem('device_token', d.deviceToken);
+      return { ok: true, deviceToken: d.deviceToken, nuevo: d.nuevo };
+    }
+    return { ok: false, error: d.error || 'No se pudo autorizar el dispositivo' };
+  } catch {
+    return { ok: false, error: 'Sin conexión al servidor' };
+  }
+}
+
 /* ── Cambiar PIN en backend (requiere token de sesión activo + PIN actual) ── */
 async function cambiarPin(pinActual, pinNuevo) {
   if (!pinActual || !pinNuevo) return { ok: false, error: 'Ingresa todos los campos' };
