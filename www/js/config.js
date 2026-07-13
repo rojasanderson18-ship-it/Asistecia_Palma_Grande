@@ -134,10 +134,11 @@ async function cargarPersonalDesdeBackend() {
       });
       d = await r.json();
     } else {
+      const deviceDid = (typeof getDeviceId === 'function') ? getDeviceId() : null;
       const r = await fetch(CONFIG.GS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ accion: 'sincronizarPersonalKiosco', deviceToken: deviceTok }),
+        body: JSON.stringify({ accion: 'sincronizarPersonalKiosco', deviceToken: deviceTok, deviceId: deviceDid }),
       });
       d = await r.json();
     }
