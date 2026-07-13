@@ -11,6 +11,60 @@ function _actualizarReloj() {
 _actualizarReloj();
 setInterval(_actualizarReloj, 30000);
 
+/* ── Estado del sistema (línea discreta) ── */
+function _actualizarSysStatus() {
+  const dot = document.getElementById('sysDot');
+  const lbl = document.getElementById('sysLabel');
+  if (!dot || !lbl) return;
+  const geoOk  = (document.getElementById('stGeocerca')?.textContent || '').includes('OK');
+  const gpsOkT = (document.getElementById('stUbicacion')?.textContent || '').includes('Dentro');
+  const netOk  = navigator.onLine;
+  if (!netOk) {
+    dot.className = 'sys-dot warn';
+    lbl.textContent = 'Sin conexión — modo offline';
+  } else if (!geoOk || !gpsOkT) {
+    dot.className = 'sys-dot warn';
+    lbl.textContent = 'Fuera del predio';
+  } else {
+    dot.className = 'sys-dot';
+    lbl.textContent = 'Sistema listo';
+  }
+}
+setInterval(_actualizarSysStatus, 5000);
+window.addEventListener('online',  _actualizarSysStatus);
+window.addEventListener('offline', _actualizarSysStatus);
+setTimeout(_actualizarSysStatus, 2000);
+
+/* ── Toggle detalle sistema ── */
+function toggleSysDetail() {
+  const det  = document.getElementById('sysDetail');
+  const chev = document.getElementById('sysChevron');
+  if (!det) return;
+  const open = det.classList.toggle('open');
+  if (chev) chev.classList.toggle('open', open);
+}
+
+/* ── Indicadores pantalla scan ── */
+function _actualizarScanIndicadores() {
+  const r = document.getElementById('scanIndRostro');
+  const g = document.getElementById('scanIndGps');
+  const n = document.getElementById('scanIndRed');
+  if (!r) return;
+  // Rostro: lo actualiza face-recognition.js via confFill/confPct — aquí solo red y gps
+  const geoTxt = document.getElementById('stGeocerca')?.textContent || '';
+  const gpsOn  = (document.getElementById('stUbicacion')?.textContent || '').includes('Dentro');
+  if (g) g.className = 'scan-ind-dot ' + (gpsOn ? 'ok' : 'warn');
+  if (n) n.className = 'scan-ind-dot ' + (navigator.onLine ? 'ok' : 'warn');
+}
+setInterval(_actualizarScanIndicadores, 3000);
+
+/* ── Botón supervisor: visible solo en excepción ── */
+function mostrarBtnSupervisor(visible) {
+  const btn = document.getElementById('btnWkSupAuth');
+  if (btn) btn.style.display = visible ? '' : 'none';
+}
+window._mostrarBtnSupervisor = mostrarBtnSupervisor;
+
 /* ── Arranque: sincronizar config y personal desde backend ── */
 aplicarEmpresaUI();
 setTimeout(sincronizarConfigDesdeBackend, 800);
