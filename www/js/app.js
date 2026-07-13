@@ -48,7 +48,7 @@ document.getElementById('btnWkSupAuth').onclick = () => {
   if (!nombre || !tipo) return;
   abrirModalSupervisor(
     `<b>${xh(nombre)}</b> — Autorizar marcación de ${tipo} con PIN de supervisor.`,
-    () => ejecutarMarcacion(nombre, tipo, null, true)
+    () => { ejecutarMarcacion(nombre, tipo, null, true); }
   );
 };
 

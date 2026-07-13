@@ -30,6 +30,7 @@ function showConf(d) {
   const bg = d.tipo === 'Entrada' ? '#071510' : '#070D18';
 
   let alerts = '';
+  if (d.offline) alerts += `<div class="conf-alert fuera">📶 Sin conexión — pendiente de sincronización</div>`;
   if (!d.gpsOk) alerts += `<div class="conf-alert fuera">⚠ Fuera del predio — revisar con Gerencia</div>`;
   if (d.punt && d.punt.estado === 'tarde') alerts += `<div class="conf-alert tarde">⏰ Entrada tarde — debe ${d.punt.minutos} min</div>`;
   if (d.punt && d.punt.estado === 'temprano') alerts += `<div class="conf-alert temprano">⏰ Salida anticipada — debe ${d.punt.minutos} min</div>`;

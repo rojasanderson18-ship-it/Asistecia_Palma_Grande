@@ -178,15 +178,15 @@ function calcularPuntualidad(tipo, hora) {
 }
 
 /* ── Marcación ── */
-function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
+async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   const hora = new Date();
-  // WORKER.doc es la fuente de verdad: fue validado al ingresar la cédula
-  const doc = WORKER.doc ? String(WORKER.doc).trim() : '';
+  const doc  = WORKER.doc ? String(WORKER.doc).trim() : '';
   if (!doc) {
     setWorkerState('IDLE');
     showRes('err', 'Sin documento', 'No se puede registrar sin número de documento.', ['Reingresa la cédula e intenta nuevamente']);
     return;
   }
+
   const punt = calcularPuntualidad(tipo, hora);
   const payload = {
     accion: 'marcar',
@@ -198,21 +198,87 @@ function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
     precisionGPS: gpsCoords ? gpsCoords.precision : null,
     distanciaFacial: sinBiometria ? null : (confPct != null ? (1 - confPct / 100) : null),
     sinBiometria: !!sinBiometria,
-    sinConexion: !navigator.onLine,
+    supervisorToken: (typeof getSupervisorToken === 'function') ? getSupervisorToken() : null,
+    sinConexion: false,
   };
-  enviar(payload);
-  updColaBadge();
-  if (doc) _agregarMarcaLocal(doc, tipo);
-  saveUltima(nombre, tipo, hora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}), gpsOk, Date.now());
+
+  const horaStr = hora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+
+  /* ── MODO OFFLINE: encolar directamente ── */
+  if (!navigator.onLine || !CONFIG.GS_URL) {
+    payload.sinConexion = true;
+    _encolarOfflineConMeta(payload);
+    updColaBadge();
+    _agregarMarcaLocal(doc, tipo);
+    saveUltima(nombre, tipo, horaStr, gpsOk, Date.now());
+    setWorkerState('CONFIRMED');
+    showConf({ nombre, tipo, hora: horaStr, gpsOk, sinBiometria, punt, offline: true });
+    return;
+  }
+
+  /* ── MODO ONLINE: esperar respuesta del servidor ── */
+  let r;
+  try {
+    r = await enviarConResp(payload);
+  } catch {
+    r = null;
+  }
+
+  /* Error de red real → encolar offline */
+  if (!r) {
+    payload.sinConexion = true;
+    _encolarOfflineConMeta(payload);
+    updColaBadge();
+    _agregarMarcaLocal(doc, tipo);
+    saveUltima(nombre, tipo, horaStr, gpsOk, Date.now());
+    setWorkerState('CONFIRMED');
+    showConf({ nombre, tipo, hora: horaStr, gpsOk, sinBiometria, punt, offline: true });
+    return;
+  }
+
+  /* Fuera de geocerca → abrir modal supervisor si aún no hay token ── */
+  if (r.fueraGeocerca) {
+    const tieneSupervisorToken = !!(typeof getSupervisorToken === 'function' && getSupervisorToken());
+    if (tieneSupervisorToken) {
+      // El token estaba presente pero el servidor lo rechazó de todas formas
+      if (typeof clearSupervisorToken === 'function') clearSupervisorToken();
+      setWorkerState('IDLE');
+      showRes('err', 'Fuera de la geocerca',
+        `${r.distanciaMetros != null ? 'A ' + r.distanciaMetros + ' m del predio. ' : ''}Supervisor no autorizado.`,
+        ['PIN de supervisor incorrecto o expirado']);
+    } else {
+      // Primera vez: abrir modal supervisor para autorizar geocerca
+      abrirModalSupervisor(
+        `<b>${xh(nombre)}</b> está fuera del predio${r.distanciaMetros != null ? ' (' + r.distanciaMetros + ' m)' : ''}. Autorizar con PIN de supervisor.`,
+        () => ejecutarMarcacion(nombre, tipo, confPct, sinBiometria)
+      );
+    }
+    return;
+  }
+
+  /* Servidor rechazó la marcación (secuencia, empleado inexistente, etc.) */
+  if (!r.ok) {
+    setWorkerState('IDLE');
+    showRes('err', 'Marcación no registrada', r.error || 'El servidor rechazó la marcación.', []);
+    return;
+  }
+
+  /* ── ÉXITO CONFIRMADO POR SERVIDOR ── */
+  _agregarMarcaLocal(doc, tipo);
+  const horaServidor = r.horaServidor || horaStr;
+  saveUltima(r.nombre || nombre, tipo, horaServidor, r.dentroGeocerca, Date.now());
   setWorkerState('CONFIRMED');
   showConf({
-    nombre, documento: doc || '—',
-    tipo, fecha: hora.toLocaleDateString('es-CO', {day:'2-digit', month:'2-digit', year:'numeric'}),
-    hora: hora.toLocaleTimeString('es-CO'),
-    ubicacion: gpsOk ? 'Dentro del predio' : 'Fuera de geocerca',
-    confianza: sinBiometria ? 'Autorizado supervisor' : (confPct != null ? confPct + '%' : '—'),
-    finca: CONFIG.FINCA.nombre, gpsOk, sinBiometria, punt
+    nombre: r.nombre || nombre, tipo,
+    hora: horaServidor, gpsOk: r.dentroGeocerca, sinBiometria, punt, offline: false
   });
+}
+
+/* Encola un item con metadatos de reintento */
+function _encolarOfflineConMeta(payload) {
+  const c = JSON.parse(localStorage.getItem('cola') || '[]');
+  c.push({ ...payload, _meta: { intentos: 0, ultimoIntento: null, ultimoError: null, estado: 'pendiente' } });
+  localStorage.setItem('cola', JSON.stringify(c));
 }
 
 /* ── Callback de reconocimiento facial ── */
@@ -289,7 +355,7 @@ setFaceMatchCallback(function onFaceMatch(nombre, dist) {
         return;
       }
       const finalPct = Math.max(0, Math.round((1 - finalDist) * 100));
-      ejecutarMarcacion(nombre, tipo, finalPct, false);
+      await ejecutarMarcacion(nombre, tipo, finalPct, false);
     } catch {
       modoActual = null;
       _autoMarkPending = false;
