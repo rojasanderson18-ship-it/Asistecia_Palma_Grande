@@ -10,541 +10,9 @@
 <meta name="theme-color" content="#122B1A">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
 <script src="lib/face-api/face-api.min.js"></script>
 <script src="js/audio.js"></script>
-<style>
-/* ── TOKENS ── */
-:root{
-  --dk:#122B1A; --dm:#1B4028; --dg:#2E7D32; --lg:#4CAF50; --xl:#E8F5E9; --xb:#C8E6C9;
-  --re:#C62828; --rl:#FFEBEE; --or:#E65100; --bl:#1565C0;
-  --bg:#F5F6F5; --wh:#FFFFFF;
-  --tx:#111827; --t1:#4B5563; --t2:#9CA3AF; --bd:#E5E7EB;
-  --sh:0 1px 4px rgba(0,0,0,.08),0 2px 10px rgba(0,0,0,.05);
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-/* TOAST */
-.toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:#1B4028;color:#fff;padding:11px 20px;border-radius:12px;
-  font-size:13px;font-weight:700;letter-spacing:.2px;
-  box-shadow:0 4px 18px rgba(0,0,0,.22);
-  opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;
-  white-space:nowrap;z-index:999;
-}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-html,body{height:100%;background:var(--bg);}
-body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);display:flex;justify-content:center;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;}
-.app{width:100%;max-width:440px;height:100dvh;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
-
-/* ════════════════════════════════
-   HEADER KIOSKO
-════════════════════════════════ */
-.hdr{
-  background:var(--dk);
-  padding:10px 14px 9px;
-  display:flex;align-items:center;gap:10px;flex-shrink:0;
-}
-.hdr-logo{
-  width:42px;height:42px;border-radius:9px;flex-shrink:0;
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
-  display:flex;align-items:center;justify-content:center;
-}
-.hdr-logo svg{width:26px;height:26px;}
-.hdr-text{flex:1;}
-.hdr-empresa{font-size:14px;font-weight:900;color:#fff;letter-spacing:.4px;line-height:1.15;}
-.hdr-sub{font-size:10px;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.5px;margin-top:2px;text-transform:uppercase;}
-.hdr-badge{
-  background:var(--dg);border-radius:5px;padding:3px 8px;
-  font-size:9.5px;font-weight:800;color:#fff;letter-spacing:1px;text-transform:uppercase;
-  align-self:flex-start;flex-shrink:0;
-}
-
-/* GEO STRIP */
-.geo-strip{
-  padding:6px 14px;display:flex;align-items:center;gap:8px;
-  font-size:11px;font-weight:600;letter-spacing:.2px;
-  background:var(--dk);border-top:1px solid rgba(255,255,255,.06);
-}
-.geo-strip.ok{color:#69F0AE;}
-.geo-strip.er{color:#FF5252;}
-.geo-strip svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;flex-shrink:0;}
-.geo-strip span{opacity:.7;font-size:10px;margin-left:auto;font-weight:500;}
-
-/* ════════════════════════════════
-   SCROLL
-════════════════════════════════ */
-.scroll{flex:1;overflow:hidden;padding:8px 12px 10px;display:flex;flex-direction:column;gap:8px;}
-
-/* ════════════════════════════════
-   BLOQUE DOCUMENTO
-════════════════════════════════ */
-.blk{background:var(--wh);border-radius:14px;box-shadow:var(--sh);border:1px solid var(--bd);overflow:hidden;}
-.blk-hdr{
-  background:var(--dk);padding:7px 13px;
-  font-size:10px;font-weight:800;color:#fff;letter-spacing:1.2px;text-transform:uppercase;
-  display:flex;align-items:center;gap:7px;
-}
-.blk-hdr svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;opacity:.7;}
-
-/* Display número */
-.doc-display{
-  display:flex;align-items:center;gap:10px;padding:10px 14px;
-  border-bottom:1px solid var(--bd);min-height:50px;
-}
-.doc-number{
-  flex:1;font-size:20px;font-weight:700;color:var(--tx);
-  font-variant-numeric:tabular-nums;letter-spacing:.5px;line-height:1.1;
-}
-.doc-number.ph{font-size:14px;font-weight:400;color:var(--t2);}
-.doc-chk{
-  width:30px;height:30px;border-radius:50%;background:var(--dg);
-  display:none;align-items:center;justify-content:center;flex-shrink:0;
-}
-.doc-chk.show{display:flex;}
-.doc-chk svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;}
-#documentoInput{display:none;}
-.btn-borrar-rec{
-  width:100%;margin:0;padding:8px 14px;
-  background:none;border:none;border-top:1px solid var(--bd);
-  color:var(--t2);font-size:11.5px;font-weight:600;letter-spacing:.3px;
-  cursor:pointer;text-align:center;
-}
-
-/* Sub-mensaje */
-.doc-info{padding:5px 14px 7px;font-size:12px;font-weight:600;color:var(--dg);}
-.doc-info.er{color:var(--re);}
-
-/* TECLADO NUMÉRICO */
-.keypad{padding:8px 12px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
-.key{
-  aspect-ratio:1;border-radius:50%;border:1.5px solid var(--bd);
-  background:var(--bg);color:var(--tx);
-  font-family:'Inter',sans-serif;font-size:18px;font-weight:600;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;user-select:none;-webkit-user-select:none;
-  touch-action:manipulation;max-width:56px;width:100%;margin:0 auto;
-  transition:background .1s,border-color .1s,transform .08s;
-}
-.key:active{background:var(--xl);border-color:var(--dg);transform:scale(.88);}
-.key.del{border-color:transparent;background:transparent;color:var(--re);font-size:12px;font-weight:700;}
-
-/* ════════════════════════════════
-   BLOQUE CÁMARA
-════════════════════════════════ */
-.cam-wrap{
-  position:relative;background:#0D0D0D;
-  height:260px;overflow:hidden;
-}
-.cam-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;}
-.cam-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);}
-
-/* Placeholder */
-.cam-placeholder{
-  position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:12px;
-  background:#0D0D0D;
-}
-.cam-placeholder svg{width:44px;height:44px;stroke:rgba(255,255,255,.25);fill:none;stroke-width:1.5;}
-.cam-placeholder p{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.5px;text-transform:uppercase;}
-
-/* Marco detección rectangular */
-.cam-marco{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);
-  width:44%;aspect-ratio:1;pointer-events:none;
-}
-.cam-marco::before,.cam-marco::after,
-.cam-marco-b::before,.cam-marco-b::after{
-  content:'';position:absolute;width:20px;height:20px;
-  border-color:#fff;border-style:solid;opacity:.85;
-}
-.cam-marco::before{top:0;left:0;border-width:2.5px 0 0 2.5px;border-radius:3px 0 0 0;}
-.cam-marco::after{top:0;right:0;border-width:2.5px 2.5px 0 0;border-radius:0 3px 0 0;}
-.cam-marco-b{position:absolute;bottom:0;left:0;width:100%;height:100%;}
-.cam-marco-b::before{bottom:0;left:0;border-width:0 0 2.5px 2.5px;border-radius:0 0 0 3px;}
-.cam-marco-b::after{bottom:0;right:0;border-width:0 2.5px 2.5px 0;border-radius:0 0 3px 0;}
-
-/* Footer cámara */
-.cam-footer{
-  position:absolute;bottom:0;left:0;right:0;
-  background:linear-gradient(transparent,rgba(0,0,0,.65));
-  padding:24px 14px 10px;display:flex;align-items:center;gap:8px;
-}
-.cam-estado{font-size:12px;font-weight:600;color:rgba(255,255,255,.85);flex:1;}
-.cam-dot{width:7px;height:7px;border-radius:50%;background:#69F0AE;flex-shrink:0;}
-
-/* ════════════════════════════════
-   BARRA DE ESTADO (compacta, una línea)
-════════════════════════════════ */
-.status-bar{
-  background:var(--wh);border-radius:10px;box-shadow:var(--sh);
-  border:1px solid var(--bd);
-  display:flex;align-items:center;padding:0 4px;
-  flex-shrink:0;
-}
-.st-item{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  padding:7px 4px;border-right:1px solid var(--bd);
-}
-.st-item:last-child{border-right:none;}
-.st-lbl{font-size:9.5px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
-.st-val{font-size:11.5px;font-weight:800;}
-.st-val.ok{color:var(--dg);}
-.st-val.er{color:var(--re);}
-.st-val.na{color:var(--t2);}
-
-/* Barra confianza */
-.conf-track{height:3px;background:var(--bd);border-radius:99px;overflow:hidden;margin-top:3px;width:40px;}
-.conf-fill{height:100%;border-radius:99px;background:var(--dg);transition:width .5s,background .4s;}
-.rec-val{font-size:12px;font-weight:700;}
-.rec-val.ok{color:var(--dg);}
-.rec-val.er{color:var(--re);}
-.rec-val.na{color:var(--t2);}
-
-/* ════════════════════════════════
-   TIPO + BOTONES ACCIÓN
-════════════════════════════════ */
-.tipo-row{
-  display:flex;align-items:center;gap:10px;
-  background:var(--wh);border-radius:12px;border:1px solid var(--bd);
-  box-shadow:var(--sh);padding:9px 14px;
-}
-.tipo-ico{
-  width:34px;height:34px;border-radius:9px;flex-shrink:0;
-  background:var(--xl);display:flex;align-items:center;justify-content:center;
-}
-.tipo-ico svg{width:15px;height:15px;stroke:var(--dg);fill:none;stroke-width:2;}
-.tipo-nombre{font-size:13px;color:var(--t1);flex:1;}
-.tipo-txt{font-size:14px;font-weight:700;color:var(--tx);}
-.tipo-txt.ph{font-size:13px;font-weight:400;color:var(--t2);}
-
-.btn-accion{
-  width:100%;padding:14px 20px;border-radius:14px;border:none;
-  font-family:'Inter',sans-serif;font-size:15px;font-weight:800;
-  letter-spacing:.6px;text-transform:uppercase;
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  cursor:pointer;transition:opacity .15s,transform .1s;
-  color:#fff;
-}
-.btn-accion:active{transform:scale(.98);opacity:.92;}
-.btn-accion:disabled{background:#D1D5DB !important;color:#9CA3AF;box-shadow:none;cursor:not-allowed;}
-.btn-accion.entrada{background:linear-gradient(135deg,#1B5E20,var(--dg));box-shadow:0 4px 18px rgba(30,94,32,.35);}
-.btn-accion.salida{background:linear-gradient(135deg,#B71C1C,var(--re));box-shadow:0 4px 18px rgba(183,28,28,.3);}
-.btn-accion svg{width:20px;height:20px;fill:currentColor;flex-shrink:0;}
-
-/* ════════════════════════════════
-   ÚLTIMA MARCACIÓN
-════════════════════════════════ */
-.ultima-card{
-  background:var(--wh);border-radius:14px;border:1px solid var(--bd);
-  box-shadow:var(--sh);padding:13px 15px;display:flex;align-items:center;gap:12px;
-}
-.ul-av{
-  width:42px;height:42px;border-radius:50%;
-  background:linear-gradient(135deg,var(--dm),var(--dg));
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.ul-av span{font-size:13px;font-weight:800;color:#fff;}
-.ul-bd{flex:1;min-width:0;}
-.ul-nom{font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ul-meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
-.ul-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:var(--xl);color:var(--dg);}
-.ul-tag.salida{background:var(--rl);color:var(--re);}
-.ul-hr{font-size:11px;color:var(--t1);}
-.ul-hace{font-size:11.5px;font-weight:700;color:var(--t2);flex-shrink:0;text-align:right;}
-
-/* Footer */
-.app-footer{display:flex;align-items:center;justify-content:space-between;padding:5px 14px 6px;flex-shrink:0;border-top:1px solid var(--bd);background:var(--bg);}
-.footer-links{display:flex;gap:12px;}
-.link-d{font-size:11px;color:var(--t2);cursor:pointer;padding:3px 0;transition:color .15s;}
-.link-d:hover{color:var(--dg);}
-.version{font-size:10.5px;color:var(--t2);font-weight:600;}
-
-/* ════════════════════════════════
-   PANTALLAS / PÁGINAS
-════════════════════════════════ */
-.pantalla{display:none;flex-direction:column;flex:1;min-height:0;}
-.pantalla.show{display:flex;animation:fade .25s ease both;}
-@keyframes fade{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
-@keyframes popin{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
-
-/* ════════════════════════════════
-   RESULTADO / CONFIRMACIÓN
-════════════════════════════════ */
-.res-scroll{flex:1;overflow-y:auto;padding:24px 14px 32px;}
-.conf-wrap{display:flex;flex-direction:column;align-items:center;animation:fade .3s ease both;}
-.c-ico{
-  width:76px;height:76px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:16px;animation:popin .45s cubic-bezier(.2,1.4,.4,1);
-}
-.c-ico.ok{background:#E8F5E9;border:2.5px solid #81C784;}
-.c-ico.err{background:var(--rl);border:2.5px solid #EF9A9A;}
-.c-ico.warn{background:#FFF3E0;border:2.5px solid #FFB74D;}
-.c-tit{font-size:22px;font-weight:900;color:var(--tx);margin-bottom:6px;text-align:center;}
-.c-bdg{
-  font-size:12px;font-weight:700;padding:5px 16px;border-radius:8px;
-  background:var(--xl);color:var(--dg);margin-bottom:20px;display:inline-block;
-  border:1px solid var(--xb);
-}
-.c-bdg.ro{background:var(--rl);color:var(--re);border-color:#FFCDD2;}
-.c-tabla{width:100%;background:var(--wh);border-radius:14px;box-shadow:var(--sh);border:1px solid var(--bd);overflow:hidden;margin-bottom:16px;}
-.cf{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd);}
-.cf:last-child{border-bottom:none;}
-.cf-ico{
-  width:28px;height:28px;border-radius:7px;background:var(--xl);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:12px;
-}
-.cf-ico svg{width:13px;height:13px;stroke:var(--dg);fill:none;stroke-width:2;}
-.cf-l{font-size:10.5px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
-.cf-v{font-size:13px;font-weight:600;color:var(--tx);}
-.c-av{font-size:12px;color:var(--or);font-weight:600;text-align:center;margin-bottom:14px;padding:10px 16px;border-radius:10px;background:#FFF3E0;width:100%;border:1px solid #FFCC80;}
-.c-det{font-size:13.5px;color:var(--t1);text-align:center;margin-bottom:16px;line-height:1.65;}
-.c-causas{width:100%;background:var(--rl);border-radius:12px;padding:12px 16px;margin-bottom:16px;text-align:left;}
-.c-causas .c-tit-sm{font-size:11px;font-weight:800;color:var(--re);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
-.c-causas li{font-size:12.5px;color:var(--re);list-style:disc;margin-left:16px;margin-bottom:4px;}
-.btn-ok{
-  width:100%;padding:16px;border-radius:13px;border:none;
-  background:linear-gradient(135deg,var(--dm),var(--dg));
-  color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:800;
-  cursor:pointer;box-shadow:0 4px 14px rgba(27,64,40,.28);letter-spacing:.3px;
-}
-.btn-ok:active{opacity:.9;}
-.btn-sec{
-  width:100%;padding:14px;border-radius:13px;border:1.5px solid var(--bd);
-  background:transparent;color:var(--t1);font-family:'Inter',sans-serif;
-  font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;
-}
-.cd-timer{font-size:13px;color:var(--t2);text-align:center;margin-top:10px;}
-
-/* ════════════════════════════════
-   PIN / GERENCIA
-════════════════════════════════ */
-.pin-screen{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:16px;padding:32px 20px;
-}
-.pin-ico{
-  width:64px;height:64px;border-radius:16px;background:var(--xl);
-  border:1px solid var(--xb);display:flex;align-items:center;justify-content:center;
-}
-.pin-ico svg{width:28px;height:28px;stroke:var(--dg);fill:none;stroke-width:1.8;}
-.pin-tit{font-size:20px;font-weight:800;}
-.pin-sub{font-size:13px;color:var(--t1);}
-input[type=password]{
-  width:100%;max-width:200px;padding:14px;border-radius:12px;
-  border:1.5px solid var(--bd);background:var(--wh);color:var(--tx);
-  font-size:26px;text-align:center;letter-spacing:10px;
-  font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;
-}
-input[type=password]:focus{border-color:var(--dg);}
-
-/* MENÚ ADMIN */
-.admin-menu{
-  flex:1;overflow-y:auto;padding:20px 14px 24px;display:flex;flex-direction:column;gap:8px;
-}
-.menu-hdr{
-  background:var(--dk);border-radius:12px;padding:14px 16px;
-  display:flex;align-items:center;gap:10px;margin-bottom:4px;
-}
-.menu-hdr svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;}
-.menu-hdr span{font-size:14px;font-weight:800;color:#fff;letter-spacing:.3px;}
-.menu-item{
-  background:var(--wh);border:1px solid var(--bd);border-radius:12px;
-  padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;
-  box-shadow:var(--sh);transition:background .1s;
-}
-.menu-item:active{background:var(--xl);}
-.menu-item-ico{
-  width:36px;height:36px;border-radius:9px;background:var(--xl);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.menu-item-ico svg{width:16px;height:16px;stroke:var(--dg);fill:none;stroke-width:2;}
-.menu-item-txt{flex:1;}
-.menu-item-lbl{font-size:14px;font-weight:700;color:var(--tx);}
-.menu-item-sub{font-size:11.5px;color:var(--t2);margin-top:2px;}
-.menu-item-chev svg{width:16px;height:16px;stroke:var(--t2);fill:none;stroke-width:2;}
-
-/* FORMULARIO */
-.page-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 32px;display:flex;flex-direction:column;gap:12px;}
-.page-hdr{display:flex;align-items:center;gap:12px;}
-.btn-back{
-  width:38px;height:38px;border-radius:50%;background:var(--wh);
-  border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;box-shadow:var(--sh);
-}
-.btn-back svg{width:17px;height:17px;stroke:var(--tx);fill:none;stroke-width:2;}
-.page-tit{font-size:16px;font-weight:800;}
-.form-c{background:var(--wh);border-radius:14px;box-shadow:var(--sh);border:1px solid var(--bd);padding:18px;}
-.fl{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);font-weight:700;margin-bottom:6px;margin-top:14px;}
-.fl:first-child{margin-top:0;}
-.fi{
-  width:100%;padding:12px 14px;border-radius:10px;
-  border:1.5px solid var(--bd);background:var(--bg);color:var(--tx);
-  font-family:'Inter',sans-serif;font-size:14px;font-weight:500;outline:none;
-  transition:border-color .2s;
-}
-.fi:focus{border-color:var(--dg);}
-/* Selector de hora personalizado */
-.time-pick{
-  display:flex;align-items:center;gap:4px;
-  background:var(--bg);border:1.5px solid var(--bd);border-radius:10px;
-  padding:0 10px;height:46px;
-}
-.time-pick select{
-  flex:1;border:none;background:transparent;color:var(--tx);
-  font-family:'Inter',sans-serif;font-size:15px;font-weight:700;
-  outline:none;appearance:none;-webkit-appearance:none;
-  text-align:center;cursor:pointer;padding:0;
-}
-.time-pick .tp-sep{font-size:16px;font-weight:800;color:var(--t2);flex-shrink:0;}
-.time-pick .tp-ampm{
-  font-size:11px;font-weight:700;color:var(--t2);flex-shrink:0;
-  min-width:28px;text-align:right;
-}
-.grilla{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
-
-/* ════════════════════════════════
-   PANTALLA CONFIRMACIÓN INMERSIVA
-════════════════════════════════ */
-#pantallaResultado{background:#071510;}
-.conf-full{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:32px 28px 24px;gap:0;
-  animation:confSlide .45s cubic-bezier(.16,1,.3,1) both;
-}
-@keyframes confSlide{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.conf-av{
-  width:56px;height:56px;border-radius:50%;
-  background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.15);
-  display:flex;align-items:center;justify-content:center;
-  font-size:17px;font-weight:900;color:rgba(255,255,255,.9);
-  margin-bottom:26px;letter-spacing:.5px;
-}
-.conf-ring{
-  width:96px;height:96px;border-radius:50%;
-  background:rgba(74,222,128,.1);border:2.5px solid rgba(74,222,128,.3);
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:24px;
-  animation:ringPop .55s cubic-bezier(.2,1.4,.4,1) both;
-}
-@keyframes ringPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
-.conf-ring svg polyline{
-  stroke-dasharray:52;stroke-dashoffset:52;
-  animation:chkIn .5s ease .28s both;
-}
-@keyframes chkIn{to{stroke-dashoffset:0}}
-.conf-saludo{
-  font-size:34px;font-weight:900;color:#fff;letter-spacing:-1px;
-  margin-bottom:6px;text-align:center;line-height:1;
-  animation:confSlide .38s cubic-bezier(.16,1,.3,1) .15s both;
-}
-.conf-nombre{
-  font-size:21px;font-weight:700;color:rgba(255,255,255,.7);
-  text-align:center;margin-bottom:20px;line-height:1.25;
-  animation:confSlide .38s cubic-bezier(.16,1,.3,1) .22s both;
-}
-.conf-badges{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;
-  margin-bottom:16px;
-  animation:confSlide .38s .3s both;
-}
-.conf-tipo-bdg{
-  background:rgba(255,255,255,.14);color:#fff;
-  font-size:11px;font-weight:800;padding:5px 15px;
-  border-radius:20px;letter-spacing:.6px;text-transform:uppercase;
-}
-.conf-hora-txt{font-size:15px;font-weight:600;color:rgba(255,255,255,.45);}
-.conf-alerts{
-  display:flex;flex-direction:column;gap:6px;width:100%;max-width:280px;
-  margin-bottom:20px;animation:confSlide .38s .38s both;
-}
-.conf-alert{padding:7px 16px;border-radius:10px;font-size:12px;font-weight:700;text-align:center;}
-.conf-alert.tarde{background:rgba(198,40,40,.22);color:#FF7070;border:1px solid rgba(255,112,112,.18);}
-.conf-alert.temprano{background:rgba(230,81,0,.22);color:#FFAB40;border:1px solid rgba(255,171,64,.18);}
-.conf-alert.fuera{background:rgba(198,40,40,.18);color:#FF7070;border:1px solid rgba(255,112,112,.14);}
-.conf-alert.supervisor{background:rgba(255,193,7,.12);color:#FFD54F;border:1px solid rgba(255,213,79,.14);}
-.conf-pgbar-wrap{
-  width:100%;max-width:220px;height:3px;
-  background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;
-  margin-top:auto;margin-bottom:14px;
-}
-.conf-pgbar{height:100%;background:rgba(255,255,255,.3);border-radius:99px;transition:width 1s linear;}
-.conf-back{
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
-  color:rgba(255,255,255,.5);border-radius:12px;
-  padding:12px 32px;font-family:'Inter',sans-serif;
-  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;
-}
-.conf-back:active{background:rgba(255,255,255,.14);}
-
-/* ════════════════════════════════
-   PANTALLA ERROR/WARN INMERSIVA
-════════════════════════════════ */
-.err-full{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:32px 28px;gap:0;
-  background:#0F0808;animation:confSlide .4s ease both;
-}
-.warn-full{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:32px 28px;gap:0;
-  background:#0F0D06;animation:confSlide .4s ease both;
-}
-.err-ring,.warn-ring{
-  width:88px;height:88px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:22px;
-  animation:ringPop .5s cubic-bezier(.2,1.4,.4,1) both;
-}
-.err-ring{background:rgba(198,40,40,.15);border:2.5px solid rgba(198,40,40,.3);}
-.warn-ring{background:rgba(230,81,0,.15);border:2.5px solid rgba(230,81,0,.3);}
-.err-tit{font-size:22px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px;}
-.err-sub{font-size:14px;color:rgba(255,255,255,.4);text-align:center;line-height:1.65;margin-bottom:28px;max-width:280px;}
-.err-actions{width:100%;max-width:260px;display:flex;flex-direction:column;gap:10px;}
-.err-btn-main{
-  padding:15px;border:none;border-radius:12px;background:#C62828;
-  color:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:800;cursor:pointer;
-}
-.err-btn-sec{
-  padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:12px;
-  background:transparent;color:rgba(255,255,255,.4);
-  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
-}
-
-/* ════════════════════════════════
-   CÁMARA: ESCANEO Y FEEDBACK
-════════════════════════════════ */
-.cam-wrap{height:280px !important;}
-.cam-scan{
-  position:absolute;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,rgba(74,222,128,.7) 40%,rgba(74,222,128,.9) 50%,rgba(74,222,128,.7) 60%,transparent);
-  pointer-events:none;opacity:0;transition:opacity .3s;top:30%;
-}
-.cam-wrap.scanning .cam-scan{opacity:1;animation:scanMove 2.2s ease-in-out infinite;}
-@keyframes scanMove{0%{top:20%}50%{top:78%}100%{top:20%}}
-.cam-wrap.face-ok .cam-marco::before,.cam-wrap.face-ok .cam-marco::after,
-.cam-wrap.face-ok .cam-marco-b::before,.cam-wrap.face-ok .cam-marco-b::after{
-  border-color:#4ADE80;transition:border-color .2s;
-}
-.cam-wrap.scanning:not(.face-ok) .cam-marco::before,.cam-wrap.scanning:not(.face-ok) .cam-marco::after,
-.cam-wrap.scanning:not(.face-ok) .cam-marco-b::before,.cam-wrap.scanning:not(.face-ok) .cam-marco-b::after{
-  border-color:rgba(255,255,255,.65);
-}
-.cam-wrap.face-ok .cam-dot{background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.7);}
-.persona{
-  background:var(--wh);border:1.5px solid var(--bd);border-radius:12px;
-  padding:13px 8px;text-align:center;cursor:pointer;transition:all .15s;
-}
-.persona.activo{border-color:var(--dg);background:var(--xl);}
-.inicial{
-  width:34px;height:34px;border-radius:50%;margin:0 auto 7px;
-  background:var(--bg);display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:700;color:var(--t1);
-}
-.persona.activo .inicial{background:var(--dg);color:#fff;}
-.nom{font-size:11px;font-weight:600;line-height:1.35;color:var(--tx);}
-.persona.activo .nom{color:var(--dg);}
-</style>
 </head>
 <body>
 <div class="app">
@@ -553,7 +21,7 @@ input[type=password]:focus{border-color:var(--dg);}
      HEADER
 ══════════════════════════════════════════ -->
 <header class="hdr">
-  <div class="hdr-logo">
+  <div class="hdr-logo" id="hdrLogo" title="5 toques para admin">
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <rect x="21" y="28" width="5" height="13" rx="2.5" fill="#fff"/>
       <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#fff" transform="rotate(-30 24 21)"/>
@@ -582,31 +50,78 @@ input[type=password]:focus{border-color:var(--dg);}
      PANTALLA MARCACIÓN
 ══════════════════════════════════════════ -->
 <div class="pantalla show" id="pantallaMarcacion">
-  <div class="scroll">
 
-    <!-- DOCUMENTO -->
-    <div class="blk">
-      <div class="blk-hdr">
-        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Documento de identidad
+  <!-- BLOQUE IDLE: teclado + doc display -->
+  <div id="wkDocBlock">
+    <div class="scroll">
+      <div class="blk">
+        <div class="blk-hdr">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Documento de identidad
+        </div>
+        <div class="doc-display">
+          <div class="doc-number ph" id="docVal">Digite su cédula</div>
+          <input type="text" id="documentoInput" inputmode="numeric" maxlength="15" style="display:none;">
+          <div class="doc-chk" id="docChk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="doc-info" id="docSub" style="display:none;"></div>
+        <div class="keypad" id="teclado">
+          <div class="key" data-k="1">1</div><div class="key" data-k="2">2</div><div class="key" data-k="3">3</div>
+          <div class="key" data-k="4">4</div><div class="key" data-k="5">5</div><div class="key" data-k="6">6</div>
+          <div class="key" data-k="7">7</div><div class="key" data-k="8">8</div><div class="key" data-k="9">9</div>
+          <div class="key del" data-k="C">C</div><div class="key" data-k="0">0</div><div class="key del" data-k="⌫">⌫</div>
+        </div>
       </div>
-      <div class="doc-display">
-        <div class="doc-number ph" id="docVal">Ingrese su número de documento</div>
-        <input type="text" id="documentoInput" inputmode="numeric" maxlength="15" readonly>
-        <div class="doc-chk" id="docChk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+
+      <!-- Última marcación -->
+      <div id="ultimaSection" style="display:none;">
+        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:7px;padding-left:2px;">Última marcación</div>
+        <div class="ultima-card">
+          <div class="ul-av"><span id="ulInic">—</span></div>
+          <div class="ul-bd">
+            <div class="ul-nom" id="ulNombre">—</div>
+            <div class="ul-meta">
+              <span class="ul-tag" id="ulTipo">—</span>
+              <span class="ul-hr" id="ulHora">—</span>
+            </div>
+          </div>
+          <div class="ul-hace" id="ulHace">—</div>
+        </div>
       </div>
-      <div class="doc-info" id="docSub" style="display:none;"></div>
-      <button class="btn-borrar-rec" id="btnBorrarRec" onclick="abrirTeclado()">⌨ &nbsp;INGRESAR CÉDULA MANUALMENTE</button>
-      <div class="keypad" id="teclado" style="display:none;">
-        <div class="key" data-k="1">1</div><div class="key" data-k="2">2</div><div class="key" data-k="3">3</div>
-        <div class="key" data-k="4">4</div><div class="key" data-k="5">5</div><div class="key" data-k="6">6</div>
-        <div class="key" data-k="7">7</div><div class="key" data-k="8">8</div><div class="key" data-k="9">9</div>
-        <div class="key del" data-k="C">C</div><div class="key" data-k="0">0</div><div class="key del" data-k="⌫">⌫</div>
+
+      <!-- Barra de estado (siempre visible) -->
+      <div class="status-bar">
+        <div class="st-item">
+          <span class="st-lbl">Geocerca</span>
+          <span class="st-val na" id="stGeocerca">—</span>
+        </div>
+        <div class="st-item">
+          <span class="st-lbl">Ubicación</span>
+          <span class="st-val na" id="stUbicacion">—</span>
+        </div>
+        <div class="st-item">
+          <span class="st-lbl">Internet</span>
+          <span class="st-val ok" id="stInternet">OK</span>
+        </div>
       </div>
     </div>
+  </div>
 
-    <!-- BANNER ENROLAMIENTO -->
-    <div id="bannerEnrolar" style="display:none;background:var(--bl);border-radius:10px;padding:10px 14px;align-items:center;gap:10px;">
+  <!-- BLOQUE SCAN: persona + cámara -->
+  <div id="wkScanBlock" style="display:none;flex:1;flex-direction:column;min-height:0;">
+
+    <!-- Banner persona -->
+    <div class="wk-person-banner" id="wkPersonBanner">
+      <div class="wk-person-av" id="wkPersonAv">—</div>
+      <div class="wk-person-info">
+        <div class="wk-person-saludo" id="wkPersonSaludo">Hola!</div>
+        <div class="wk-person-doc" id="wkPersonDoc"></div>
+      </div>
+      <div class="wk-tipo-bdg" id="wkTipoBdg">—</div>
+    </div>
+
+    <!-- Banner enrolamiento -->
+    <div id="bannerEnrolar" style="background:var(--bl);padding:10px 14px;align-items:center;gap:10px;">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <div style="flex:1;">
         <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.6px;">Modo enrolamiento</div>
@@ -615,96 +130,63 @@ input[type=password]:focus{border-color:var(--dg);}
       <button onclick="cancelarEnrolar()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;padding:5px 10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">CANCELAR</button>
     </div>
 
-    <!-- CÁMARA -->
-    <div class="blk" id="bloqueCamera">
-      <div class="blk-hdr">
-        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Reconocimiento facial
-      </div>
+    <!-- Cámara -->
+    <div id="bloqueCamera" style="flex:1;min-height:0;">
       <div class="cam-wrap" id="camWrap">
         <video id="video" autoplay muted playsinline></video>
         <canvas id="overlay"></canvas>
         <div class="cam-scan" id="camScan"></div>
-        <div class="cam-marco" id="camMarco">
-          <div class="cam-marco-b"></div>
-        </div>
-        <div class="cam-placeholder" id="camPlaceholder">
+        <div class="cam-marco" id="camMarco"><div class="cam-marco-b"></div></div>
+        <div class="cam-placeholder" id="camPlaceholder" style="display:flex;">
           <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          <p>Toque para activar cámara</p>
+          <p>Activando cámara…</p>
         </div>
         <div class="cam-footer">
           <span class="cam-estado" id="camEstado">Iniciando…</span>
-          <span class="cam-dot"></span>
+          <span class="cam-dot" id="camDot"></span>
+        </div>
+        <!-- Overlay validación -->
+        <div class="cam-validating" id="camValidating" style="display:none;">
+          <div class="cam-val-spinner"></div>
+          <div class="cam-val-txt">Validando identidad…</div>
         </div>
       </div>
     </div>
 
-    <!-- ESTADO RECONOCIMIENTO -->
-    <!-- BARRA DE ESTADO -->
-    <div class="status-bar">
-      <div class="st-item">
-        <span class="st-lbl">Confianza</span>
-        <span class="st-val na" id="confPct">—</span>
-        <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
-      </div>
-      <div class="st-item">
-        <span class="st-lbl">Ubicación</span>
-        <span class="st-val na" id="stUbicacion">—</span>
-      </div>
-      <div class="st-item">
-        <span class="st-lbl">Geocerca</span>
-        <span class="st-val na" id="stGeocerca">—</span>
-      </div>
-      <div class="st-item">
-        <span class="st-lbl">Internet</span>
-        <span class="st-val ok" id="stInternet">OK</span>
-      </div>
-    </div>
-
-    <!-- TIPO -->
-    <div class="tipo-row">
-      <div class="tipo-ico">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      </div>
-      <div class="tipo-nombre">Tipo de marcación</div>
-      <div class="tipo-txt ph" id="tipoTxt">Seleccionar…</div>
-    </div>
-
-    <!-- BOTÓN PRINCIPAL -->
-    <button class="btn-accion" id="btnMarcar" disabled>
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg>
-      REGISTRAR ASISTENCIA
-    </button>
-
-    <!-- ÚLTIMA MARCACIÓN -->
-    <div id="ultimaSection" style="display:none;">
-      <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:7px;padding-left:2px;">Última marcación</div>
-      <div class="ultima-card">
-        <div class="ul-av"><span id="ulInic">—</span></div>
-        <div class="ul-bd">
-          <div class="ul-nom" id="ulNombre">—</div>
-          <div class="ul-meta">
-            <span class="ul-tag" id="ulTipo">—</span>
-            <span class="ul-hr" id="ulHora">—</span>
-          </div>
+    <!-- Confianza + acciones -->
+    <div style="padding:8px 12px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
+      <div class="status-bar">
+        <div class="st-item">
+          <span class="st-lbl">Confianza</span>
+          <span class="st-val na" id="confPct">—</span>
+          <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
         </div>
-        <div class="ul-hace" id="ulHace">—</div>
+        <div class="st-item">
+          <span class="st-lbl">Geocerca</span>
+          <span class="st-val na" id="stGeocerca2">—</span>
+        </div>
+        <div class="st-item">
+          <span class="st-lbl">Internet</span>
+          <span class="st-val ok" id="stInternet2">OK</span>
+        </div>
+      </div>
+      <div class="wk-scan-actions">
+        <button class="btn-wk-cancel" id="btnWkCancel">← Cambiar cédula</button>
+        <button class="btn-sup-auth" id="btnWkSupAuth">Autorizar con PIN supervisor</button>
       </div>
     </div>
-
   </div>
 
-  <!-- Footer fijo al fondo, fuera del scroll -->
+  <!-- Footer fijo -->
   <div class="app-footer">
     <div class="footer-links">
       <span class="link-d" id="btnEnrolar">Enrolar empleado</span>
-      <span class="link-d" id="btnAgregarPersonal">Agregar personal</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <div id="colaBadge" style="display:none;background:var(--or);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;cursor:pointer;" title="Marcaciones pendientes de enviar">
+      <div id="colaBadge" style="display:none;background:var(--or);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;cursor:pointer;">
         <span id="colaCnt">0</span> pendientes
       </div>
-      <span class="version">V 1.0.0</span>
+      <span class="version">V 2.0.0</span>
     </div>
   </div>
 </div>
@@ -713,7 +195,7 @@ input[type=password]:focus{border-color:var(--dg);}
      PANTALLA RESULTADO
 ══════════════════════════════════════════ -->
 <div class="pantalla" id="pantallaResultado">
-  <div class="res-scroll" id="resultadoContenido"></div>
+  <div id="resultadoContenido" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;"></div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -724,7 +206,7 @@ input[type=password]:focus{border-color:var(--dg);}
     <div class="pin-ico">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
-    <div class="pin-tit">Acceso Gerencia</div>
+    <div class="pin-tit">Acceso Administración</div>
     <div class="pin-sub">Ingresa el PIN de 4 dígitos</div>
     <input type="password" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••">
     <button class="btn-ok" id="btnPinConfirmar">Ingresar</button>
@@ -741,48 +223,32 @@ input[type=password]:focus{border-color:var(--dg);}
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       <span>Menú Administrativo</span>
     </div>
-    <!-- Aviso re-enrolamiento -->
     <div id="avisoReenrolar" style="display:none;background:#FFF3E0;border:1px solid #FFB74D;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--or);font-weight:600;line-height:1.5;">
       ⚠️ <span id="avisoReenrolarTxt"></span> Ingresa a Gestión de rostros para ver quiénes necesitan re-enrolarse.
     </div>
     <div class="menu-item" id="menuEnrolar">
       <div class="menu-item-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div class="menu-item-txt">
-        <div class="menu-item-lbl">Enrolar empleado</div>
-        <div class="menu-item-sub">Capturar rostro de referencia</div>
-      </div>
+      <div class="menu-item-txt"><div class="menu-item-lbl">Enrolar empleado</div><div class="menu-item-sub">Capturar rostro de referencia</div></div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
     <div class="menu-item" id="menuRostros">
-      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg></div>
-      <div class="menu-item-txt">
-        <div class="menu-item-lbl">Gestión de rostros</div>
-        <div class="menu-item-sub" id="menuRostrosSub">Ver y eliminar rostros enrolados</div>
-      </div>
+      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+      <div class="menu-item-txt"><div class="menu-item-lbl">Gestión de rostros</div><div class="menu-item-sub" id="menuRostrosSub">Ver y eliminar rostros enrolados</div></div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
     <div class="menu-item" id="menuAgregar">
       <div class="menu-item-ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
-      <div class="menu-item-txt">
-        <div class="menu-item-lbl">Agregar personal</div>
-        <div class="menu-item-sub">Registrar nuevo empleado</div>
-      </div>
+      <div class="menu-item-txt"><div class="menu-item-lbl">Agregar personal</div><div class="menu-item-sub">Registrar nuevo empleado</div></div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
     <div class="menu-item" id="menuReporte">
       <div class="menu-item-ico"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-      <div class="menu-item-txt">
-        <div class="menu-item-lbl">Ver reportes</div>
-        <div class="menu-item-sub">Dashboard Dirección Agronómica</div>
-      </div>
+      <div class="menu-item-txt"><div class="menu-item-lbl">Ver reportes</div><div class="menu-item-sub">Dashboard Dirección Agronómica</div></div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
     <div class="menu-item" id="menuConfig">
       <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-      <div class="menu-item-txt">
-        <div class="menu-item-lbl">Configuración</div>
-        <div class="menu-item-sub">Finca, geocerca, horarios</div>
-      </div>
+      <div class="menu-item-txt"><div class="menu-item-lbl">Configuración</div><div class="menu-item-sub">Finca, geocerca, horarios</div></div>
       <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
     <button class="btn-sec" id="menuCerrar" style="margin-top:8px;">Cerrar sesión</button>
@@ -828,7 +294,7 @@ input[type=password]:focus{border-color:var(--dg);}
       <button class="btn-back" id="btnVolverDesdeRostros"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span class="page-tit">Gestión de rostros</span>
     </div>
-    <div id="rostrosResumen" style="background:var(--wh);border-radius:12px;border:1px solid var(--bd);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="background:var(--wh);border-radius:12px;border:1px solid var(--bd);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
       <div>
         <div style="font-size:13px;font-weight:700;" id="rostrosCount">—</div>
         <div style="font-size:11px;color:var(--t2);margin-top:2px;">empleados con rostro enrolado</div>
@@ -848,8 +314,6 @@ input[type=password]:focus{border-color:var(--dg);}
       <button class="btn-back" id="btnVolverDesdeConfig"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span class="page-tit">Configuración</span>
     </div>
-
-    <!-- FINCA -->
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Datos de la finca</div>
       <div class="fl">Nombre de la finca</div>
@@ -865,28 +329,15 @@ input[type=password]:focus{border-color:var(--dg);}
         Usar mi ubicación actual como centro
       </button>
     </div>
-
-    <!-- HORARIO -->
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:4px;">Horario laboral</div>
       <div style="font-size:11.5px;color:var(--t2);margin-bottom:14px;line-height:1.5;">Usado como respaldo cuando no hay conexión.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div>
-          <div class="fl">Entrada</div>
-          <div class="time-pick" id="cfgEntrada"></div>
-        </div>
-        <div>
-          <div class="fl">Salida L-V</div>
-          <div class="time-pick" id="cfgSalida"></div>
-        </div>
-        <div>
-          <div class="fl">Salida sábado</div>
-          <div class="time-pick" id="cfgSalidaSab"></div>
-        </div>
+        <div><div class="fl">Entrada</div><div class="time-pick" id="cfgEntrada"></div></div>
+        <div><div class="fl">Salida L-V</div><div class="time-pick" id="cfgSalida"></div></div>
+        <div><div class="fl">Salida sábado</div><div class="time-pick" id="cfgSalidaSab"></div></div>
       </div>
     </div>
-
-    <!-- RECONOCIMIENTO -->
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Reconocimiento facial</div>
       <div class="fl" style="margin-bottom:6px;">Minutos de almuerzo (se descuentan al autorizar)</div>
@@ -901,24 +352,21 @@ input[type=password]:focus{border-color:var(--dg);}
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-top:2px;"><span>Muy estricto</span><span>Permisivo</span></div>
     </div>
-
-    <!-- PIN -->
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Seguridad</div>
-      <div class="fl">PIN de gerencia (4 dígitos)</div>
+      <div class="fl">PIN de administración (4 dígitos)</div>
       <input type="password" id="cfgPin" maxlength="4" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
       <div class="fl" style="margin-top:10px;">Confirmar PIN</div>
       <input type="password" id="cfgPinConf" maxlength="4" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
       <div style="font-size:11px;color:var(--t2);margin-top:6px;">Deja vacío para no cambiar el PIN actual.</div>
     </div>
-
     <button class="btn-ok" id="btnGuardarConfig">Guardar configuración</button>
     <button class="btn-sec" id="btnCancelarConfig">Cancelar</button>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════
-     PANTALLA REPORTE DE DEUDA
+     PANTALLA REPORTE
 ══════════════════════════════════════════ -->
 <div class="pantalla" id="pantallaReporte">
   <div class="page-scroll">
@@ -926,15 +374,11 @@ input[type=password]:focus{border-color:var(--dg);}
       <button class="btn-back" id="btnVolverDesdeReporte"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span class="page-tit">Reporte de deuda</span>
     </div>
-
-    <!-- selector de fecha -->
     <div style="display:flex;align-items:center;gap:8px;background:var(--wh);border-radius:12px;padding:10px 14px;border:1px solid var(--bd);box-shadow:var(--sh);">
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--dg)" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <input type="date" id="repFecha" style="flex:1;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--tx);outline:none;">
       <button id="btnRepCargar" style="background:var(--dg);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;">Cargar</button>
     </div>
-
-    <!-- resumen rápido -->
     <div id="repResumen" style="display:none;background:var(--wh);border-radius:12px;padding:12px 14px;border:1px solid var(--bd);box-shadow:var(--sh);">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:8px;">Resumen del día</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
@@ -943,13 +387,8 @@ input[type=password]:focus{border-color:var(--dg);}
         <div style="text-align:center;"><div id="repCntDeuda" style="font-size:22px;font-weight:900;color:var(--bl);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Min deuda</div></div>
       </div>
     </div>
-
-    <!-- estado carga -->
     <div id="repEstado" style="text-align:center;font-size:13px;color:var(--t2);padding:24px 0;">Selecciona una fecha y toca Cargar</div>
-
-    <!-- tabla empleados -->
-    <div id="repTabla"></div>
-
+    <div id="repTabla" style="display:flex;flex-direction:column;gap:10px;"></div>
   </div>
 </div>
 
@@ -974,1112 +413,22 @@ input[type=password]:focus{border-color:var(--dg);}
   <div style="background:var(--wh);border-radius:18px;padding:24px 20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
     <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Autorización requerida</div>
     <div style="font-size:13px;color:var(--t1);margin-bottom:18px;line-height:1.55;" id="modalSupervisorTxt"></div>
-    <input type="password" id="modalPinInput" maxlength="4" inputmode="numeric" placeholder="PIN de gerencia"
+    <input type="password" id="modalPinInput" maxlength="4" inputmode="numeric" placeholder="PIN de administración"
       style="width:100%;padding:13px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);color:var(--tx);font-size:22px;text-align:center;letter-spacing:8px;font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;">
     <div style="font-size:11.5px;color:var(--re);font-weight:600;min-height:18px;margin-bottom:10px;" id="modalPinErr"></div>
-    <button class="btn-ok" id="modalPinOk">Autorizar marcación</button>
+    <button class="btn-ok" id="modalPinOk">Autorizar</button>
     <button class="btn-sec" id="modalPinCancel" style="margin-top:10px;">Cancelar</button>
   </div>
 </div>
 
-<script>
-/* ── CONFIG ── */
-const CONFIG={
-  GS_URL:"https://script.google.com/macros/s/AKfycbzCdKT63tnUe07VNNoTUotbiY_Vr8wrf7HA5d0CUU-squZJBbTNIYDTnT9cn9aqJElM/exec",
-  PIN_GERENCIA:"2105",
-  FINCA:{id:2,nombre:"Finca 2",lat:2.722853,lng:-72.735464,radioMetros:100},
-  PERSONAL_BASE:[
-    {documento:"1121816934",nombre:"Rusbel Reynel Algarra Salgado",cargo:"Conductor"},
-    {documento:"1120926454",nombre:"Dubian Camilo Cuervo Gomez",cargo:"Auxiliar de Sanidad"},
-    {documento:"1123162209",nombre:"Arnol Neyer Escamilla Gil",cargo:"Sup. Sanidad Plantacion"},
-    {documento:"1122655798",nombre:"Ricardo Gaitan Cleves",cargo:"Auxiliar de Sanidad"},
-    {documento:"1063282651",nombre:"Leanis Yulieth Garizao Argumedo",cargo:"Almacenista"},
-    {documento:"1093738385",nombre:"Fernando Francisco Leon Suarez",cargo:"Operario Tractor"},
-    {documento:"79728288",nombre:"Juan Carlos Oviedo Castillejo",cargo:"Sup. Cultivo"},
-    {documento:"1120924351",nombre:"Alix Viviana Peña Garzon",cargo:"Sup. Cultivo"},
-    {documento:"1006534617",nombre:"Ayler Perez Guzman",cargo:"Auxiliar de Sanidad"},
-    {documento:"82391042",nombre:"Ciro Alfonso Romero Ramos",cargo:"Auxiliar de Sanidad"},
-    {documento:"1006810316",nombre:"Luis Fernando Sanchez Chitiva",cargo:"Director Tecnico"},
-    {documento:"86010042",nombre:"Jose Oswaldo Sanchez Martinez",cargo:"Operario Tractor"},
-    {documento:"11434440",nombre:"Edgar Alfonso Tinjaca Niño",cargo:"Jefe de Taller"},
-    {documento:"79978603",nombre:"Jurley Trujillo Fernandez",cargo:"Auxiliar de Sanidad"},
-    {documento:"15174884",nombre:"Johony Manuel Valdez Yance",cargo:"Auxiliar de Sanidad"},
-    {documento:"1066269860",nombre:"Saul Camilo Vega Gutierrez",cargo:"Auxiliar de Sanidad"},
-    {documento:"1121884438",nombre:"Nayiver Ercilia Vergara Alvarez",cargo:"Auxiliar Administrativa"},
-    {documento:"78715610",nombre:"Cesar Alberto Verona Monterrosa",cargo:"Operario Tractor"},
-    {documento:"1121944143",nombre:"Anderson Gonzalo Rojas Rojas",cargo:"Superintendente"},
-    {documento:"17417318",nombre:"Ever Ferney Cleves Florez",cargo:"Operario Tractor"},
-    {documento:"7392093",nombre:"Sandro Edison Bonilla Parra",cargo:"Operario Tractor"},
-    {documento:"1193447192",nombre:"Brayan Farid Perez Avendaño",cargo:"Supervisor"},
-    {documento:"1120560605",nombre:"John Fredy Garnica Buitrago",cargo:"Operario Tractor"},
-    {documento:"1007294977",nombre:"Mabel Gisette Romero Guerrero",cargo:"Auxiliar HSEQ"},
-    {documento:"1120365099",nombre:"Julio Cesar Bacca Moreno",cargo:"Operario Tractor"},
-    {documento:"1192803681",nombre:"Andres Felipe Fajardo Cardenas",cargo:"Supervisor"},
-    {documento:"1006879326",nombre:"Juan David Guiza Fajardo",cargo:"Auxiliar de Sanidad"},
-    {documento:"1001933516",nombre:"Sebastian Rafael Celedon Moreno",cargo:"Auxiliar de Sanidad"},
-    {documento:"4428130",nombre:"Tulio Antonio Olaya Gonzalez",cargo:"Mecanico Integral"}
-  ],
-  HORARIO:{entrada:6.0,salida:14.75,salidaSabado:11.75},
-  UMBRAL_FACIAL:0.45,
-  ALMUERZO_MIN:60
-};
-
-function xh(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function inic(n){return n.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();}
-function getPE(){try{return JSON.parse(localStorage.getItem('personal_extra')||'[]');}catch{return[];}}
-function savePE(l){localStorage.setItem('personal_extra',JSON.stringify(l));}
-function getPC(){return[...CONFIG.PERSONAL_BASE,...getPE()].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));}
-function getCargo(n){const p=getPC().find(p=>p.nombre===n);return p?p.cargo:'';}
-function getPorDoc(d){const s=String(d).trim();return getPC().find(p=>String(p.documento)===s);}
-function getRostros(){try{return JSON.parse(localStorage.getItem('rostros_enrolados')||'{}');}catch{return{};}}
-function getRostrosMeta(){try{return JSON.parse(localStorage.getItem('rostros_meta')||'{}');}catch{return{};}}
-function saveRostro(n,d){
-  const r=getRostros();r[n]=Array.from(d);localStorage.setItem('rostros_enrolados',JSON.stringify(r));
-  const m=getRostrosMeta();m[n]={v:2,fecha:new Date().toISOString()};localStorage.setItem('rostros_meta',JSON.stringify(m));
-}
-function deleteRostro(n){
-  const r=getRostros();delete r[n];localStorage.setItem('rostros_enrolados',JSON.stringify(r));
-  const m=getRostrosMeta();delete m[n];localStorage.setItem('rostros_meta',JSON.stringify(m));
-}
-
-document.getElementById('nombreFinca').textContent=CONFIG.FINCA.nombre;
-
-/* RELOJ */
-function tickReloj(){
-  const a=new Date();
-  const h=a.getHours()%12||12,m=String(a.getMinutes()).padStart(2,'0'),s=String(a.getSeconds()).padStart(2,'0');
-  document.getElementById('stHora').textContent=`${h}:${m}:${s} ${a.getHours()>=12?'p.m.':'a.m.'}`;
-}
-setInterval(tickReloj,1000);tickReloj();
-
-/* GPS */
-let gpsOk=false,gpsCoords=null;
-function setGeo(ok,txt){
-  const strip=document.getElementById('geoBadge');
-  document.getElementById('geoTxt').textContent=ok?'Dentro del predio':'Fuera de geocerca';
-  strip.className='geo-strip '+(ok?'ok':'er');
-  document.getElementById('stUbicacion').textContent=ok?'Dentro':'Fuera';
-  document.getElementById('stUbicacion').className='st-val '+(ok?'ok':'er');
-  document.getElementById('stGeocerca').textContent=ok?'OK':'Fuera';
-  document.getElementById('stGeocerca').className='st-val '+(ok?'ok':'er');
-}
-function chkGps(){
-  if(!navigator.geolocation){setGeo(false,'Sin GPS');return;}
-  navigator.geolocation.getCurrentPosition(pos=>{
-    gpsCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
-    const R=6371000,tr=x=>x*Math.PI/180;
-    const dLa=tr(CONFIG.FINCA.lat-pos.coords.latitude),dLo=tr(CONFIG.FINCA.lng-pos.coords.longitude);
-    const a=Math.sin(dLa/2)**2+Math.cos(tr(pos.coords.latitude))*Math.cos(tr(CONFIG.FINCA.lat))*Math.sin(dLo/2)**2;
-    const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    gpsOk=d<=CONFIG.FINCA.radioMetros;
-    setGeo(gpsOk);
-  },()=>setGeo(false,'GPS no disponible'),{enableHighAccuracy:true,timeout:8000});
-}
-chkGps();setInterval(chkGps,60000);
-
-window.addEventListener('online',()=>{document.getElementById('stInternet').textContent='OK';document.getElementById('stInternet').className='st-val ok';});
-window.addEventListener('offline',()=>{document.getElementById('stInternet').textContent='Sin red';document.getElementById('stInternet').className='st-val er';});
-
-/* TIPO */
-let tipoCalc=null;
-const TIPO_CLASS={'Entrada':'entrada','Salida':'salida'};
-async function getTipo(doc){
-  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR'))return{tipo:'Entrada',completo:false,marcas:[]};
-  try{
-    const r=await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`,{cache:'no-store'});
-    const d=await r.json();const m=(d&&d.marcas)||[];
-    if(m.includes('Salida'))return{tipo:'Salida',completo:true,marcas:m};
-    if(m.includes('Entrada'))return{tipo:'Salida',completo:false,marcas:m};
-    return{tipo:'Entrada',completo:false,marcas:m};
-  }catch{
-    const a=new Date(),h=a.getHours()+a.getMinutes()/60;
-    const sal=CONFIG.HORARIO.salida||14.75;
-    return{tipo:h<sal?'Entrada':'Salida',completo:false,marcas:[]};
-  }
-}
-
-/* DOCUMENTO */
-const docInput=document.getElementById('documentoInput');
-const docValEl=document.getElementById('docVal');
-const docSubEl=document.getElementById('docSub');
-const docChkEl=document.getElementById('docChk');
-let nombreSel=null;
-
-function updateBtnColor(){
-  const btn=document.getElementById('btnMarcar');
-  const cls=TIPO_CLASS[tipoCalc]||'entrada';
-  btn.className='btn-accion '+cls;
-}
-
-async function updDoc(){
-  autoFillActivo=false; // manual input overrides face recognition
-  docInput.value=docInput.value.replace(/\D/g,'');
-  const doc=docInput.value.trim();
-  const tipoTxt=document.getElementById('tipoTxt');
-  const btn=document.getElementById('btnMarcar');
-  if(!doc){
-    docValEl.textContent='Ingrese su número de documento';docValEl.className='doc-number ph';
-    docSubEl.style.display='none';docChkEl.classList.remove('show');
-    nombreSel=null;tipoCalc=null;
-    tipoTxt.textContent='Seleccionar…';tipoTxt.className='tipo-txt ph';
-    btn.disabled=true;btn.className='btn-accion';return;
-  }
-  docValEl.textContent=doc.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-  docValEl.className='doc-number';
-  const p=getPorDoc(doc);
-  if(!p){
-    nombreSel=null;tipoCalc=null;
-    docSubEl.textContent='Documento no encontrado en el sistema';docSubEl.className='doc-info er';docSubEl.style.display='block';
-    docChkEl.classList.remove('show');tipoTxt.textContent='Seleccionar…';tipoTxt.className='tipo-txt ph';
-    btn.disabled=true;btn.className='btn-accion';return;
-  }
-  nombreSel=p.nombre;
-  docSubEl.textContent=p.nombre+' · '+p.cargo;docSubEl.className='doc-info';docSubEl.style.display='block';
-  docChkEl.classList.add('show');
-  btn.disabled=true;
-  tipoTxt.textContent='Verificando…';tipoTxt.className='tipo-txt ph';
-  const res=await getTipo(doc);
-  if(docInput.value.trim()!==doc)return;
-  if(res.completo){
-    tipoCalc=null;tipoTxt.textContent='Jornada completa';tipoTxt.className='tipo-txt';
-    docSubEl.textContent='Ya completaste tu jornada hoy';docSubEl.className='doc-info er';
-    btn.disabled=true;btn.className='btn-accion';return;
-  }
-  tipoCalc=res.tipo;
-  tipoTxt.textContent=tipoCalc;tipoTxt.className='tipo-txt';
-  btn.disabled=false;updateBtnColor();
-  btn.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg> REGISTRAR ${tipoCalc.toUpperCase()}`;
-}
-docInput.addEventListener('input',updDoc);
-
-document.getElementById('teclado').addEventListener('click',e=>{
-  const t=e.target.closest('.key');if(!t)return;
-  const k=t.dataset.k;
-  if(k==='C')docInput.value='';
-  else if(k==='⌫')docInput.value=docInput.value.slice(0,-1);
-  else if(docInput.value.length<15)docInput.value+=k;
-  updDoc();
-});
-
-/* ÚLTIMA MARCACIÓN */
-function fmtHace(ts){
-  const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(m/60),mn=m%60;
-  if(h>0)return`Hace ${h}h ${mn}m`;
-  return`Hace ${m}m`;
-}
-function saveUltima(nombre,tipo,hora,dentro,ts){
-  localStorage.setItem('ultima_marc',JSON.stringify({nombre,tipo,hora,dentro,ts}));
-  showUltima();
-}
-function showUltima(){
-  const d=JSON.parse(localStorage.getItem('ultima_marc')||'null');
-  const s=document.getElementById('ultimaSection');
-  if(!d){s.style.display='none';return;}
-  s.style.display='block';
-  document.getElementById('ulNombre').textContent=d.nombre||'—';
-  document.getElementById('ulInic').textContent=inic(d.nombre||'');
-  const tag=document.getElementById('ulTipo');
-  tag.textContent=d.tipo;
-  tag.className='ul-tag'+(d.tipo==='Salida'?' salida':'');
-  document.getElementById('ulHora').textContent=d.hora;
-  document.getElementById('ulHace').textContent=fmtHace(d.ts);
-}
-showUltima();
-setInterval(()=>{
-  const d=JSON.parse(localStorage.getItem('ultima_marc')||'null');
-  if(d)document.getElementById('ulHace').textContent=fmtHace(d.ts);
-},60000);
-
-/* MODELOS */
-const MODEL_URL='models';
-let modOk=false,modErr=null,modCargando=false;
-async function loadModels(){
-  if(modCargando)return;
-  modCargando=true;modOk=false;modErr=null;
-  document.getElementById('camEstado').textContent='Cargando modelos IA…';
-  try{
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    ]);
-    modOk=true;
-    document.getElementById('camEstado').textContent='Buscando rostro…';
-  }catch(e){
-    modErr=e.message||'Error modelos';
-    document.getElementById('camEstado').textContent='Error cargando modelos';
-  }
-  modCargando=false;
-}
-loadModels();
-setTimeout(()=>{
-  if(!modOk&&!modErr&&!modCargando)modErr='Tiempo agotado';
-  if(modErr){document.getElementById('camEstado').textContent='Error: '+modErr;}
-},45000);
-
-/* CÁMARA */
-const video=document.getElementById('video');
-const overlay=document.getElementById('overlay');
-let stream=null,modoActual=null,nombreEnrolando=null,loopActivo=false;
-
-async function iniciarCamara(){
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:480,height:480}});
-    video.srcObject=stream;
-    video.addEventListener('loadeddata',()=>{
-      const ph=document.getElementById('camPlaceholder');
-      if(ph)ph.style.display='none';
-      document.getElementById('camEstado').textContent='Buscando rostro…';
-      if(!loopActivo)loopDeteccion();
-    },{once:true});
-  }catch(e){
-    document.getElementById('camEstado').textContent='Sin acceso a cámara';
-  }
-}
-iniciarCamara();
-
-// Touch sobre el placeholder también intenta cámara
-document.getElementById('camPlaceholder').addEventListener('click',()=>{if(!stream)iniciarCamara();});
-
-let lastDist=null;
-let autoFillActivo=false;
-let autoFillPending=false;
-let reconocido=false; // pausa el loop tras captura exitosa
-
-async function autoFill(nombre,dist){
-  if(autoFillPending)return;
-  autoFillPending=true;
-  reconocido=true; // pausa el loop
-  const p=getPC().find(x=>x.nombre===nombre);
-  if(!p){autoFillPending=false;reconocido=false;return;}
-  nombreSel=nombre;
-  autoFillActivo=true;
-  docInput.value=p.documento;
-  docValEl.textContent=p.documento.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-  docValEl.className='doc-number';
-  document.getElementById('teclado').style.display='none';
-  docSubEl.textContent=p.nombre+' · '+p.cargo;
-  docSubEl.className='doc-info';docSubEl.style.display='block';
-  docChkEl.classList.add('show');
-  const pct=Math.max(0,Math.round((1-dist)*100));
-  setConf(pct,true);
-  const tipoTxt=document.getElementById('tipoTxt');
-  const btn=document.getElementById('btnMarcar');
-  tipoTxt.textContent='Verificando…';tipoTxt.className='tipo-txt ph';
-  btn.disabled=true;
-  const res=await getTipo(p.documento);
-  autoFillPending=false;
-  if(nombreSel!==nombre)return;
-  // Mostrar marcaciones de hoy
-  const marcasLabel=res.marcas&&res.marcas.length?'Hoy: '+res.marcas.join(' · '):'Sin marcaciones hoy';
-  if(res.completo){
-    tipoCalc=null;tipoTxt.textContent='Jornada completa';tipoTxt.className='tipo-txt';
-    docSubEl.textContent='Ya completaste tu jornada hoy · '+marcasLabel;docSubEl.className='doc-info er';
-    btn.disabled=true;btn.className='btn-accion';return;
-  }
-  docSubEl.textContent=p.nombre+' · '+p.cargo+' · '+marcasLabel;
-  tipoCalc=res.tipo;tipoTxt.textContent=tipoCalc;tipoTxt.className='tipo-txt';
-  btn.disabled=false;updateBtnColor();
-  btn.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg> REGISTRAR ${tipoCalc.toUpperCase()}`;
-}
-
-function resetAutoFill(){
-  reconocido=false;autoFillActivo=false;nombreSel=null;tipoCalc=null;
-  docInput.value='';
-  docValEl.textContent='Ingrese su número de documento';docValEl.className='doc-number ph';
-  docSubEl.style.display='none';docChkEl.classList.remove('show');
-  document.getElementById('bloqueCamera').style.display='';
-  document.getElementById('teclado').style.display='none';
-  document.getElementById('tipoTxt').textContent='Seleccionar…';document.getElementById('tipoTxt').className='tipo-txt ph';
-  document.getElementById('btnMarcar').disabled=true;document.getElementById('btnMarcar').className='btn-accion';
-}
-
-function abrirTeclado(){
-  resetAutoFill();
-  document.getElementById('bloqueCamera').style.display='none';
-  document.getElementById('teclado').style.display='';
-}
-
-async function loopDeteccion(){
-  loopActivo=true;
-  while(true){
-    await new Promise(r=>setTimeout(r,250));
-    if(!modOk||!stream)continue;
-    if(modoActual==='procesando'||modoActual==='enrolar')continue;
-    try{
-      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:160,scoreThreshold:0.45})).withFaceLandmarks().withFaceDescriptor();
-      const camWrap=document.getElementById('camWrap');
-      if(!det){
-        document.getElementById('camEstado').textContent='Buscando rostro…';
-        camWrap.classList.remove('scanning','face-ok');
-        setConf(0,false);lastDist=null;
-        if((reconocido||autoFillActivo)&&!autoFillPending)resetAutoFill();
-        continue;
-      }
-      camWrap.classList.add('scanning');
-      if(reconocido)continue; // cara presente, ya identificado — esperar marcación o que se retire
-      document.getElementById('camEstado').textContent='Analizando…';
-      const rostros=getRostros();
-      const nombres=Object.keys(rostros);
-      if(nombres.length>0){
-        let mejorNombre=null,mejorDist=Infinity;
-        for(const n of nombres){
-          const dist=faceapi.euclideanDistance(det.descriptor,new Float32Array(rostros[n]));
-          if(dist<mejorDist){mejorDist=dist;mejorNombre=n;}
-        }
-        lastDist=mejorDist;
-        if(mejorDist<=CONFIG.UMBRAL_FACIAL){
-          camWrap.classList.add('face-ok');
-          setConf(Math.max(0,Math.round((1-mejorDist)*100)),true);
-          autoFill(mejorNombre,mejorDist);
-        }else{
-          camWrap.classList.remove('face-ok');
-          setConf(Math.max(0,Math.round((1-mejorDist)*100)),false);
-        }
-      }else{
-        document.getElementById('camEstado').textContent='Sin empleados enrolados';
-        setConf(null,false);
-      }
-    }catch{continue;}
-  }
-}
-
-function setConf(pct,ok){
-  const pe=document.getElementById('confPct'),fi=document.getElementById('confFill');
-  if(pct===null){pe.textContent='—';pe.className='st-val na';fi.style.width='0%';return;}
-  if(pct===0&&!ok){pe.textContent='—';pe.className='st-val na';fi.style.width='0%';return;}
-  pe.textContent=pct+'%';pe.className='st-val '+(ok?'ok':'er');
-  fi.style.width=pct+'%';
-  fi.style.background=ok?'var(--dg)':pct>50?'var(--or)':'var(--re)';
-}
-
-function capFoto(){
-  try{
-    const c=document.createElement('canvas');c.width=240;c.height=240;
-    const ctx=c.getContext('2d'),vw=video.videoWidth,vh=video.videoHeight,l=Math.min(vw,vh);
-    ctx.drawImage(video,(vw-l)/2,(vh-l)/2,l,l,0,0,240,240);
-    return c.toDataURL('image/jpeg',0.5);
-  }catch{return'';}
-}
-
-function mostrarPantalla(id){
-  document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('show'));
-  document.getElementById(id).classList.add('show');
-  if(id==='pantallaMenu')actualizarMenuAdmin();
-}
-function actualizarMenuAdmin(){
-  updColaBadge();
-  const rostros=getRostros();const meta=getRostrosMeta();
-  const enrolados=getPC().filter(p=>rostros[p.nombre]);
-  const viejos=enrolados.filter(p=>!meta[p.nombre]||meta[p.nombre].v<2);
-  document.getElementById('menuRostrosSub').textContent=`${enrolados.length} de ${getPC().length} enrolados`;
-  const avisoEl=document.getElementById('avisoReenrolar');
-  const avisoTxt=document.getElementById('avisoReenrolarTxt');
-  if(viejos.length){avisoEl.style.display='block';avisoTxt.textContent=`${viejos.length} empleado(s) con enrolamiento antiguo (1 captura).`;}
-  else{avisoEl.style.display='none';}
-}
-
-/* MARCAR */
-document.getElementById('btnMarcar').onclick=async()=>{
-  if(!nombreSel)return;
-  if(!modOk){
-    if(modErr){modErr=null;loadModels();}
-    showRes('warn','Modelos cargando…','Espera unos segundos y toca REGISTRAR nuevamente.','');return;
-  }
-  modoActual='procesando';
-  const btn=document.getElementById('btnMarcar');
-  btn.disabled=true;btn.textContent='Verificando rostro…';
-
-  let det;
-  try{
-    det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-  }catch(e){
-    modoActual=null;btn.disabled=false;resetBtnReg();
-    showRes('err','Error analizando rostro',xh(e.message||String(e)),'Intenta de nuevo');return;
-  }
-  modoActual=null;
-
-  if(!det){
-    btn.disabled=false;resetBtnReg();
-    showRes('err','No se detectó ningún rostro',
-      'Asegúrate de estar frente a la cámara con buena iluminación.',
-      ['Rostro no enrolado','Mala iluminación','Cámara borrosa','Distancia incorrecta']);return;
-  }
-
-  const rostros=getRostros(),ref=rostros[nombreSel];
-  if(!ref){
-    modoActual=null;btn.disabled=false;resetBtnReg();
-    // Ofrecer autorización supervisor en lugar de error puro
-    abrirModalSupervisor(
-      `<b>${xh(nombreSel)}</b> no tiene rostro enrolado. Un supervisor puede autorizar la marcación con su PIN.`,
-      ()=>ejecutarMarcacion(nombreSel,tipoCalc||'Entrada',null,true)
-    );
-    return;
-  }
-
-  const dist=faceapi.euclideanDistance(det.descriptor,new Float32Array(ref));
-  if(dist>CONFIG.UMBRAL_FACIAL){
-    btn.disabled=false;resetBtnReg();
-    showRes('err','No se pudo validar el rostro',
-      `El rostro no coincide con <b>${xh(nombreSel)}</b>.`,
-      ['Rostro no enrolado','Mala iluminación','Cámara borrosa','Documento incorrecto','Fuera del área permitida']);return;
-  }
-
-  ejecutarMarcacion(nombreSel,tipoCalc||'Entrada',Math.round((1-dist)*100),false);
-};
-
-function calcularPuntualidad(tipo,hora){
-  const h=hora.getHours()+hora.getMinutes()/60;
-  const GRACIA=15/60;
-  const esSabado=hora.getDay()===6;
-  if(tipo==='Entrada'){
-    const entrada=CONFIG.HORARIO.entrada||6.0;
-    if(h<=entrada+GRACIA)return{estado:'ok',msg:'A tiempo',minutos:0};
-    const min=Math.round((h-entrada)*60);
-    return{estado:'tarde',msg:`Tarde ${min} min`,minutos:min};
-  }
-  if(tipo==='Salida'){
-    const salida=esSabado?(CONFIG.HORARIO.salidaSabado||11.75):(CONFIG.HORARIO.salida||14.75);
-    if(h>=salida)return{estado:'ok',msg:'A tiempo',minutos:0};
-    const min=Math.round((salida-h)*60);
-    return{estado:'temprano',msg:`Salida ${min} min antes`,minutos:min};
-  }
-  return{estado:'ok',msg:'',minutos:0};
-}
-
-function ejecutarMarcacion(nombre,tipo,confPct,sinBiometria){
-  const hora=new Date();
-  const pm=getPorDoc(docInput.value.trim());
-  const punt=calcularPuntualidad(tipo,hora);
-  const payload={accion:'marcar',nombre,documento:pm?pm.documento:'',finca:CONFIG.FINCA.nombre,tipo,cargo:getCargo(nombre),fechaHora:hora.toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:sinBiometria?null:(1-confPct/100),sinBiometria:!!sinBiometria,puntualidad:punt.estado,minutosDeuda:punt.minutos};
-  enviar(payload);updColaBadge();
-  saveUltima(nombre,tipo,hora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),gpsOk,Date.now());
-  showConf({nombre,documento:pm?pm.documento:'—',tipo,fecha:hora.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}),hora:hora.toLocaleTimeString('es-CO'),ubicacion:gpsOk?'Dentro del predio':'Fuera de geocerca',confianza:sinBiometria?'Autorizado supervisor':(confPct+'%'),finca:CONFIG.FINCA.nombre,gpsOk,sinBiometria,punt});
-}
-
-function resetBtnReg(){
-  const b=document.getElementById('btnMarcar');
-  b.className='btn-accion';b.disabled=true;
-  b.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg> REGISTRAR ASISTENCIA`;
-}
-
-/* CONFIRMACIÓN INMERSIVA */
-let cdInterval=null;
-function showConf(d){
-  playSound('success');
-  const primerNombre=d.nombre.split(' ')[0];
-  const saludo=d.tipo==='Entrada'?'¡BIENVENIDO!':'¡HASTA MAÑANA!';
-  // Fondo ligeramente distinto por tipo — verde oscuro entrada, azul oscuro salida
-  const bg=d.tipo==='Entrada'?'#071510':'#070D18';
-
-  let alerts='';
-  if(!d.gpsOk) alerts+=`<div class="conf-alert fuera">⚠ Fuera del predio — revisar con Gerencia</div>`;
-  if(d.punt&&d.punt.estado==='tarde') alerts+=`<div class="conf-alert tarde">⏰ Entrada tarde — debe ${d.punt.minutos} min</div>`;
-  if(d.punt&&d.punt.estado==='temprano') alerts+=`<div class="conf-alert temprano">⏰ Salida anticipada — debe ${d.punt.minutos} min</div>`;
-  if(d.sinBiometria) alerts+=`<div class="conf-alert supervisor">👤 Autorizado por supervisor</div>`;
-
-  document.getElementById('resultadoContenido').innerHTML=`
-    <div class="conf-full" style="background:${bg}">
-      <div class="conf-av">${xh(inic(d.nombre))}</div>
-      <div class="conf-ring">
-        <svg viewBox="0 0 44 44" fill="none" width="50" height="50">
-          <polyline points="9 22 19 32 35 13"
-            stroke="#4ADE80" stroke-width="3.5"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="conf-saludo">${saludo}</div>
-      <div class="conf-nombre">${xh(primerNombre)}</div>
-      <div class="conf-badges">
-        <span class="conf-tipo-bdg">${xh(d.tipo)}</span>
-        <span class="conf-hora-txt">${d.hora}</span>
-      </div>
-      ${alerts?`<div class="conf-alerts">${alerts}</div>`:''}
-      <div class="conf-pgbar-wrap"><div class="conf-pgbar" id="confPBar"></div></div>
-      <button class="conf-back" id="btnConfOk">Continuar</button>
-    </div>`;
-
-  mostrarPantalla('pantallaResultado');
-  // Iniciar barra de progreso
-  const bar=document.getElementById('confPBar');
-  if(bar){bar.style.width='100%';setTimeout(()=>{bar.style.width='0%';},50);}
-
-  let secs=5;
-  function volverInicio(){
-    if(cdInterval)clearInterval(cdInterval);
-    modoActual=null;resetAutoFill();resetBtnReg();
-    document.getElementById('camWrap').classList.remove('scanning','face-ok');
-    mostrarPantalla('pantallaMarcacion');
-  }
-  document.getElementById('btnConfOk').onclick=volverInicio;
-  if(cdInterval)clearInterval(cdInterval);
-  cdInterval=setInterval(()=>{secs--;if(secs<=0){clearInterval(cdInterval);volverInicio();}},1000);
-}
-
-function showRes(tipo,tit,det,causas){
-  if(tipo==='err')playSound('error');
-  const isErr=tipo==='err',isWarn=tipo==='warn';
-  const wrapClass=isErr?'err-full':isWarn?'warn-full':'conf-full';
-  const ringClass=isErr?'err-ring':isWarn?'warn-ring':'conf-ring';
-  const strokeColor=isErr?'#FF5252':isWarn?'#FFAB40':'#4ADE80';
-  const icoPath=isErr?'<path d="M18 6L6 18M6 6l12 12"/>':isWarn?'<path d="M12 9v4M12 17h.01"/>':'<polyline points="20 6 9 17 4 12"/>';
-  const causasHtml=Array.isArray(causas)&&causas.length
-    ?`<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:12px 16px;margin-bottom:20px;max-width:280px;width:100%;text-align:left;">
-        <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Posibles causas</div>
-        <ul style="margin-left:14px;">${causas.map(c=>`<li style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:4px;">${xh(c)}</li>`).join('')}</ul>
-       </div>`:'';
-  function goBack(){resetAutoFill();resetBtnReg();document.getElementById('camWrap').classList.remove('scanning','face-ok');mostrarPantalla('pantallaMarcacion');}
-  document.getElementById('resultadoContenido').innerHTML=`
-    <div class="${wrapClass}">
-      <div class="${ringClass}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2.8" width="36" height="36">${icoPath}</svg>
-      </div>
-      <div class="err-tit">${tit}</div>
-      <div class="err-sub">${det||''}</div>
-      ${causasHtml}
-      <div class="err-actions">
-        <button class="err-btn-main" id="resBtn1">Intentar nuevamente</button>
-        <button class="err-btn-sec" id="resBtn2">Volver al inicio</button>
-      </div>
-    </div>`;
-  mostrarPantalla('pantallaResultado');
-  document.getElementById('resBtn1').onclick=goBack;
-  document.getElementById('resBtn2').onclick=goBack;
-  if(tipo!=='ok')setTimeout(goBack,5500);
-}
-
-/* ENVÍO */
-function enviar(p){
-  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR')){const c=JSON.parse(localStorage.getItem('cola')||'[]');c.push(p);localStorage.setItem('cola',JSON.stringify(c));return;}
-  fetch(CONFIG.GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).catch(()=>{const c=JSON.parse(localStorage.getItem('cola')||'[]');c.push(p);localStorage.setItem('cola',JSON.stringify(c));});
-}
-function enviarConResp(p){
-  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR'))return Promise.resolve(null);
-  return fetch(CONFIG.GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p)}).then(r=>r.json()).catch(e=>({ok:false,error:e.message}));
-}
-let reint=false;
-async function reintentarCola(){
-  if(reint)return;const c=JSON.parse(localStorage.getItem('cola')||'[]');if(!c.length)return;
-  reint=true;const pen=[];
-  for(const i of c){try{await fetch(CONFIG.GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(i)});}catch{pen.push(i);}}
-  localStorage.setItem('cola',JSON.stringify(pen));reint=false;updColaBadge();
-}
-window.addEventListener('online',reintentarCola);setInterval(reintentarCola,120000);setTimeout(reintentarCola,3000);
-
-/* ENROLAMIENTO */
-function pintarGrilla(id,cb){
-  const c=document.getElementById(id);c.innerHTML='';const r=getRostros();
-  getPC().forEach(({nombre})=>{
-    const d=document.createElement('div');d.className='persona';
-    const i=document.createElement('div');i.className='inicial';i.textContent=inic(nombre);
-    const n=document.createElement('div');n.className='nom';n.textContent=nombre;
-    d.append(i,n);
-    if(id==='grillaEnrolar'){const e=document.createElement('div');e.style.cssText='font-size:10px;margin-top:4px;font-weight:700;';e.textContent=r[nombre]?'✓ Enrolado':'Sin enrolar';e.style.color=r[nombre]?'var(--dg)':'var(--re)';d.append(e);}
-    d.onclick=()=>cb(nombre,d,c);c.appendChild(d);
-  });
-}
-
-/* PIN */
-let pinDest='enrolar';
-document.getElementById('btnEnrolar').onclick=()=>{document.getElementById('pinInput').value='';pinDest='enrolar';mostrarPantalla('pantallaPin');};
-document.getElementById('btnAgregarPersonal').onclick=()=>{document.getElementById('pinInput').value='';pinDest='agregar';mostrarPantalla('pantallaPin');};
-document.getElementById('btnPinCancelar').onclick=()=>mostrarPantalla('pantallaMarcacion');
-document.getElementById('btnPinConfirmar').onclick=()=>{
-  if(document.getElementById('pinInput').value===CONFIG.PIN_GERENCIA){
-    mostrarPantalla('pantallaMenu');
-  }else{alert('PIN incorrecto');}
-};
-
-/* MENÚ ADMIN */
-document.getElementById('menuEnrolar').onclick=()=>{
-  pintarGrilla('grillaEnrolar',nombre=>{
-    nombreEnrolando=nombre;modoActual='enrolar';errE=0;
-    // Ir a pantalla marcación para que el empleado vea la cámara
-    mostrarPantalla('pantallaMarcacion');
-    procesarEnrolar();
-  });
-  mostrarPantalla('pantallaEnrolar');
-};
-document.getElementById('menuAgregar').onclick=()=>{
-  document.getElementById('nuevoDocumento').value='';
-  document.getElementById('nuevoNombre').value='';
-  document.getElementById('nuevoCargo').value='';
-  mostrarPantalla('pantallaAgregar');
-};
-document.getElementById('menuReporte').onclick=()=>{
-  // preset fecha = hoy
-  const hoy=new Date();
-  document.getElementById('repFecha').value=hoy.toISOString().slice(0,10);
-  mostrarPantalla('pantallaReporte');
-  cargarReporte();
-};
-document.getElementById('btnVolverDesdeReporte').onclick=()=>mostrarPantalla('pantallaMenu');
-document.getElementById('btnRepCargar').onclick=cargarReporte;
-
-async function cargarReporte(){
-  const fechaVal=document.getElementById('repFecha').value;
-  if(!fechaVal)return;
-  const estEl=document.getElementById('repEstado');
-  const tabEl=document.getElementById('repTabla');
-  const resEl=document.getElementById('repResumen');
-  estEl.style.display='block';
-  estEl.textContent='Cargando...';
-  tabEl.innerHTML='';
-  resEl.style.display='none';
-
-  // Construir mapa de marcaciones del día desde el backend
-  // Usamos marcasHoy por persona para cada empleado O un endpoint resumenDia si existe
-  // Fallback: consultar cada empleado individualmente usando marcasHoy
-  const personal=getPC();
-  const fecha=fechaVal; // YYYY-MM-DD
-
-  if(!CONFIG.GS_URL||CONFIG.GS_URL.includes('PEGAR')){
-    estEl.textContent='⚠️ Configura la URL del servidor primero.';return;
-  }
-
-  // Intentar endpoint resumenDia (más eficiente)
-  let datos=[];
-  try{
-    const r=await fetch(`${CONFIG.GS_URL}?accion=resumenDia&fecha=${fecha}&finca=${encodeURIComponent(CONFIG.FINCA.nombre)}&_=${Date.now()}`,{cache:'no-store'});
-    const j=await r.json();
-    if(j&&Array.isArray(j.empleados)){
-      datos=j.empleados;
-    }
-  }catch(e){/* endpoint no existe, usar fallback */}
-
-  // Si no vino nada del backend usamos marcas locales (cola offline)
-  if(!datos.length){
-    // Construir desde marcas en cola offline + simular
-    const cola=JSON.parse(localStorage.getItem('cola')||'[]');
-    const marcasFecha=cola.filter(m=>m.fechaHora&&m.fechaHora.startsWith(fecha));
-    const porNombre={};
-    marcasFecha.forEach(m=>{
-      if(!porNombre[m.nombre])porNombre[m.nombre]={nombre:m.nombre,marcas:[],minutosDeuda:0,puntualidad:[]};
-      porNombre[m.nombre].marcas.push(m.tipo);
-      if(m.minutosDeuda)porNombre[m.nombre].minutosDeuda+=m.minutosDeuda;
-      if(m.puntualidad&&m.puntualidad!=='ok')porNombre[m.nombre].puntualidad.push({tipo:m.tipo,estado:m.puntualidad,minutos:m.minutosDeuda||0});
-    });
-    datos=Object.values(porNombre);
-    if(!datos.length){estEl.textContent='No hay datos offline para esta fecha. Verifica la conexión al servidor.';return;}
-  }
-
-  estEl.style.display='none';
-  resEl.style.display='block';
-
-  let totalTarde=0,totalTemprano=0,totalMin=0;
-  datos.forEach(e=>{
-    const p=e.puntualidad||[];
-    p.forEach(x=>{if(x.estado==='tarde')totalTarde++;if(x.estado==='temprano')totalTemprano++;totalMin+=x.minutos||0;});
-    totalMin+=e.minutosDeuda||0;
-  });
-  // dedup — si el backend ya devuelve el total no sumemos puntualidad extra
-  document.getElementById('repCntTarde').textContent=totalTarde;
-  document.getElementById('repCntTemprano').textContent=totalTemprano;
-  document.getElementById('repCntDeuda').textContent=totalMin;
-
-  // Renderizar tabla
-  const html=datos.map(e=>{
-    const tieneDeuda=(e.minutosDeuda||0)>0;
-    const almTrab=e.almuerzoTrabajado||false;
-    const ALMUERZO_MIN=CONFIG.ALMUERZO_MIN||30;
-    return `<div class="rep-card" style="background:var(--wh);border-radius:14px;padding:14px;border:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:38px;height:38px;border-radius:50%;background:var(--xl);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--dg);flex-shrink:0;">${xh(inic(e.nombre))}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xh(e.nombre)}</div>
-          <div style="font-size:11px;color:var(--t2);">${xh(e.cargo||getCargo(e.nombre)||'—')}</div>
-        </div>
-        ${tieneDeuda?`<div style="background:var(--rl);color:var(--re);font-size:12px;font-weight:800;border-radius:8px;padding:4px 9px;white-space:nowrap;">−${e.minutosDeuda} min</div>`:'<div style="background:#E8F5E9;color:var(--dg);font-size:12px;font-weight:800;border-radius:8px;padding:4px 9px;">✓ Al día</div>'}
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${(e.marcas||[]).map(m=>`<span style="background:var(--xl);color:var(--dg);font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;">${xh(m)}</span>`).join('')}
-        ${!(e.marcas||[]).length?'<span style="color:var(--t2);font-size:11px;">Sin marcaciones</span>':''}
-      </div>
-      ${tieneDeuda?`<div style="border-top:1px solid var(--bd);padding-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <div style="font-size:11.5px;color:var(--t1);font-weight:600;line-height:1.4;">
-          ${almTrab?`<span style="color:var(--dg);">✓ Trabajó almuerzo (+${ALMUERZO_MIN} min descontados)</span>`:`<span style="color:var(--t2);">¿Trabajó en almuerzo? (+${ALMUERZO_MIN} min)</span>`}
-        </div>
-        <button onclick="autorizarAlmuerzo('${e.nombre.replace(/'/g,"\\'")}')" style="background:${almTrab?'var(--dg)':'var(--bg)'};color:${almTrab?'#fff':'var(--t1)'};border:1.5px solid ${almTrab?'var(--dg)':'var(--bd)'};border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;">${almTrab?'Autorizado':'Autorizar'}</button>
-      </div>`:''}
-    </div>`;
-  }).join('');
-  tabEl.innerHTML=html||'<div style="text-align:center;color:var(--t2);font-size:13px;padding:20px 0;">Sin registros para esta fecha</div>';
-}
-
-function autorizarAlmuerzo(nombre){
-  abrirModalSupervisor(
-    `Autorizar tiempo de almuerzo trabajado para <b>${xh(nombre)}</b>. Se descontarán ${CONFIG.ALMUERZO_MIN||30} minutos de su deuda.`,
-    ()=>{
-      const fechaVal=document.getElementById('repFecha').value;
-      const ALMUERZO_MIN=CONFIG.ALMUERZO_MIN||30;
-      const payload={accion:'marcar',nombre,documento:'',finca:CONFIG.FINCA.nombre,tipo:'AlmuerzoTrabajado',cargo:getCargo(nombre),fechaHora:new Date().toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:null,sinBiometria:true,puntualidad:'ok',minutosDeuda:-ALMUERZO_MIN,fechaDeuda:fechaVal};
-      enviar(payload);updColaBadge();
-      showToast(`Almuerzo autorizado para ${nombre}`);
-      // re-cargar
-      setTimeout(()=>cargarReporte(),800);
-    }
-  );
-}
-document.getElementById('menuCerrar').onclick=()=>mostrarPantalla('pantallaMarcacion');
-
-document.getElementById('btnVolverMarcacion').onclick=()=>{modoActual=null;mostrarPantalla('pantallaMenu');};
-document.getElementById('btnCancelarAgregar').onclick=()=>mostrarPantalla('pantallaMenu');
-document.getElementById('btnCancelarAgregar2').onclick=()=>mostrarPantalla('pantallaMenu');
-
-document.getElementById('btnGuardarPersonal').onclick=async()=>{
-  const doc=document.getElementById('nuevoDocumento').value.trim();
-  const nom=document.getElementById('nuevoNombre').value.trim();
-  const car=document.getElementById('nuevoCargo').value;
-  if(!doc){alert('Escribe el documento');return;}
-  if(!/^\d+$/.test(doc)){alert('Solo números');return;}
-  if(!nom){alert('Escribe el nombre');return;}
-  if(!car){alert('Selecciona cargo');return;}
-  if(getPC().some(p=>p.nombre.toLowerCase()===nom.toLowerCase())){alert('Ya existe ese nombre');return;}
-  if(getPorDoc(doc)){alert('Ya existe ese documento');return;}
-  const btn=document.getElementById('btnGuardarPersonal');btn.disabled=true;
-  const r=await enviarConResp({accion:'registrarPersonal',documento:doc,nombre:nom,cargo:car,fechaHora:new Date().toISOString()});
-  btn.disabled=false;
-  if(!r||!r.ok){showRes('err','No se pudo registrar',`<b>${xh(nom)}</b> no se guardó en el Sheet.<br><small>${xh((r&&r.error)||'Sin conexión')}</small>`,[]);return;}
-  const ex=getPE();ex.push({documento:doc,nombre:nom,cargo:car});savePE(ex);
-  showRes('ok','Personal agregado',`<b>${xh(nom)}</b><br>${xh(car)} · Doc. ${xh(doc)}`,[]);
-  setTimeout(()=>mostrarPantalla('pantallaMarcacion'),2200);
-};
-
-const CAPTURAS_ENROLAR=3;
-let errE=0;
-
-function promediarDescriptores(lista){
-  const len=lista[0].length,avg=new Float32Array(len);
-  for(const d of lista)for(let i=0;i<len;i++)avg[i]+=d[i];
-  for(let i=0;i<len;i++)avg[i]/=lista.length;
-  return avg;
-}
-
-function setProgreso(n,total){
-  const estEl=document.getElementById('camEstado');
-  if(estEl)estEl.textContent=`Enrolando: ${n}/${total} — quédate quieto`;
-  // Barra de confianza como indicador de progreso
-  const fi=document.getElementById('confFill'),pe=document.getElementById('confPct');
-  if(fi){fi.style.width=Math.round((n/total)*100)+'%';fi.style.background='var(--bl)';}
-  if(pe){pe.textContent=`${n}/${total}`;pe.className='st-val';}
-}
-
-function mostrarBannerEnrolar(nombre){
-  const b=document.getElementById('bannerEnrolar');
-  b.style.display='flex';
-  document.getElementById('bannerEnrolarNombre').textContent=nombre;
-}
-function ocultarBannerEnrolar(){
-  document.getElementById('bannerEnrolar').style.display='none';
-}
-function cancelarEnrolar(){
-  modoActual=null;nombreEnrolando=null;
-  ocultarBannerEnrolar();
-  mostrarPantalla('pantallaMarcacion');
-}
-
-async function procesarEnrolar(){
-  if(modoActual!=='enrolar')return; // guard: el usuario canceló antes de que cargaran los modelos
-  if(!modOk){
-    if(modErr){modErr=null;loadModels();
-      document.getElementById('camEstado').textContent='Reintentando carga de modelos…';
-    }
-    setTimeout(procesarEnrolar,800);return;
-  }
-  // Asegurar que la cámara es visible (puede haberse ocultado por teclado manual)
-  document.getElementById('bloqueCamera').style.display='';
-  document.getElementById('teclado').style.display='none';
-  mostrarBannerEnrolar(nombreEnrolando);
-  const descriptores=[];
-  setProgreso(0,CAPTURAS_ENROLAR);
-
-  while(descriptores.length<CAPTURAS_ENROLAR){
-    if(modoActual!=='enrolar'){ocultarBannerEnrolar();return;}
-    await new Promise(r=>setTimeout(r,300));
-    let det;
-    try{
-      det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      errE=0;
-    }catch(e){
-      errE++;if(errE>=8){
-        modoActual=null;ocultarBannerEnrolar();
-        showRes('err','Error analizando rostro',xh(e.message||String(e)),[]);return;
-      }
-      continue;
-    }
-    if(!det){
-      document.getElementById('camEstado').textContent='No detecto rostro — acércate a la cámara';
-      continue;
-    }
-    descriptores.push(det.descriptor);
-    setProgreso(descriptores.length,CAPTURAS_ENROLAR);
-  }
-
-  if(modoActual!=='enrolar'){ocultarBannerEnrolar();return;}
-  document.getElementById('camEstado').textContent='Guardando…';
-  const descriptorFinal=promediarDescriptores(descriptores);
-  saveRostro(nombreEnrolando,descriptorFinal);
-  modoActual=null; // liberar el loop de reconocimiento
-  ocultarBannerEnrolar();
-
-  const pe=getPC().find(p=>p.nombre===nombreEnrolando);
-  const foto=capFoto();
-  if(!pe||!foto){showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero no se guardó la foto.`,[]);setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;}
-  const r=await enviarConResp({accion:'guardarFotoPersonal',documento:pe.documento,foto,nombre:pe.nombre,cargo:pe.cargo});
-  if(!r||!r.ok||!r.fotoURL){showRes('err','Rostro guardado, foto no',`<b>${xh(nombreEnrolando)}</b> puede marcar pero hubo un error en Drive.`,[]);setTimeout(()=>mostrarPantalla('pantallaMarcacion'),4000);return;}
-  showRes('ok','Empleado enrolado',`<b>${xh(nombreEnrolando)}</b> ya puede marcar asistencia`,[]);
-  setTimeout(()=>mostrarPantalla('pantallaMarcacion'),3000);
-}
-
-/* ── CONFIGURACIÓN ── */
-function getCfgGuardada(){
-  try{return JSON.parse(localStorage.getItem('app_config')||'null');}catch{return null;}
-}
-function aplicarConfig(cfg){
-  if(!cfg)return;
-  if(cfg.nombreFinca){CONFIG.FINCA.nombre=cfg.nombreFinca;document.getElementById('nombreFinca').textContent=cfg.nombreFinca;}
-  if(cfg.lat!=null)CONFIG.FINCA.lat=parseFloat(cfg.lat);
-  if(cfg.lng!=null)CONFIG.FINCA.lng=parseFloat(cfg.lng);
-  if(cfg.radio)CONFIG.FINCA.radioMetros=parseInt(cfg.radio);
-  if(cfg.entrada!=null)CONFIG.HORARIO.entrada=cfg.entrada;
-  if(cfg.salida!=null)CONFIG.HORARIO.salida=cfg.salida;
-  if(cfg.salidaSab!=null)CONFIG.HORARIO.salidaSabado=cfg.salidaSab;
-  if(cfg.umbral!=null)CONFIG.UMBRAL_FACIAL=parseFloat(cfg.umbral);
-  if(cfg.pin)CONFIG.PIN_GERENCIA=cfg.pin;
-  if(cfg.almuerzoMin!=null)CONFIG.ALMUERZO_MIN=parseInt(cfg.almuerzoMin);
-}
-// Aplicar al inicio
-aplicarConfig(getCfgGuardada());
-
-// Construye un selector hh:mm dentro de un .time-pick
-function buildTimePick(id){
-  const wrap=document.getElementById(id);if(!wrap)return;
-  // Horas 0-23
-  const selH=document.createElement('select');
-  for(let h=0;h<24;h++){const o=document.createElement('option');o.value=h;o.textContent=String(h).padStart(2,'0');selH.appendChild(o);}
-  // Minutos 00,15,30,45
-  const selM=document.createElement('select');
-  [0,15,30,45].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=String(m).padStart(2,'0');selM.appendChild(o);});
-  const sep=document.createElement('span');sep.className='tp-sep';sep.textContent=':';
-  const ampm=document.createElement('span');ampm.className='tp-ampm';
-  selH.addEventListener('change',()=>updAmpm(selH,ampm));
-  wrap.innerHTML='';wrap.append(selH,sep,selM,ampm);
-  return{selH,selM,ampm};
-}
-function updAmpm(selH,ampm){
-  const h=parseInt(selH.value);ampm.textContent=h<12?'a.m.':'p.m.';
-}
-function setTimePick(id,decimal){
-  const wrap=document.getElementById(id);if(!wrap)return;
-  const selH=wrap.querySelector('select:nth-child(1)');
-  const selM=wrap.querySelector('select:nth-child(3)');
-  const ampm=wrap.querySelector('.tp-ampm');
-  if(!selH||!selM)return;
-  const hh=Math.floor(decimal),mm=Math.round((decimal-hh)*60);
-  selH.value=hh;
-  // Redondear minutos al cuarto más cercano
-  const mq=[0,15,30,45].reduce((a,b)=>Math.abs(b-mm)<Math.abs(a-mm)?b:a,0);
-  selM.value=mq;
-  if(ampm)updAmpm(selH,ampm);
-}
-function getTimePick(id){
-  const wrap=document.getElementById(id);if(!wrap)return null;
-  const selH=wrap.querySelector('select:nth-child(1)');
-  const selM=wrap.querySelector('select:nth-child(3)');
-  if(!selH||!selM)return null;
-  return parseInt(selH.value)+parseInt(selM.value)/60;
-}
-
-function abrirConfig(){
-  // Construir pickers si aún no existen
-  ['cfgEntrada','cfgSalida','cfgSalidaSab'].forEach(id=>{
-    if(!document.getElementById(id).querySelector('select'))buildTimePick(id);
-  });
-  const cfg=getCfgGuardada()||{};
-  document.getElementById('cfgNombreFinca').value=cfg.nombreFinca||CONFIG.FINCA.nombre;
-  document.getElementById('cfgLat').value=cfg.lat!=null?cfg.lat:CONFIG.FINCA.lat;
-  document.getElementById('cfgLng').value=cfg.lng!=null?cfg.lng:CONFIG.FINCA.lng;
-  document.getElementById('cfgRadio').value=cfg.radio!=null?cfg.radio:CONFIG.FINCA.radioMetros;
-  setTimePick('cfgEntrada',cfg.entrada!=null?cfg.entrada:CONFIG.HORARIO.entrada);
-  setTimePick('cfgSalida',cfg.salida!=null?cfg.salida:CONFIG.HORARIO.salida);
-  setTimePick('cfgSalidaSab',cfg.salidaSab!=null?cfg.salidaSab:CONFIG.HORARIO.salidaSabado);
-  const u=cfg.umbral!=null?cfg.umbral:CONFIG.UMBRAL_FACIAL;
-  document.getElementById('cfgUmbral').value=u;
-  document.getElementById('cfgUmbralVal').textContent=parseFloat(u).toFixed(2);
-  document.getElementById('cfgAlmuerzoMin').value=cfg.almuerzoMin!=null?cfg.almuerzoMin:CONFIG.ALMUERZO_MIN;
-  mostrarPantalla('pantallaConfig');
-}
-
-document.getElementById('cfgUmbral').addEventListener('input',function(){
-  document.getElementById('cfgUmbralVal').textContent=parseFloat(this.value).toFixed(2);
-});
-
-document.getElementById('btnUsarUbicacion').addEventListener('click',()=>{
-  if(!navigator.geolocation){alert('GPS no disponible');return;}
-  const btn=document.getElementById('btnUsarUbicacion');
-  btn.textContent='Obteniendo ubicación…';btn.disabled=true;
-  navigator.geolocation.getCurrentPosition(pos=>{
-    document.getElementById('cfgLat').value=pos.coords.latitude.toFixed(6);
-    document.getElementById('cfgLng').value=pos.coords.longitude.toFixed(6);
-    btn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Ubicación capturada ✓';
-    btn.disabled=false;
-  },()=>{btn.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Usar mi ubicación actual como centro';btn.disabled=false;alert('No se pudo obtener la ubicación');},{enableHighAccuracy:true,timeout:8000});
-});
-
-document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
-  const nombre=document.getElementById('cfgNombreFinca').value.trim();
-  const lat=parseFloat(document.getElementById('cfgLat').value);
-  const lng=parseFloat(document.getElementById('cfgLng').value);
-  const radio=parseInt(document.getElementById('cfgRadio').value);
-  if(!nombre){alert('Escribe el nombre de la finca');return;}
-  if(isNaN(lat)||isNaN(lng)){alert('Las coordenadas no son válidas');return;}
-  if(isNaN(radio)||radio<50){alert('El radio mínimo es 50 metros');return;}
-  const pinNuevo=document.getElementById('cfgPin').value;
-  const cfg={
-    nombreFinca:nombre,lat,lng,radio,
-    entrada:getTimePick('cfgEntrada'),
-    salida:getTimePick('cfgSalida'),
-    salidaSab:getTimePick('cfgSalidaSab'),
-    umbral:parseFloat(document.getElementById('cfgUmbral').value),
-    almuerzoMin:parseInt(document.getElementById('cfgAlmuerzoMin').value)||60
-  };
-  if(pinNuevo&&/^\d{4}$/.test(pinNuevo))cfg.pin=pinNuevo;
-  else{const prev=getCfgGuardada();if(prev&&prev.pin)cfg.pin=prev.pin;}
-  localStorage.setItem('app_config',JSON.stringify(cfg));
-  aplicarConfig(cfg);
-  mostrarPantalla('pantallaMenu');
-  showToast('✓ Configuración guardada');
-  setTimeout(()=>chkGps(),500); // re-evaluar geocerca con nuevas coords
-});
-
-document.getElementById('btnVolverDesdeConfig').addEventListener('click',()=>mostrarPantalla('pantallaMenu'));
-document.getElementById('btnCancelarConfig').addEventListener('click',()=>mostrarPantalla('pantallaMenu'));
-document.getElementById('menuConfig').onclick=()=>abrirConfig();
-
-/* TOAST */
-const toastEl=document.createElement('div');toastEl.className='toast';document.body.appendChild(toastEl);
-let toastTimer=null;
-function showToast(msg){
-  toastEl.textContent=msg;toastEl.classList.add('show');
-  if(toastTimer)clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2500);
-}
-
-/* COLA BADGE */
-function updColaBadge(){
-  const c=JSON.parse(localStorage.getItem('cola')||'[]');
-  const badge=document.getElementById('colaBadge');
-  const cnt=document.getElementById('colaCnt');
-  if(c.length>0){badge.style.display='block';cnt.textContent=c.length;}
-  else{badge.style.display='none';}
-}
-updColaBadge();
-document.getElementById('colaBadge').addEventListener('click',()=>{
-  const c=JSON.parse(localStorage.getItem('cola')||'[]');
-  if(c.length)showToast(`${c.length} marcación(es) pendientes de enviar`);
-});
-
-/* MODAL SUPERVISOR */
-let _modalOkCb=null;
-function abrirModalSupervisor(txt,cb){
-  _modalOkCb=cb;
-  document.getElementById('modalSupervisorTxt').innerHTML=txt;
-  document.getElementById('modalPinInput').value='';
-  document.getElementById('modalPinErr').textContent='';
-  document.getElementById('modalSupervisor').style.display='flex';
-  setTimeout(()=>document.getElementById('modalPinInput').focus(),100);
-}
-document.getElementById('modalPinOk').onclick=()=>{
-  const pin=document.getElementById('modalPinInput').value;
-  if(pin!==CONFIG.PIN_GERENCIA){document.getElementById('modalPinErr').textContent='PIN incorrecto';return;}
-  document.getElementById('modalSupervisor').style.display='none';
-  if(_modalOkCb){_modalOkCb();_modalOkCb=null;}
-};
-document.getElementById('modalPinCancel').onclick=()=>{
-  document.getElementById('modalSupervisor').style.display='none';_modalOkCb=null;
-};
-
-/* GESTIÓN DE ROSTROS */
-function abrirGestionRostros(){
-  const rostros=getRostros();const meta=getRostrosMeta();
-  const todos=getPC();
-  const enrolados=todos.filter(p=>rostros[p.nombre]);
-  document.getElementById('rostrosCount').textContent=enrolados.length;
-  // Aviso re-enrolamiento: los que no tienen meta.v===2
-  const viejos=enrolados.filter(p=>!meta[p.nombre]||meta[p.nombre].v<2);
-  const avisoEl=document.getElementById('avisoReenrolar');
-  const avisoTxt=document.getElementById('avisoReenrolarTxt');
-  if(viejos.length){
-    avisoEl.style.display='block';
-    avisoTxt.textContent=`${viejos.length} empleado(s) enrolado(s) con el sistema antiguo (1 sola captura).`;
-  }else{avisoEl.style.display='none';}
-  // Actualizar sub del menú
-  document.getElementById('menuRostrosSub').textContent=`${enrolados.length} de ${todos.length} enrolados`;
-  // Lista
-  const lista=document.getElementById('listaRostros');lista.innerHTML='';
-  todos.forEach(p=>{
-    const enrol=!!rostros[p.nombre];
-    const esViejo=enrol&&(!meta[p.nombre]||meta[p.nombre].v<2);
-    const fechaStr=meta[p.nombre]?new Date(meta[p.nombre].fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
-    const div=document.createElement('div');
-    div.style.cssText='background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;';
-    div.innerHTML=`
-      <div style="width:36px;height:36px;border-radius:50%;background:${enrol?'var(--xl)':'var(--bg)'};border:1.5px solid ${enrol?'var(--dg)':'var(--bd)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span style="font-size:11px;font-weight:700;color:${enrol?'var(--dg)':'var(--t2)'}">${inic(p.nombre)}</span>
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xh(p.nombre)}</div>
-        <div style="font-size:11px;color:var(--t2);margin-top:2px;">${enrol?(esViejo?'⚠️ Enrolado (antiguo)':'✓ Enrolado · '+fechaStr):'Sin enrolar'}</div>
-      </div>
-      ${enrol?`<button data-nombre="${encodeURIComponent(p.nombre)}" style="background:var(--rl);border:1px solid #FFCDD2;color:var(--re);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Borrar</button>`:''}
-    `;
-    lista.appendChild(div);
-  });
-  // Delegación de eventos borrar
-  lista.onclick=e=>{
-    const btn=e.target.closest('button[data-nombre]');if(!btn)return;
-    const nombre=decodeURIComponent(btn.dataset.nombre);
-    if(!confirm(`¿Borrar el rostro de ${nombre}? Deberá enrolarse nuevamente.`))return;
-    deleteRostro(nombre);showToast('Rostro eliminado');abrirGestionRostros();
-  };
-  mostrarPantalla('pantallaRostros');
-}
-document.getElementById('menuRostros').onclick=abrirGestionRostros;
-document.getElementById('btnVolverDesdeRostros').onclick=()=>mostrarPantalla('pantallaMenu');
-document.getElementById('btnBorrarTodosRostros').onclick=()=>{
-  const n=Object.keys(getRostros()).length;
-  if(!n){showToast('No hay rostros enrolados');return;}
-  if(!confirm(`¿Borrar los ${n} rostros enrolados? Todos deberán enrolarse nuevamente.`))return;
-  localStorage.removeItem('rostros_enrolados');localStorage.removeItem('rostros_meta');
-  showToast('Todos los rostros eliminados');abrirGestionRostros();
-};
-
-/* CONFIG — PIN */
-// La función abrirConfig ya existe; se extiende leyendo el PIN guardado
-const _abrirConfigOrig=abrirConfig;
-abrirConfig=function(){
-  _abrirConfigOrig();
-  document.getElementById('cfgPin').value='';
-  document.getElementById('cfgPinConf').value='';
-};
-
-/* CONFIG — guardar PIN */
-const _btnGuardarOrig=document.getElementById('btnGuardarConfig').onclick;
-// Se reemplaza el listener de guardar para validar PIN (ver más abajo en la función ya definida)
-
-// Parchar el guardar para incluir PIN
-document.getElementById('btnGuardarConfig').addEventListener('click',()=>{
-  const pin=document.getElementById('cfgPin').value;
-  const conf=document.getElementById('cfgPinConf').value;
-  if(pin){
-    if(!/^\d{4}$/.test(pin)){alert('El PIN debe ser exactamente 4 dígitos');return;}
-    if(pin!==conf){alert('Los PINs no coinciden');return;}
-    CONFIG.PIN_GERENCIA=pin;
-    // Se guarda también en localStorage dentro del cfg — ya lo maneja btnGuardarConfig original
-  }
-},true); // capture=true → corre antes del listener existente
-
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-</script>
+<!-- Scripts en orden de dependencia -->
+<script src="js/config.js"></script>
+<script src="js/geolocation.js"></script>
+<script src="js/offline-queue.js"></script>
+<script src="js/face-recognition.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/attendance.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
