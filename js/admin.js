@@ -224,6 +224,9 @@ function abrirConfig() {
   const u = cfg.umbral != null ? cfg.umbral : CONFIG.UMBRAL_FACIAL;
   document.getElementById('cfgUmbral').value = u;
   document.getElementById('cfgUmbralVal').textContent = parseFloat(u).toFixed(2);
+  document.getElementById('cfgPinActual').value = '';
+  document.getElementById('cfgPinNuevo').value = '';
+  document.getElementById('cfgPinConf').value = '';
   mostrarPantalla('pantallaConfig');
 }
 
@@ -241,34 +244,62 @@ document.getElementById('btnUsarUbicacion').addEventListener('click', () => {
   }, () => { btn.textContent = 'Usar mi ubicación actual'; btn.disabled = false; alert('No se pudo obtener la ubicación'); }, {enableHighAccuracy:true, timeout:8000});
 });
 document.getElementById('btnGuardarConfig').addEventListener('click', async () => {
-  const gsUrlVal = (document.getElementById('cfgGsUrl') || {}).value || '';
-  const empresaVal = (document.getElementById('cfgEmpresa') || {}).value || '';
+  const pinActual = document.getElementById('cfgPinActual').value;
+  const pinNuevo  = document.getElementById('cfgPinNuevo').value;
+  const pinConf   = document.getElementById('cfgPinConf').value;
+
+  if (pinNuevo) {
+    if (!/^\d{4,8}$/.test(pinNuevo)) { alert('El PIN nuevo debe tener entre 4 y 8 dígitos'); return; }
+    if (pinNuevo !== pinConf) { alert('Los PINs nuevos no coinciden'); return; }
+    if (!pinActual) { alert('Ingresa el PIN actual para cambiar el PIN'); return; }
+  }
+
+  const gsUrlVal    = (document.getElementById('cfgGsUrl') || {}).value || '';
+  const empresaVal  = (document.getElementById('cfgEmpresa') || {}).value || '';
   const fincaNombre = document.getElementById('cfgNombreFinca').value.trim();
-  const lat = parseFloat(document.getElementById('cfgLat').value);
-  const lng = parseFloat(document.getElementById('cfgLng').value);
-  const radio = parseInt(document.getElementById('cfgRadio').value);
+  const lat         = parseFloat(document.getElementById('cfgLat').value);
+  const lng         = parseFloat(document.getElementById('cfgLng').value);
+  const radio       = parseInt(document.getElementById('cfgRadio').value);
+  const umbral      = parseFloat(document.getElementById('cfgUmbral').value);
+  const entrada     = getTimePick('cfgEntrada');
+  const salida      = getTimePick('cfgSalida');
+  const salidaSab   = getTimePick('cfgSalidaSab');
+
   if (!fincaNombre) { alert('Escribe el nombre de la finca'); return; }
   if (isNaN(lat) || isNaN(lng)) { alert('Las coordenadas no son válidas'); return; }
   if (isNaN(radio) || radio < 50) { alert('El radio mínimo es 50 metros'); return; }
+
+  const btn = document.getElementById('btnGuardarConfig');
+  btn.disabled = true;
+
+  // 1. Cambiar PIN en backend si se solicitó
+  if (pinNuevo && pinActual) {
+    const r = await cambiarPin(pinActual, pinNuevo);
+    if (!r.ok) { btn.disabled = false; alert('No se pudo cambiar el PIN: ' + r.error); return; }
+    showToast('✓ PIN actualizado en el servidor');
+  }
+
+  // 2. Guardar en LocalStorage (siempre, para offline)
   const prev = getCfgGuardada() || {};
   const cfg = {
     ...prev,
     gsUrl: gsUrlVal.trim() || prev.gsUrl || '',
     empresa: empresaVal.trim() || prev.empresa || '',
-    fincaNombre, lat, lng, radio,
-    entrada: getTimePick('cfgEntrada'),
-    salida: getTimePick('cfgSalida'),
-    salidaSab: getTimePick('cfgSalidaSab'),
-    umbral: parseFloat(document.getElementById('cfgUmbral').value),
+    fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral,
   };
-  // Eliminar cualquier vestigio de PIN local (migración de versiones anteriores)
-  delete cfg.pin;
-  delete cfg.pinHash;
-  delete cfg.pinSha;
-  delete cfg._salt;
-  delete cfg.nombreFinca;
+  delete cfg.pin; delete cfg.pinHash; delete cfg.pinSha; delete cfg._salt; delete cfg.nombreFinca;
   localStorage.setItem('app_config', JSON.stringify(cfg));
   aplicarConfig(cfg);
+
+  // 3. Guardar en backend si hay PIN actual (autenticación requerida)
+  if (pinActual && CONFIG.GS_URL) {
+    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral };
+    guardarConfigBackend(pinActual, cfgBackend).then(r => {
+      if (!r.ok) showToast('⚠ Config local guardada, pero sin sincronizar al servidor: ' + r.error);
+    });
+  }
+
+  btn.disabled = false;
   aplicarEmpresaUI();
   mostrarPantalla('pantallaMenu');
   showToast('✓ Configuración guardada');

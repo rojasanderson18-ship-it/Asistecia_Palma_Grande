@@ -1,7 +1,8 @@
 /* ── MÓDULO: App — inicialización ── */
 
-/* ── Arranque: UI de empresa y personal desde backend ── */
+/* ── Arranque: sincronizar config y personal desde backend ── */
 aplicarEmpresaUI();
+setTimeout(sincronizarConfigDesdeBackend, 800);
 setTimeout(cargarPersonalDesdeBackend, 1500);
 
 /* ── 5-TAP en logo → Admin ── */
