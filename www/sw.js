@@ -1,9 +1,10 @@
-const CACHE_NAME = 'asistencia-palma-v5';
+const CACHE_NAME = 'asistencia-palma-v6';
 const ARCHIVOS_CACHE = [
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './js/audio.js',
   './lib/face-api/face-api.min.js',
   './models/tiny_face_detector_model-weights_manifest.json',
   './models/tiny_face_detector_model-shard1',

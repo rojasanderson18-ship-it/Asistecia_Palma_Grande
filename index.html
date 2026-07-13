@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="lib/face-api/face-api.min.js"></script>
+<script src="js/audio.js"></script>
 <style>
 /* ── TOKENS ── */
 :root{
@@ -401,6 +402,135 @@ input[type=password]:focus{border-color:var(--dg);}
   min-width:28px;text-align:right;
 }
 .grilla{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+
+/* ════════════════════════════════
+   PANTALLA CONFIRMACIÓN INMERSIVA
+════════════════════════════════ */
+#pantallaResultado{background:#071510;}
+.conf-full{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:32px 28px 24px;gap:0;
+  animation:confSlide .45s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes confSlide{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.conf-av{
+  width:56px;height:56px;border-radius:50%;
+  background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:900;color:rgba(255,255,255,.9);
+  margin-bottom:26px;letter-spacing:.5px;
+}
+.conf-ring{
+  width:96px;height:96px;border-radius:50%;
+  background:rgba(74,222,128,.1);border:2.5px solid rgba(74,222,128,.3);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:24px;
+  animation:ringPop .55s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes ringPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.conf-ring svg polyline{
+  stroke-dasharray:52;stroke-dashoffset:52;
+  animation:chkIn .5s ease .28s both;
+}
+@keyframes chkIn{to{stroke-dashoffset:0}}
+.conf-saludo{
+  font-size:34px;font-weight:900;color:#fff;letter-spacing:-1px;
+  margin-bottom:6px;text-align:center;line-height:1;
+  animation:confSlide .38s cubic-bezier(.16,1,.3,1) .15s both;
+}
+.conf-nombre{
+  font-size:21px;font-weight:700;color:rgba(255,255,255,.7);
+  text-align:center;margin-bottom:20px;line-height:1.25;
+  animation:confSlide .38s cubic-bezier(.16,1,.3,1) .22s both;
+}
+.conf-badges{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;
+  margin-bottom:16px;
+  animation:confSlide .38s .3s both;
+}
+.conf-tipo-bdg{
+  background:rgba(255,255,255,.14);color:#fff;
+  font-size:11px;font-weight:800;padding:5px 15px;
+  border-radius:20px;letter-spacing:.6px;text-transform:uppercase;
+}
+.conf-hora-txt{font-size:15px;font-weight:600;color:rgba(255,255,255,.45);}
+.conf-alerts{
+  display:flex;flex-direction:column;gap:6px;width:100%;max-width:280px;
+  margin-bottom:20px;animation:confSlide .38s .38s both;
+}
+.conf-alert{padding:7px 16px;border-radius:10px;font-size:12px;font-weight:700;text-align:center;}
+.conf-alert.tarde{background:rgba(198,40,40,.22);color:#FF7070;border:1px solid rgba(255,112,112,.18);}
+.conf-alert.temprano{background:rgba(230,81,0,.22);color:#FFAB40;border:1px solid rgba(255,171,64,.18);}
+.conf-alert.fuera{background:rgba(198,40,40,.18);color:#FF7070;border:1px solid rgba(255,112,112,.14);}
+.conf-alert.supervisor{background:rgba(255,193,7,.12);color:#FFD54F;border:1px solid rgba(255,213,79,.14);}
+.conf-pgbar-wrap{
+  width:100%;max-width:220px;height:3px;
+  background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;
+  margin-top:auto;margin-bottom:14px;
+}
+.conf-pgbar{height:100%;background:rgba(255,255,255,.3);border-radius:99px;transition:width 1s linear;}
+.conf-back{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.5);border-radius:12px;
+  padding:12px 32px;font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;
+}
+.conf-back:active{background:rgba(255,255,255,.14);}
+
+/* ════════════════════════════════
+   PANTALLA ERROR/WARN INMERSIVA
+════════════════════════════════ */
+.err-full{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:32px 28px;gap:0;
+  background:#0F0808;animation:confSlide .4s ease both;
+}
+.warn-full{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:32px 28px;gap:0;
+  background:#0F0D06;animation:confSlide .4s ease both;
+}
+.err-ring,.warn-ring{
+  width:88px;height:88px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:22px;
+  animation:ringPop .5s cubic-bezier(.2,1.4,.4,1) both;
+}
+.err-ring{background:rgba(198,40,40,.15);border:2.5px solid rgba(198,40,40,.3);}
+.warn-ring{background:rgba(230,81,0,.15);border:2.5px solid rgba(230,81,0,.3);}
+.err-tit{font-size:22px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px;}
+.err-sub{font-size:14px;color:rgba(255,255,255,.4);text-align:center;line-height:1.65;margin-bottom:28px;max-width:280px;}
+.err-actions{width:100%;max-width:260px;display:flex;flex-direction:column;gap:10px;}
+.err-btn-main{
+  padding:15px;border:none;border-radius:12px;background:#C62828;
+  color:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:800;cursor:pointer;
+}
+.err-btn-sec{
+  padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  background:transparent;color:rgba(255,255,255,.4);
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+}
+
+/* ════════════════════════════════
+   CÁMARA: ESCANEO Y FEEDBACK
+════════════════════════════════ */
+.cam-wrap{height:280px !important;}
+.cam-scan{
+  position:absolute;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(74,222,128,.7) 40%,rgba(74,222,128,.9) 50%,rgba(74,222,128,.7) 60%,transparent);
+  pointer-events:none;opacity:0;transition:opacity .3s;top:30%;
+}
+.cam-wrap.scanning .cam-scan{opacity:1;animation:scanMove 2.2s ease-in-out infinite;}
+@keyframes scanMove{0%{top:20%}50%{top:78%}100%{top:20%}}
+.cam-wrap.face-ok .cam-marco::before,.cam-wrap.face-ok .cam-marco::after,
+.cam-wrap.face-ok .cam-marco-b::before,.cam-wrap.face-ok .cam-marco-b::after{
+  border-color:#4ADE80;transition:border-color .2s;
+}
+.cam-wrap.scanning:not(.face-ok) .cam-marco::before,.cam-wrap.scanning:not(.face-ok) .cam-marco::after,
+.cam-wrap.scanning:not(.face-ok) .cam-marco-b::before,.cam-wrap.scanning:not(.face-ok) .cam-marco-b::after{
+  border-color:rgba(255,255,255,.65);
+}
+.cam-wrap.face-ok .cam-dot{background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.7);}
 .persona{
   background:var(--wh);border:1.5px solid var(--bd);border-radius:12px;
   padding:13px 8px;text-align:center;cursor:pointer;transition:all .15s;
@@ -494,6 +624,7 @@ input[type=password]:focus{border-color:var(--dg);}
       <div class="cam-wrap" id="camWrap">
         <video id="video" autoplay muted playsinline></video>
         <canvas id="overlay"></canvas>
+        <div class="cam-scan" id="camScan"></div>
         <div class="cam-marco" id="camMarco">
           <div class="cam-marco-b"></div>
         </div>
@@ -1177,12 +1308,15 @@ async function loopDeteccion(){
     if(modoActual==='procesando'||modoActual==='enrolar')continue;
     try{
       const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:160,scoreThreshold:0.45})).withFaceLandmarks().withFaceDescriptor();
+      const camWrap=document.getElementById('camWrap');
       if(!det){
         document.getElementById('camEstado').textContent='Buscando rostro…';
+        camWrap.classList.remove('scanning','face-ok');
         setConf(0,false);lastDist=null;
         if((reconocido||autoFillActivo)&&!autoFillPending)resetAutoFill();
         continue;
       }
+      camWrap.classList.add('scanning');
       if(reconocido)continue; // cara presente, ya identificado — esperar marcación o que se retire
       document.getElementById('camEstado').textContent='Analizando…';
       const rostros=getRostros();
@@ -1195,10 +1329,11 @@ async function loopDeteccion(){
         }
         lastDist=mejorDist;
         if(mejorDist<=CONFIG.UMBRAL_FACIAL){
+          camWrap.classList.add('face-ok');
           setConf(Math.max(0,Math.round((1-mejorDist)*100)),true);
-          // Captura única: autoFill activa reconocido=true para pausar el loop
           autoFill(mejorNombre,mejorDist);
         }else{
+          camWrap.classList.remove('face-ok');
           setConf(Math.max(0,Math.round((1-mejorDist)*100)),false);
         }
       }else{
@@ -1328,64 +1463,89 @@ function resetBtnReg(){
   b.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 6.07c1.5.89 2.75 2.08 3.89 3.34.18.20.15.5-.05.68-.2.18-.5.15-.68-.05-1.08-1.19-2.26-2.31-3.62-3.13-2.9-1.86-6.55-1.87-9.46-.02-1.38.73-2.58 1.77-3.45 3.02-.09.14-.24.21-.38.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51-.01.7-.09.08-.21.16-.36.16zm5.38 3.2c-1.9 0-3.16-.9-3.99-2.07-1.04-1.57-1.58-3.52-1.58-5.55 0-1.39 1.13-2.52 2.52-2.52s2.52 1.13 2.52 2.52c0 1.24 1.09 2.01 1.97 2.01s1.97-.77 1.97-2.01c0-3.19-2.77-5.76-6.18-5.76-2.43 0-4.6 1.4-5.61 3.44-.44.84-.66 1.71-.66 2.61 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.03.25-2.02.75-2.99C8.17 12.2 10.58 10.7 13.3 10.7c3.93 0 7.18 3.13 7.18 6.76 0 1.68-1.33 3.01-2.97 3.01-1.64 0-2.97-1.33-2.97-3.01 0-.84-.69-1.52-1.52-1.52s-1.52.68-1.52 1.52c0 1.78.45 3.52 1.37 4.94.65 1.02 1.62 1.69 3.11 1.69.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg> REGISTRAR ASISTENCIA`;
 }
 
-/* CONFIRMACIÓN */
+/* CONFIRMACIÓN INMERSIVA */
 let cdInterval=null;
 function showConf(d){
-  let secs=5;
-  const filas=[
-    {p:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',l:'Empleado',v:xh(d.nombre)},
-    {p:'<rect x="5" y="2" width="14" height="20" rx="2"/>',l:'Documento',v:String(d.documento).replace(/\B(?=(\d{3})+(?!\d))/g,'.')},
-    {p:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',l:'Fecha',v:d.fecha},
-    {p:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',l:'Hora',v:d.hora},
-    {p:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',l:'Finca',v:xh(d.finca||'—')},
-    {p:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',l:'Confianza facial',v:d.confianza},
-  ];
-  const pColor=d.punt?{ok:'#2E7D32',tarde:'#C62828',temprano:'#E65100'}[d.punt.estado]||'#555':'#555';
-  const puntFila=d.punt&&d.punt.msg?`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="${pColor}" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="cf-l">Puntualidad</div><div class="cf-v" style="color:${pColor};font-weight:700">${xh(d.punt.msg)}</div></div></div>`:'';
+  playSound('success');
+  const primerNombre=d.nombre.split(' ')[0];
+  const saludo=d.tipo==='Entrada'?'¡BIENVENIDO!':'¡HASTA MAÑANA!';
+  // Fondo ligeramente distinto por tipo — verde oscuro entrada, azul oscuro salida
+  const bg=d.tipo==='Entrada'?'#071510':'#070D18';
+
+  let alerts='';
+  if(!d.gpsOk) alerts+=`<div class="conf-alert fuera">⚠ Fuera del predio — revisar con Gerencia</div>`;
+  if(d.punt&&d.punt.estado==='tarde') alerts+=`<div class="conf-alert tarde">⏰ Entrada tarde — debe ${d.punt.minutos} min</div>`;
+  if(d.punt&&d.punt.estado==='temprano') alerts+=`<div class="conf-alert temprano">⏰ Salida anticipada — debe ${d.punt.minutos} min</div>`;
+  if(d.sinBiometria) alerts+=`<div class="conf-alert supervisor">👤 Autorizado por supervisor</div>`;
+
   document.getElementById('resultadoContenido').innerHTML=`
-    <div class="conf-wrap">
-      <div class="c-ico ok"><svg viewBox="0 0 24 24" fill="none" stroke="#2E7D32" stroke-width="2.5" width="32" height="32"><polyline points="20 6 9 17 4 12"/></svg></div>
-      <div class="c-tit">¡Marcación registrada!</div>
-      <span class="c-bdg">${xh(d.tipo)}</span>
-      <div class="c-tabla">${filas.map(f=>`<div class="cf"><div class="cf-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="#2E7D32" width="13" height="13">${f.p}</svg></div><div><div class="cf-l">${f.l}</div><div class="cf-v">${f.v}</div></div></div>`).join('')}${puntFila}</div>
-      ${!d.gpsOk?'<div class="c-av">⚠️ Marcado fuera de geocerca — revisión Gerencia</div>':''}
-      ${d.sinBiometria?'<div class="c-av" style="background:#FFF3E0;border-color:#FFB74D;">⚠️ Marcado sin verificación biométrica — autorizado por supervisor</div>':''}
-      ${d.punt&&d.punt.estado==='tarde'?`<div class="c-av" style="background:#FFEBEE;border-color:#EF9A9A;">⏰ Entrada tarde — debe ${d.punt.minutos} min</div>`:''}
-      ${d.punt&&d.punt.estado==='temprano'?`<div class="c-av" style="background:#FFF8E1;border-color:#FFD54F;">⏰ Salida anticipada — debe ${d.punt.minutos} min</div>`:''}
-      <button class="btn-ok" id="btnConfOk">ACEPTAR (<span id="cdNum">${secs}</span>)</button>
-      <div class="cd-timer">Volverá al inicio en unos segundos</div>
+    <div class="conf-full" style="background:${bg}">
+      <div class="conf-av">${xh(inic(d.nombre))}</div>
+      <div class="conf-ring">
+        <svg viewBox="0 0 44 44" fill="none" width="50" height="50">
+          <polyline points="9 22 19 32 35 13"
+            stroke="#4ADE80" stroke-width="3.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="conf-saludo">${saludo}</div>
+      <div class="conf-nombre">${xh(primerNombre)}</div>
+      <div class="conf-badges">
+        <span class="conf-tipo-bdg">${xh(d.tipo)}</span>
+        <span class="conf-hora-txt">${d.hora}</span>
+      </div>
+      ${alerts?`<div class="conf-alerts">${alerts}</div>`:''}
+      <div class="conf-pgbar-wrap"><div class="conf-pgbar" id="confPBar"></div></div>
+      <button class="conf-back" id="btnConfOk">Continuar</button>
     </div>`;
+
   mostrarPantalla('pantallaResultado');
+  // Iniciar barra de progreso
+  const bar=document.getElementById('confPBar');
+  if(bar){bar.style.width='100%';setTimeout(()=>{bar.style.width='0%';},50);}
+
+  let secs=5;
   function volverInicio(){
     if(cdInterval)clearInterval(cdInterval);
     modoActual=null;resetAutoFill();resetBtnReg();
+    document.getElementById('camWrap').classList.remove('scanning','face-ok');
     mostrarPantalla('pantallaMarcacion');
   }
   document.getElementById('btnConfOk').onclick=volverInicio;
   if(cdInterval)clearInterval(cdInterval);
-  cdInterval=setInterval(()=>{
-    secs--;const el=document.getElementById('cdNum');
-    if(el)el.textContent=secs;
-    if(secs<=0){clearInterval(cdInterval);volverInicio();}
-  },1000);
+  cdInterval=setInterval(()=>{secs--;if(secs<=0){clearInterval(cdInterval);volverInicio();}},1000);
 }
 
 function showRes(tipo,tit,det,causas){
-  const col={ok:'#2E7D32',err:'#C62828',warn:'#E65100'};
-  const ico={ok:'<polyline points="20 6 9 17 4 12"/>',err:'<path d="M18 6L6 18M6 6l12 12"/>',warn:'<path d="M12 9v4M12 17h.01"/>'};
-  const causasHtml=Array.isArray(causas)&&causas.length?
-    `<div class="c-causas"><div class="c-tit-sm">Posibles causas:</div><ul>${causas.map(c=>`<li>${xh(c)}</li>`).join('')}</ul></div>`:'';
+  if(tipo==='err')playSound('error');
+  const isErr=tipo==='err',isWarn=tipo==='warn';
+  const wrapClass=isErr?'err-full':isWarn?'warn-full':'conf-full';
+  const ringClass=isErr?'err-ring':isWarn?'warn-ring':'conf-ring';
+  const strokeColor=isErr?'#FF5252':isWarn?'#FFAB40':'#4ADE80';
+  const icoPath=isErr?'<path d="M18 6L6 18M6 6l12 12"/>':isWarn?'<path d="M12 9v4M12 17h.01"/>':'<polyline points="20 6 9 17 4 12"/>';
+  const causasHtml=Array.isArray(causas)&&causas.length
+    ?`<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:12px 16px;margin-bottom:20px;max-width:280px;width:100%;text-align:left;">
+        <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Posibles causas</div>
+        <ul style="margin-left:14px;">${causas.map(c=>`<li style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:4px;">${xh(c)}</li>`).join('')}</ul>
+       </div>`:'';
+  function goBack(){resetAutoFill();resetBtnReg();document.getElementById('camWrap').classList.remove('scanning','face-ok');mostrarPantalla('pantallaMarcacion');}
   document.getElementById('resultadoContenido').innerHTML=`
-    <div class="conf-wrap">
-      <div class="c-ico ${tipo==='ok'?'ok':tipo==='warn'?'warn':'err'}"><svg viewBox="0 0 24 24" fill="none" stroke="${col[tipo]||col.err}" stroke-width="2.5" width="32" height="32">${ico[tipo]||ico.err}</svg></div>
-      <div class="c-tit">${tit}</div>
-      <div class="c-det">${det||''}</div>
+    <div class="${wrapClass}">
+      <div class="${ringClass}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2.8" width="36" height="36">${icoPath}</svg>
+      </div>
+      <div class="err-tit">${tit}</div>
+      <div class="err-sub">${det||''}</div>
       ${causasHtml}
-      <button class="btn-ok" onclick="resetAutoFill();resetBtnReg();mostrarPantalla('pantallaMarcacion')">INTENTAR NUEVAMENTE</button>
-      <button class="btn-sec" onclick="resetAutoFill();resetBtnReg();mostrarPantalla('pantallaMarcacion')">Volver al inicio</button>
+      <div class="err-actions">
+        <button class="err-btn-main" id="resBtn1">Intentar nuevamente</button>
+        <button class="err-btn-sec" id="resBtn2">Volver al inicio</button>
+      </div>
     </div>`;
   mostrarPantalla('pantallaResultado');
-  if(tipo!=='ok')setTimeout(()=>{resetAutoFill();resetBtnReg();mostrarPantalla('pantallaMarcacion');},5000);
+  document.getElementById('resBtn1').onclick=goBack;
+  document.getElementById('resBtn2').onclick=goBack;
+  if(tipo!=='ok')setTimeout(goBack,5500);
 }
 
 /* ENVÍO */
@@ -1554,7 +1714,7 @@ function autorizarAlmuerzo(nombre){
       const ALMUERZO_MIN=CONFIG.ALMUERZO_MIN||30;
       const payload={accion:'marcar',nombre,documento:'',finca:CONFIG.FINCA.nombre,tipo:'AlmuerzoTrabajado',cargo:getCargo(nombre),fechaHora:new Date().toISOString(),lat:gpsCoords?gpsCoords.lat:null,lng:gpsCoords?gpsCoords.lng:null,dentroGeocerca:gpsOk,distanciaFacial:null,sinBiometria:true,puntualidad:'ok',minutosDeuda:-ALMUERZO_MIN,fechaDeuda:fechaVal};
       enviar(payload);updColaBadge();
-      mostrarToast(`Almuerzo autorizado para ${nombre}`);
+      showToast(`Almuerzo autorizado para ${nombre}`);
       // re-cargar
       setTimeout(()=>cargarReporte(),800);
     }
