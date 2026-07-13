@@ -151,7 +151,7 @@ document.getElementById('modalPinOk').onclick = async () => {
   const pin = document.getElementById('modalPinInput').value;
   const errEl = document.getElementById('modalPinErr');
   btn.disabled = true;
-  const result = await autenticarPin(pin);
+  const result = await loginSupervisor(pin);
   btn.disabled = false;
   if (!result.ok) {
     if (errEl) errEl.textContent = result.error || 'PIN incorrecto';
@@ -159,6 +159,7 @@ document.getElementById('modalPinOk').onclick = async () => {
   }
   document.getElementById('modalSupervisor').style.display = 'none';
   if (_modalOkCb) { _modalOkCb(); _modalOkCb = null; }
+  clearSupervisorToken();
 };
 
 document.getElementById('modalPinCancel').onclick = () => {
