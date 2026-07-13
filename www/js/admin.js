@@ -32,9 +32,9 @@ document.getElementById('btnPinConfirmar').onclick = async () => {
   const val = document.getElementById('pinInput').value;
   const errEl = document.getElementById('pinErr');
   btn.disabled = true;
-  const ok = await autenticarPin(val);
+  const result = await autenticarPin(val);
   btn.disabled = false;
-  if (ok) {
+  if (result.ok) {
     if (_pinDest === 'enrolar') {
       _abrirEnrolar();
     } else if (_pinDest === 'agregar') {
@@ -43,7 +43,7 @@ document.getElementById('btnPinConfirmar').onclick = async () => {
       mostrarPantalla('pantallaMenu');
     }
   } else {
-    if (errEl) { errEl.textContent = 'PIN incorrecto'; errEl.style.display = 'block'; setTimeout(() => { errEl.textContent = ''; errEl.style.display = 'none'; }, 2000); }
+    if (errEl) { errEl.textContent = result.error || 'PIN incorrecto'; errEl.style.display = 'block'; setTimeout(() => { errEl.textContent = ''; errEl.style.display = 'none'; }, 3000); }
   }
 };
 document.getElementById('pinInput').addEventListener('keydown', e => {
@@ -224,8 +224,6 @@ function abrirConfig() {
   const u = cfg.umbral != null ? cfg.umbral : CONFIG.UMBRAL_FACIAL;
   document.getElementById('cfgUmbral').value = u;
   document.getElementById('cfgUmbralVal').textContent = parseFloat(u).toFixed(2);
-  document.getElementById('cfgPin').value = '';
-  document.getElementById('cfgPinConf').value = '';
   mostrarPantalla('pantallaConfig');
 }
 
@@ -243,12 +241,6 @@ document.getElementById('btnUsarUbicacion').addEventListener('click', () => {
   }, () => { btn.textContent = 'Usar mi ubicación actual'; btn.disabled = false; alert('No se pudo obtener la ubicación'); }, {enableHighAccuracy:true, timeout:8000});
 });
 document.getElementById('btnGuardarConfig').addEventListener('click', async () => {
-  const pinNuevo = document.getElementById('cfgPin').value;
-  const pinConf = document.getElementById('cfgPinConf').value;
-  if (pinNuevo) {
-    if (!/^\d{4,8}$/.test(pinNuevo)) { alert('El PIN debe tener entre 4 y 8 dígitos'); return; }
-    if (pinNuevo !== pinConf) { alert('Los PINs no coinciden'); return; }
-  }
   const gsUrlVal = (document.getElementById('cfgGsUrl') || {}).value || '';
   const empresaVal = (document.getElementById('cfgEmpresa') || {}).value || '';
   const fincaNombre = document.getElementById('cfgNombreFinca').value.trim();
@@ -258,9 +250,6 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   if (!fincaNombre) { alert('Escribe el nombre de la finca'); return; }
   if (isNaN(lat) || isNaN(lng)) { alert('Las coordenadas no son válidas'); return; }
   if (isNaN(radio) || radio < 50) { alert('El radio mínimo es 50 metros'); return; }
-  // Guardar PIN primero (async SHA-256); esto actualiza app_config en localStorage
-  if (pinNuevo) await guardarPin(pinNuevo);
-  // Leer config actualizada (puede incluir pinSha del paso anterior)
   const prev = getCfgGuardada() || {};
   const cfg = {
     ...prev,
@@ -272,9 +261,10 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
     salidaSab: getTimePick('cfgSalidaSab'),
     umbral: parseFloat(document.getElementById('cfgUmbral').value),
   };
-  // Eliminar todos los formatos de PIN en claro o hash reversible
+  // Eliminar cualquier vestigio de PIN local (migración de versiones anteriores)
   delete cfg.pin;
   delete cfg.pinHash;
+  delete cfg.pinSha;
   delete cfg._salt;
   delete cfg.nombreFinca;
   localStorage.setItem('app_config', JSON.stringify(cfg));

@@ -436,36 +436,21 @@ function calcularResumenDiario() {
 /**
  * Utilitario para configurar el PIN del administrador desde el editor de Apps Script.
  * Ejecutar UNA SOLA VEZ después de desplegar, con el PIN deseado.
- * El PIN NUNCA se guarda en claro: se almacena solo el hash SHA-256.
+ * El PIN NUNCA se guarda en claro: se almacena solo el hash SHA-256(pin).
  *
  * Uso:
  *   1. En Apps Script, abrir el editor y ejecutar esta función manualmente.
+ *      Ejemplo: setPin('1234')
  *   2. El hash queda en PropertiesService del script (no en el Sheet).
- *
- * IMPORTANTE: el salt debe coincidir con el que usa el frontend (location.origin + ':asistencia:v2').
- * Para instalaciones múltiples, cada dominio tiene su propio salt y su propio hash.
+ *   3. El frontend envía SHA-256(pin) al endpoint validarPin y este compara.
  */
 function setPin(pin) {
   if (!pin || !/^\d{4,8}$/.test(String(pin))) {
     throw new Error('El PIN debe tener entre 4 y 8 dígitos numéricos');
   }
-  // El salt debe ser idéntico al que genera el frontend para ese dominio.
-  // Ajustar origin según el dominio de GitHub Pages o APK de la instalación.
-  const origin = PropertiesService.getScriptProperties().getProperty('ORIGIN') || 'https://rojasanderson18-ship-it.github.io';
-  const salt = origin + ':asistencia:v2';
-  const texto = pin + salt;
-  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, texto)
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(pin))
     .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
     .join('');
   PropertiesService.getScriptProperties().setProperty('PIN_HASH', hash);
   Logger.log('PIN configurado. Hash: ' + hash);
-}
-
-/**
- * Configura el dominio de origen para el cálculo del salt.
- * Ejecutar antes de setPin() si el dominio no es el predeterminado.
- */
-function setOrigin(origin) {
-  PropertiesService.getScriptProperties().setProperty('ORIGIN', origin);
-  Logger.log('Origin configurado: ' + origin);
 }
