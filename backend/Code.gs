@@ -228,7 +228,7 @@ function obtenerOhCrearHoja() {
     hoja = ss.insertSheet(HOJA_MARCACIONES);
     hoja.appendRow(['Fecha','Hora','Nombre','Documento','Cargo','Finca','Tipo',
                     'Lat','Lng','DentroGeocerca','DistanciaFacial','Timestamp',
-                    'DeviceId','PrecisionGPS','AppVersion','ModoOffline','ResultadoFacial']);
+                    'DeviceId','PrecisionGPS','AppVersion','ModoOffline','ResultadoFacial','EstadoGPS']);
     hoja.setFrozenRows(1);
   }
   return hoja;
@@ -797,22 +797,42 @@ function doPost(e) {
         sinConfigGeo = false;
       }
 
-      // Validar precisión GPS (tarea 3)
-      if (gpsValido && datos.precisionGPS != null) {
-        const prec = parseFloat(datos.precisionGPS);
-        if (isNaN(prec) || prec < 0 || prec > 50000) {
-          return _respuestaJson({ ok: false, error: 'Valor de precisión GPS inválido.' });
-        }
-        if (prec > 100) {
-          const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
-          if (!svPrec.ok) {
-            return _respuestaJson({
-              ok: false,
-              error: 'Precisión GPS insuficiente (' + Math.round(prec) + ' m de incertidumbre). Mejora la señal GPS o solicita autorización de supervisor.'
-            });
+      // Precisión GPS: obligatoria cuando hay coordenadas y geocerca configurada
+      // Estado para auditoría: PRECISO (≤50 m) | MEDIO (51–100 m) | BAJO (>100 m) | AUSENTE | SIN_PRECISION
+      let estadoGPS = gpsValido ? 'SIN_PRECISION' : 'AUSENTE';
+      if (gpsValido) {
+        const precRaw = datos.precisionGPS;
+        if (precRaw == null || precRaw === '') {
+          if (geocercaConfigurada) {
+            const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
+            if (!svPrec.ok) {
+              return _respuestaJson({
+                ok: false,
+                error: 'Precisión GPS no informada. Con geocerca configurada se requiere autorización de supervisor cuando no se conoce la exactitud de la ubicación.'
+              });
+            }
+          }
+          // sin geocerca: aceptar con estado SIN_PRECISION
+        } else {
+          const prec = parseFloat(precRaw);
+          if (isNaN(prec) || prec < 0 || prec > 50000) {
+            return _respuestaJson({ ok: false, error: 'Valor de precisión GPS inválido.' });
+          }
+          if (prec <= 50) {
+            estadoGPS = 'PRECISO';
+          } else if (prec <= 100) {
+            estadoGPS = 'MEDIO';
+          } else {
+            estadoGPS = 'BAJO';
+            const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
+            if (!svPrec.ok) {
+              return _respuestaJson({
+                ok: false,
+                error: 'Precisión GPS insuficiente (' + Math.round(prec) + ' m de incertidumbre). Mejora la señal GPS o solicita autorización de supervisor.'
+              });
+            }
           }
         }
-        // 51–100 m: aceptar con advertencia (se registra en ResultadoFacial)
       }
 
       // REGLA GEOCERCA/GPS: si está fuera o sin GPS (y hay config), exigir supervisor
@@ -896,7 +916,8 @@ function doPost(e) {
         datos.precisionGPS != null ? parseFloat(datos.precisionGPS).toFixed(1) : '',
         sanitizarCelda(String(datos.appVersion || '')),
         datos.sinConexion ? 'OFFLINE' : 'ONLINE',
-        resultadoFacial
+        resultadoFacial,
+        estadoGPS
       ]);
       SpreadsheetApp.flush();
 
