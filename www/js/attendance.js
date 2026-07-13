@@ -176,7 +176,12 @@ function calcularPuntualidad(tipo, hora) {
 function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   const hora = new Date();
   // WORKER.doc es la fuente de verdad: fue validado al ingresar la cédula
-  const doc = WORKER.doc || '';
+  const doc = WORKER.doc ? String(WORKER.doc).trim() : '';
+  if (!doc) {
+    setWorkerState('IDLE');
+    showRes('err', 'Sin documento', 'No se puede registrar sin número de documento.', ['Reingresa la cédula e intenta nuevamente']);
+    return;
+  }
   const punt = calcularPuntualidad(tipo, hora);
   const payload = {
     accion:'marcar', nombre,
