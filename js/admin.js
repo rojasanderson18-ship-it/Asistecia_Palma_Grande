@@ -14,6 +14,12 @@ function actualizarMenuAdmin() {
     if (viejos.length) { avisoEl.style.display = 'block'; avisoTxt.textContent = `${viejos.length} empleado(s) con enrolamiento antiguo (1 captura).`; }
     else { avisoEl.style.display = 'none'; }
   }
+  const cola = JSON.parse(localStorage.getItem('cola') || '[]');
+  const dashCola = document.getElementById('dashColaCnt');
+  if (dashCola) {
+    if (cola.length) { dashCola.textContent = cola.length; dashCola.style.display = ''; }
+    else { dashCola.style.display = 'none'; }
+  }
 }
 
 /* ── PIN screen ── */
@@ -76,6 +82,19 @@ document.getElementById('menuReporte').onclick = () => {
 };
 
 document.getElementById('menuConfig').onclick = () => abrirConfig();
+
+document.getElementById('menuColaPendientes').onclick = () => {
+  const cola = JSON.parse(localStorage.getItem('cola') || '[]');
+  if (!cola.length) { showToast('No hay marcaciones pendientes de sincronizar'); return; }
+  showToast(`${cola.length} marcación(es) pendientes de enviar`);
+};
+
+document.getElementById('menuGeocerca').onclick = () => abrirConfig();
+
+const _btnSeguridad = document.getElementById('menuSeguridad');
+if (_btnSeguridad) _btnSeguridad.onclick = () => {
+  abrirPinScreen('menu');
+};
 
 /* ── Enrolar ── */
 function _abrirEnrolar() {
@@ -371,15 +390,25 @@ async function cargarReporte() {
     if (!datos.length) { estEl.textContent = 'No hay datos offline para esta fecha.'; return; }
   }
   estEl.style.display = 'none'; resEl.style.display = 'block';
-  let totalTarde = 0, totalTemprano = 0, totalMin = 0;
+  let totalTarde = 0, totalTemprano = 0, totalMin = 0, totalPresentes = 0, totalCompletas = 0, totalExcepciones = 0;
+  const colaPendientes = JSON.parse(localStorage.getItem('cola') || '[]').length;
   datos.forEach(e => {
     const p = e.puntualidad || [];
+    const marcas = e.marcas || [];
     p.forEach(x => { if (x.estado === 'tarde') totalTarde++; if (x.estado === 'temprano') totalTemprano++; });
     totalMin += e.minutosDeuda || 0;
+    if (marcas.length > 0) totalPresentes++;
+    if (marcas.includes('ENTRADA') && marcas.includes('SALIDA')) totalCompletas++;
+    if (e.excepcion || (e.minutosDeuda || 0) > 60) totalExcepciones++;
   });
-  document.getElementById('repCntTarde').textContent = totalTarde;
-  document.getElementById('repCntTemprano').textContent = totalTemprano;
-  document.getElementById('repCntDeuda').textContent = totalMin;
+  const _setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  _setKpi('repCntPresentes', totalPresentes);
+  _setKpi('repCntCompletas', totalCompletas);
+  _setKpi('repCntTarde', totalTarde);
+  _setKpi('repCntTemprano', totalTemprano);
+  _setKpi('repCntPendientes', colaPendientes);
+  _setKpi('repCntExcepciones', totalExcepciones);
+  _setKpi('repCntDeuda', totalMin);
   tabEl.innerHTML = datos.map(e => {
     const tieneDeuda = (e.minutosDeuda || 0) > 0;
     return `<div style="background:var(--wh);border-radius:14px;padding:14px;border:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px;">

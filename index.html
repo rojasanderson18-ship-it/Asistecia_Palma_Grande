@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#122B1A">
+<meta name="theme-color" content="#0C1410">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..900;1,14..32,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
@@ -34,13 +34,16 @@
   </div>
   <div class="hdr-text">
     <div class="hdr-empresa" id="hdrEmpresa">MI EMPRESA</div>
-    <div class="hdr-sub">Sistema de Asistencia · <span id="nombreFinca">Sin configurar</span></div>
+    <div class="hdr-sub-wrap">
+      <span class="hdr-sub-ctrl">Control de asistencia</span>
+      <span class="hdr-sub-sep">·</span>
+      <span class="hdr-sub-finca" id="nombreFinca">Sin configurar</span>
+    </div>
   </div>
-  <div class="hdr-badge">Biométrica</div>
 </header>
 
-<!-- Geo strip -->
-<div class="geo-strip er" id="geoBadge">
+<!-- Geo strip (oculto — mantiene IDs para geolocation.js) -->
+<div class="geo-strip er" id="geoBadge" style="display:none;">
   <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
   <span id="geoTxt">Verificando ubicación…</span>
   <span id="stHora">--:--</span>
@@ -78,18 +81,24 @@
         </div>
       </div>
 
-      <!-- Barra de estado (siempre visible) -->
-      <div class="status-bar">
-        <div class="st-item">
-          <span class="st-lbl">Geocerca</span>
+      <!-- Estado del sistema — una sola línea discreta -->
+      <div class="sys-status" id="sysStatus" onclick="toggleSysDetail()">
+        <span class="sys-dot" id="sysDot"></span>
+        <span class="sys-label" id="sysLabel">Sistema listo</span>
+        <span class="sys-chevron" id="sysChevron">›</span>
+      </div>
+      <!-- Detalle técnico (colapsado; IDs preservados para geolocation.js) -->
+      <div class="sys-detail" id="sysDetail">
+        <div class="sys-detail-row">
+          <span class="sys-detail-lbl">Geocerca</span>
           <span class="st-val na" id="stGeocerca">—</span>
         </div>
-        <div class="st-item">
-          <span class="st-lbl">Ubicación</span>
+        <div class="sys-detail-row">
+          <span class="sys-detail-lbl">GPS</span>
           <span class="st-val na" id="stUbicacion">—</span>
         </div>
-        <div class="st-item">
-          <span class="st-lbl">Internet</span>
+        <div class="sys-detail-row">
+          <span class="sys-detail-lbl">Internet</span>
           <span class="st-val ok" id="stInternet">OK</span>
         </div>
       </div>
@@ -142,39 +151,45 @@
       </div>
     </div>
 
-    <!-- Confianza + acciones -->
-    <div style="padding:8px 12px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
-      <div class="status-bar">
-        <div class="st-item">
-          <span class="st-lbl">Confianza</span>
-          <span class="st-val na" id="confPct">—</span>
-          <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+    <!-- Pie pantalla scan: instrucción + indicadores + acciones -->
+    <div class="scan-footer" id="scanFooter">
+      <!-- Instrucción -->
+      <div class="scan-instruccion">Mire directamente a la cámara</div>
+      <!-- Tres indicadores pequeños -->
+      <div class="scan-indicators">
+        <div class="scan-ind">
+          <span class="scan-ind-dot" id="scanIndRostro"></span>
+          <span class="scan-ind-lbl">Rostro</span>
         </div>
-        <div class="st-item">
-          <span class="st-lbl">Geocerca</span>
-          <span class="st-val na" id="stGeocerca2">—</span>
+        <div class="scan-ind">
+          <span class="scan-ind-dot" id="scanIndGps"></span>
+          <span class="scan-ind-lbl">GPS</span>
         </div>
-        <div class="st-item">
-          <span class="st-lbl">Internet</span>
-          <span class="st-val ok" id="stInternet2">OK</span>
+        <div class="scan-ind">
+          <span class="scan-ind-dot" id="scanIndRed"></span>
+          <span class="scan-ind-lbl">Red</span>
         </div>
       </div>
+      <!-- Acciones -->
       <div class="wk-scan-actions">
         <button class="btn-wk-cancel" id="btnWkCancel">← Cambiar cédula</button>
-        <button class="btn-sup-auth" id="btnWkSupAuth">Autorizar con PIN supervisor</button>
+        <button class="btn-sup-auth" id="btnWkSupAuth" style="display:none;">Autorizar con PIN</button>
       </div>
+    </div>
+    <!-- IDs técnicos ocultos requeridos por face-recognition.js / attendance.js -->
+    <div style="display:none;">
+      <span id="confPct"></span>
+      <div id="confFill"></div>
+      <span id="stGeocerca2"></span>
+      <span id="stInternet2"></span>
     </div>
   </div>
 
   <!-- Footer fijo -->
   <div class="app-footer">
-    <div class="footer-links">
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div id="colaBadge" style="display:none;background:var(--or);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;cursor:pointer;">
-        <span id="colaCnt">0</span> pendientes
-      </div>
-      <span class="version">V 2.0.0</span>
+    <div class="footer-links"></div>
+    <div id="colaBadge" style="display:none;cursor:pointer;">
+      <span id="colaCnt">0</span> pendientes
     </div>
   </div>
 </div>
@@ -208,39 +223,94 @@
 ══════════════════════════════════════════ -->
 <div class="pantalla" id="pantallaMenu">
   <div class="admin-menu">
-    <div class="menu-hdr">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      <span>Menú Administrativo</span>
+
+    <!-- Encabezado admin -->
+    <div class="admin-dash-hdr">
+      <div class="admin-dash-title">Administración</div>
+      <button class="admin-dash-cerrar" id="menuCerrar">Cerrar sesión</button>
     </div>
-    <div id="avisoReenrolar" style="display:none;background:#FFF3E0;border:1px solid #FFB74D;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--or);font-weight:600;line-height:1.5;">
-      ⚠️ <span id="avisoReenrolarTxt"></span> Ingresa a Gestión de rostros para ver quiénes necesitan re-enrolarse.
+
+    <!-- Aviso reenrolar -->
+    <div id="avisoReenrolar" style="display:none;">
+      <span id="avisoReenrolarTxt"></span> — Ingresa a Gestión de rostros.
     </div>
-    <div class="menu-item" id="menuEnrolar">
-      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div class="menu-item-txt"><div class="menu-item-lbl">Enrolar empleado</div><div class="menu-item-sub">Capturar rostro de referencia</div></div>
-      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+
+    <!-- GRUPO: Personal y Biometría -->
+    <div class="dash-group">
+      <div class="dash-group-label">Personal y Biometría</div>
+      <div class="dash-cards">
+        <div class="dash-card" id="menuAgregar">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          </div>
+          <div class="dash-card-lbl">Personal</div>
+        </div>
+        <div class="dash-card" id="menuEnrolar">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="dash-card-lbl">Enrolamiento</div>
+        </div>
+        <div class="dash-card" id="menuRostros">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+          <div class="dash-card-lbl" id="menuRostrosSub">Rostros</div>
+        </div>
+      </div>
     </div>
-    <div class="menu-item" id="menuRostros">
-      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
-      <div class="menu-item-txt"><div class="menu-item-lbl">Gestión de rostros</div><div class="menu-item-sub" id="menuRostrosSub">Ver y eliminar rostros enrolados</div></div>
-      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+
+    <!-- GRUPO: Operación -->
+    <div class="dash-group">
+      <div class="dash-group-label">Operación</div>
+      <div class="dash-cards">
+        <div class="dash-card" id="menuReporte">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="dash-card-lbl">Asistencia</div>
+        </div>
+        <div class="dash-card dash-card-cola" id="menuColaPendientes">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </div>
+          <div class="dash-card-lbl">Pendientes</div>
+          <div class="dash-card-badge" id="dashColaCnt" style="display:none;"></div>
+        </div>
+        <div class="dash-card dash-card-dis" id="menuDispositivos">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <div class="dash-card-lbl">Dispositivos</div>
+        </div>
+      </div>
     </div>
-    <div class="menu-item" id="menuAgregar">
-      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
-      <div class="menu-item-txt"><div class="menu-item-lbl">Agregar personal</div><div class="menu-item-sub">Registrar nuevo empleado</div></div>
-      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+
+    <!-- GRUPO: Sistema -->
+    <div class="dash-group">
+      <div class="dash-group-label">Sistema</div>
+      <div class="dash-cards">
+        <div class="dash-card" id="menuConfig">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div class="dash-card-lbl">Configuración</div>
+        </div>
+        <div class="dash-card" id="menuGeocerca">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="dash-card-lbl">Geocerca</div>
+        </div>
+        <div class="dash-card" id="menuSeguridad">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="dash-card-lbl">Seguridad</div>
+        </div>
+      </div>
     </div>
-    <div class="menu-item" id="menuReporte">
-      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-      <div class="menu-item-txt"><div class="menu-item-lbl">Ver reportes</div><div class="menu-item-sub">Dashboard Dirección Agronómica</div></div>
-      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>
-    <div class="menu-item" id="menuConfig">
-      <div class="menu-item-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-      <div class="menu-item-txt"><div class="menu-item-lbl">Configuración</div><div class="menu-item-sub">Finca, geocerca, horarios</div></div>
-      <div class="menu-item-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>
-    <button class="btn-sec" id="menuCerrar" style="margin-top:8px;">Cerrar sesión</button>
+
   </div>
 </div>
 
@@ -375,19 +445,46 @@
   <div class="page-scroll">
     <div class="page-hdr">
       <button class="btn-back" id="btnVolverDesdeReporte"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
-      <span class="page-tit">Reporte de deuda</span>
+      <span class="page-tit">Reporte de asistencia</span>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;background:var(--wh);border-radius:12px;padding:10px 14px;border:1px solid var(--bd);box-shadow:var(--sh);">
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--dg)" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <input type="date" id="repFecha" style="flex:1;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--tx);outline:none;">
-      <button id="btnRepCargar" style="background:var(--dg);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;">Cargar</button>
+    <!-- Selector de fecha -->
+    <div class="rep-date-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--g500)" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="date" id="repFecha" class="rep-date-input">
+      <button id="btnRepCargar" class="rep-btn-cargar">Cargar</button>
     </div>
-    <div id="repResumen" style="display:none;background:var(--wh);border-radius:12px;padding:12px 14px;border:1px solid var(--bd);box-shadow:var(--sh);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:8px;">Resumen del día</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div style="text-align:center;"><div id="repCntTarde" style="font-size:22px;font-weight:900;color:var(--re);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Tarde</div></div>
-        <div style="text-align:center;"><div id="repCntTemprano" style="font-size:22px;font-weight:900;color:var(--or);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Salida ant.</div></div>
-        <div style="text-align:center;"><div id="repCntDeuda" style="font-size:22px;font-weight:900;color:var(--bl);">0</div><div style="font-size:10px;color:var(--t2);font-weight:600;">Min deuda</div></div>
+    <!-- KPIs -->
+    <div id="repResumen" style="display:none;">
+      <div class="rep-kpi-grid">
+        <div class="rep-kpi">
+          <div class="rep-kpi-val ok" id="repCntPresentes">0</div>
+          <div class="rep-kpi-lbl">Presentes</div>
+        </div>
+        <div class="rep-kpi">
+          <div class="rep-kpi-val ok" id="repCntCompletas">0</div>
+          <div class="rep-kpi-lbl">Jornadas completas</div>
+        </div>
+        <div class="rep-kpi">
+          <div class="rep-kpi-val warn" id="repCntTarde">0</div>
+          <div class="rep-kpi-lbl">Llegadas tarde</div>
+        </div>
+        <div class="rep-kpi">
+          <div class="rep-kpi-val warn" id="repCntTemprano">0</div>
+          <div class="rep-kpi-lbl">Salidas anticipadas</div>
+        </div>
+        <div class="rep-kpi">
+          <div class="rep-kpi-val muted" id="repCntPendientes">0</div>
+          <div class="rep-kpi-lbl">Pendientes sync</div>
+        </div>
+        <div class="rep-kpi">
+          <div class="rep-kpi-val err" id="repCntExcepciones">0</div>
+          <div class="rep-kpi-lbl">Excepciones</div>
+        </div>
+      </div>
+      <!-- Deuda como dato secundario -->
+      <div class="rep-deuda-secundaria">
+        <span class="rep-deuda-lbl">Minutos de deuda total:</span>
+        <span class="rep-deuda-val" id="repCntDeuda">0</span> min
       </div>
     </div>
     <div id="repEstado" style="text-align:center;font-size:13px;color:var(--t2);padding:24px 0;">Selecciona una fecha y toca Cargar</div>
