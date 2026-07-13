@@ -27,10 +27,14 @@ function abrirPinScreen(dest) {
 }
 
 document.getElementById('btnPinCancelar').onclick = () => mostrarPantalla('pantallaMarcacion');
-document.getElementById('btnPinConfirmar').onclick = () => {
+document.getElementById('btnPinConfirmar').onclick = async () => {
+  const btn = document.getElementById('btnPinConfirmar');
   const val = document.getElementById('pinInput').value;
-  // Si no hay PIN configurado, acceso libre (primera configuración)
-  if (!hayPinConfigurado() || validatePin(val)) {
+  const errEl = document.getElementById('pinErr');
+  btn.disabled = true;
+  const ok = await autenticarPin(val);
+  btn.disabled = false;
+  if (ok) {
     if (_pinDest === 'enrolar') {
       _abrirEnrolar();
     } else if (_pinDest === 'agregar') {
@@ -39,9 +43,7 @@ document.getElementById('btnPinConfirmar').onclick = () => {
       mostrarPantalla('pantallaMenu');
     }
   } else {
-    const errEl = document.getElementById('pinErr');
     if (errEl) { errEl.textContent = 'PIN incorrecto'; errEl.style.display = 'block'; setTimeout(() => { errEl.textContent = ''; errEl.style.display = 'none'; }, 2000); }
-    else alert('PIN incorrecto');
   }
 };
 document.getElementById('pinInput').addEventListener('keydown', e => {
@@ -240,7 +242,7 @@ document.getElementById('btnUsarUbicacion').addEventListener('click', () => {
     btn.textContent = '✓ Ubicación capturada'; btn.disabled = false;
   }, () => { btn.textContent = 'Usar mi ubicación actual'; btn.disabled = false; alert('No se pudo obtener la ubicación'); }, {enableHighAccuracy:true, timeout:8000});
 });
-document.getElementById('btnGuardarConfig').addEventListener('click', () => {
+document.getElementById('btnGuardarConfig').addEventListener('click', async () => {
   const pinNuevo = document.getElementById('cfgPin').value;
   const pinConf = document.getElementById('cfgPinConf').value;
   if (pinNuevo) {
@@ -256,6 +258,9 @@ document.getElementById('btnGuardarConfig').addEventListener('click', () => {
   if (!fincaNombre) { alert('Escribe el nombre de la finca'); return; }
   if (isNaN(lat) || isNaN(lng)) { alert('Las coordenadas no son válidas'); return; }
   if (isNaN(radio) || radio < 50) { alert('El radio mínimo es 50 metros'); return; }
+  // Guardar PIN primero (async SHA-256); esto actualiza app_config en localStorage
+  if (pinNuevo) await guardarPin(pinNuevo);
+  // Leer config actualizada (puede incluir pinSha del paso anterior)
   const prev = getCfgGuardada() || {};
   const cfg = {
     ...prev,
@@ -267,14 +272,11 @@ document.getElementById('btnGuardarConfig').addEventListener('click', () => {
     salidaSab: getTimePick('cfgSalidaSab'),
     umbral: parseFloat(document.getElementById('cfgUmbral').value),
   };
-  // Eliminar campos legacy y sensibles que no deben estar en el objeto
-  delete cfg.nombreFinca; // renombrado a fincaNombre
-  // PIN: usar auth.js para guardar con hash
-  if (pinNuevo) {
-    guardarPin(pinNuevo); // persiste en localStorage via auth.js
-  }
-  // Guardar todo excepto pin en claro
+  // Eliminar todos los formatos de PIN en claro o hash reversible
   delete cfg.pin;
+  delete cfg.pinHash;
+  delete cfg._salt;
+  delete cfg.nombreFinca;
   localStorage.setItem('app_config', JSON.stringify(cfg));
   aplicarConfig(cfg);
   aplicarEmpresaUI();

@@ -146,9 +146,13 @@ function abrirModalSupervisor(txt, cb) {
   setTimeout(() => { if (pinEl) pinEl.focus(); }, 100);
 }
 
-document.getElementById('modalPinOk').onclick = () => {
+document.getElementById('modalPinOk').onclick = async () => {
+  const btn = document.getElementById('modalPinOk');
   const pin = document.getElementById('modalPinInput').value;
-  if (!validatePin(pin)) {
+  btn.disabled = true;
+  const ok = await autenticarPin(pin);
+  btn.disabled = false;
+  if (!ok) {
     document.getElementById('modalPinErr').textContent = 'PIN incorrecto';
     return;
   }

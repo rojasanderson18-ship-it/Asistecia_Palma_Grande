@@ -138,19 +138,18 @@ async function getTipo(doc) {
       const r = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`, { cache: 'no-store' });
       const d = await r.json();
       const m = (d && d.marcas) ? d.marcas : [];
-      // Actualizar cache con respuesta del backend
       if (m.length) _setMarcasHoyCache(doc, m);
       if (m.includes('Salida')) return { tipo: 'Salida', completo: true, marcas: m };
       if (m.includes('Entrada')) return { tipo: 'Salida', completo: false, marcas: m };
       return { tipo: 'Entrada', completo: false, marcas: m };
     } catch {
-      // Backend no responde: continuar con lógica offline
+      // Backend no disponible: caer en error explícito
     }
   }
 
-  // 5. Último recurso: hora actual (solo si no hay ninguna información local ni backend)
-  const a = new Date(), h = a.getHours() + a.getMinutes() / 60;
-  return { tipo: h < (CONFIG.HORARIO.salida || 15.0) ? 'Entrada' : 'Salida', completo: false, marcas: [] };
+  // Sin estado local ni backend: no asumir el tipo — pedir verificación
+  // La hora NUNCA determina Entrada o Salida
+  return { tipo: null, completo: false, marcas: [], sinEstado: true };
 }
 
 /* ── Puntualidad ── */
@@ -176,11 +175,12 @@ function calcularPuntualidad(tipo, hora) {
 /* ── Marcación ── */
 function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   const hora = new Date();
-  const pm = getPorDoc(WORKER.doc || '');
+  // WORKER.doc es la fuente de verdad: fue validado al ingresar la cédula
+  const doc = WORKER.doc || '';
   const punt = calcularPuntualidad(tipo, hora);
   const payload = {
     accion:'marcar', nombre,
-    documento: pm ? pm.documento : '',
+    documento: doc,
     finca: CONFIG.FINCA.nombre,
     tipo, cargo: getCargo(nombre),
     fechaHora: hora.toISOString(),
@@ -194,12 +194,11 @@ function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   };
   enviar(payload);
   updColaBadge();
-  // Registrar en cache local del día para offline inteligente
-  if (pm) _agregarMarcaLocal(pm.documento, tipo);
+  if (doc) _agregarMarcaLocal(doc, tipo);
   saveUltima(nombre, tipo, hora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}), gpsOk, Date.now());
   setWorkerState('CONFIRMED');
   showConf({
-    nombre, documento: pm ? pm.documento : '—',
+    nombre, documento: doc || '—',
     tipo, fecha: hora.toLocaleDateString('es-CO', {day:'2-digit', month:'2-digit', year:'numeric'}),
     hora: hora.toLocaleTimeString('es-CO'),
     ubicacion: gpsOk ? 'Dentro del predio' : 'Fuera de geocerca',
@@ -325,6 +324,13 @@ async function procesarDoc(docVal) {
   const res = await getTipo(docNum);
   if (res.completo) {
     if (docSubEl) { docSubEl.textContent = 'Ya completaste tu jornada hoy'; docSubEl.className = 'doc-info er'; }
+    if (docChkEl) docChkEl.classList.remove('show');
+    return;
+  }
+
+  // Sin estado conocido y sin conexión: no avanzar, informar al operario
+  if (res.sinEstado) {
+    if (docSubEl) { docSubEl.textContent = 'Sin conexión — activa el internet para verificar marcaciones'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
     if (docChkEl) docChkEl.classList.remove('show');
     return;
   }
