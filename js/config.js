@@ -118,12 +118,29 @@ let _personalCargando = false;
 
 async function cargarPersonalDesdeBackend() {
   if (_personalCargando || !CONFIG.GS_URL) return;
-  const tok = (typeof getAdminToken === 'function') ? getAdminToken() : null;
-  if (!tok) return;
+  // Si hay sesión admin activa, usar listarPersonal (catálogo completo).
+  // Si solo hay deviceToken, usar sincronizarPersonalKiosco (catálogo ligero, no requiere sesión admin).
+  const adminTok  = (typeof getAdminToken === 'function') ? getAdminToken() : null;
+  const deviceTok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
+  if (!adminTok && !deviceTok) return;
   _personalCargando = true;
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=listarPersonal&token=${encodeURIComponent(tok)}&_=${Date.now()}`, { cache: 'no-store' });
-    const d = await r.json();
+    let d;
+    if (adminTok) {
+      const r = await fetch(CONFIG.GS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ accion: 'listarPersonal', token: adminTok }),
+      });
+      d = await r.json();
+    } else {
+      const r = await fetch(CONFIG.GS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ accion: 'sincronizarPersonalKiosco', deviceToken: deviceTok }),
+      });
+      d = await r.json();
+    }
     if (d && Array.isArray(d.personal) && d.personal.length) {
       savePersonalCache(d.personal);
     }

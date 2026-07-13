@@ -17,7 +17,7 @@ function chkGps() {
   if (!navigator.geolocation) { setGeo(false); return; }
   navigator.geolocation.getCurrentPosition(
     pos => {
-      gpsCoords = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      gpsCoords = {lat: pos.coords.latitude, lng: pos.coords.longitude, precision: pos.coords.accuracy};
       const R = 6371000, tr = x => x * Math.PI / 180;
       const dLa = tr(CONFIG.FINCA.lat - pos.coords.latitude);
       const dLo = tr(CONFIG.FINCA.lng - pos.coords.longitude);
