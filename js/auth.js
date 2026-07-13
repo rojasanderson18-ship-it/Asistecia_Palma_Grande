@@ -81,6 +81,7 @@ async function autenticarPin(pin) {
 
 function getAdminToken() { return _adminToken; }
 function getSupervisorToken() { return _supervisorToken; }
+function getDeviceId() { return _getDeviceId(); }
 
 function logout() {
   _adminToken = null;

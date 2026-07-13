@@ -239,7 +239,7 @@ function obtenerOhCrearHojaPersonal() {
   let hoja   = ss.getSheetByName(HOJA_PERSONAL);
   if (!hoja) {
     hoja = ss.insertSheet(HOJA_PERSONAL);
-    hoja.appendRow(['Documento','Nombre','Cargo','Fecha registro','FotoId']);
+    hoja.appendRow(['Documento','Nombre','Cargo','Fecha registro','FotoId','Estado']);
     hoja.setFrozenRows(1);
   }
   return hoja;
@@ -324,7 +324,7 @@ function guardarFotoPersonal_(documento, fotoDataUrl, nombre, cargo) {
   }
   const fotoId = guardarFoto(fotoDataUrl, documento, 'Enrolamiento');
   hoja.appendRow([sanitizarCelda(String(documento)), sanitizarCelda(nombre || ''),
-                  sanitizarCelda(cargo || ''), new Date(), fotoId]);
+                  sanitizarCelda(cargo || ''), new Date(), fotoId, 'ACTIVO']);
   SpreadsheetApp.flush();
   return fotoId;
 }
@@ -351,6 +351,8 @@ function _buscarEmpleado(documento) {
   const datos = hoja.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
     if (String(datos[i][0]).trim() === doc) {
+      const estado = String(datos[i][5] || 'ACTIVO').trim().toUpperCase();
+      if (estado === 'INACTIVO') return { ok: false, error: 'Empleado inactivo. Contacta al administrador.' };
       return { ok: true, nombre: String(datos[i][1]).trim(), cargo: String(datos[i][2]).trim() };
     }
   }
@@ -508,7 +510,7 @@ function doPost(e) {
           return _respuestaJson({ ok: false, error: 'Ya existe una persona con ese documento' });
       }
       hojaPersonal.appendRow([sanitizarCelda(docNuevo), sanitizarCelda(datos.nombre),
-                               sanitizarCelda(datos.cargo), new Date(), '']);
+                               sanitizarCelda(datos.cargo), new Date(), '', 'ACTIVO']);
       SpreadsheetApp.flush();
       // Invalidar cache de personal kiosco
       CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
@@ -542,6 +544,42 @@ function doPost(e) {
       return _respuestaJson({ ok: false, error: 'Empleado no encontrado' });
     }
 
+    /* ── Activar personal (requiere sesión admin) ── */
+    if (accion === 'activarPersonal') {
+      const sv = _validarSesion(datos.token, ['admin']);
+      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const hoja  = obtenerOhCrearHojaPersonal();
+      const filas = hoja.getDataRange().getValues();
+      const doc   = String(datos.documento || '').trim();
+      for (let i = 1; i < filas.length; i++) {
+        if (String(filas[i][0]).trim() === doc) {
+          hoja.getRange(i + 1, 6).setValue('ACTIVO');
+          SpreadsheetApp.flush();
+          CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          return _respuestaJson({ ok: true });
+        }
+      }
+      return _respuestaJson({ ok: false, error: 'Empleado no encontrado' });
+    }
+
+    /* ── Inactivar personal (requiere sesión admin, conserva historial) ── */
+    if (accion === 'inactivarPersonal') {
+      const sv = _validarSesion(datos.token, ['admin']);
+      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const hoja  = obtenerOhCrearHojaPersonal();
+      const filas = hoja.getDataRange().getValues();
+      const doc   = String(datos.documento || '').trim();
+      for (let i = 1; i < filas.length; i++) {
+        if (String(filas[i][0]).trim() === doc) {
+          hoja.getRange(i + 1, 6).setValue('INACTIVO');
+          SpreadsheetApp.flush();
+          CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          return _respuestaJson({ ok: true });
+        }
+      }
+      return _respuestaJson({ ok: false, error: 'Empleado no encontrado' });
+    }
+
     /* ── Listar personal completo (requiere sesión admin) ── */
     if (accion === 'listarPersonal') {
       const sv = _validarSesion(datos.token, ['admin']);
@@ -550,9 +588,10 @@ function doPost(e) {
       const filas = hoja.getDataRange().getValues();
       const personal = [];
       for (let i = 1; i < filas.length; i++) {
-        const [doc, nombre, cargo] = filas[i];
+        const [doc, nombre, cargo, , , estado] = filas[i];
         if (doc && nombre) personal.push({
-          documento: String(doc).trim(), nombre: String(nombre).trim(), cargo: String(cargo || '').trim()
+          documento: String(doc).trim(), nombre: String(nombre).trim(),
+          cargo: String(cargo || '').trim(), estado: String(estado || 'ACTIVO').trim()
         });
       }
       return _respuestaJson({ ok: true, personal: personal });
@@ -664,6 +703,8 @@ function doPost(e) {
     if (accion === 'sincronizarPersonalKiosco') {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
+      if (datos.deviceId && String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+        return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
       _actualizarUltimaConexion(datos.deviceToken);
       // Cache del catálogo para no leer la hoja en cada arranque
       const cacheKey = 'PERSONAL_KIOSCO';
@@ -676,10 +717,11 @@ function doPost(e) {
         const filas = hoja.getDataRange().getValues();
         personal = [];
         for (let i = 1; i < filas.length; i++) {
-          const [doc, nombre, cargo] = filas[i];
-          if (doc && nombre) personal.push({
+          const [doc, nombre, cargo, , , estado] = filas[i];
+          const estadoStr = String(estado || 'ACTIVO').trim().toUpperCase();
+          if (doc && nombre && estadoStr !== 'INACTIVO') personal.push({
             documento: String(doc).trim(), nombre: String(nombre).trim(),
-            cargo: String(cargo || '').trim(), activo: true
+            cargo: String(cargo || '').trim()
           });
         }
         try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(personal), 300); } catch (e) {}
@@ -691,6 +733,8 @@ function doPost(e) {
     if (accion === 'marcasHoy') {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
+      if (datos.deviceId && String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+        return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
       const documento = String(datos.documento || '').trim();
       if (!documento) return _respuestaJson({ ok: false, error: 'documento requerido' });
       const hoy    = Utilities.formatDate(new Date(), 'America/Bogota', 'dd/MM/yyyy');
@@ -702,6 +746,10 @@ function doPost(e) {
     if (accion === 'marcar') {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
+
+      // Verificar que deviceId del payload corresponda al token (tarea 6)
+      if (datos.deviceId && String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+        return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
 
       const tipo = String(datos.tipo || '').trim();
       if (tipo !== 'Entrada' && tipo !== 'Salida')
@@ -720,25 +768,73 @@ function doPost(e) {
       const seqVal = _validarSecuencia(marcasDelDia, tipo);
       if (!seqVal.ok) return _respuestaJson({ ok: false, error: seqVal.error });
 
-      // Geocerca calculada en el backend (ignorar dentroGeocerca del frontend)
+      // Configuración del servidor (umbral facial, geocerca, finca)
+      const appCfg = (function() {
+        try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
+        catch (e) { return {}; }
+      })();
+
+      // GPS: distinguir ausente/inválido, fuera de geocerca, sin configuración (tarea 2)
       const lat = parseFloat(datos.lat);
       const lng = parseFloat(datos.lng);
-      let dentroGeocerca = false, distanciaMetros = null, sinConfigGeo = true;
-      if (!isNaN(lat) && !isNaN(lng)) {
+      const gpsValido = !isNaN(lat) && !isNaN(lng);
+      const geocercaConfigurada = !isNaN(parseFloat(appCfg.lat)) && !isNaN(parseFloat(appCfg.lng));
+      let dentroGeocerca = false, distanciaMetros = null;
+      let sinConfigGeo = !geocercaConfigurada;
+      let gpsAusente = false;
+
+      if (gpsValido && geocercaConfigurada) {
         const geo = _calcularGeocerca(lat, lng);
         dentroGeocerca  = geo.dentroGeocerca;
         distanciaMetros = geo.distancia;
         sinConfigGeo    = !!geo.sinConfig;
+      } else if (!gpsValido && geocercaConfigurada) {
+        // GPS ausente con geocerca configurada: tratar igual que fuera del predio
+        gpsAusente   = true;
+        sinConfigGeo = false;
       }
 
-      // REGLA GEOCERCA: si hay configuración de geocerca y el trabajador está fuera,
-      // exigir token de supervisor válido para permitir la marcación.
-      if (!dentroGeocerca && !sinConfigGeo) {
+      // REGLA GEOCERCA/GPS: si está fuera o sin GPS (y hay config), exigir supervisor
+      const esFueraGeo = !dentroGeocerca && !sinConfigGeo;
+      if (esFueraGeo) {
         const svGeo = _validarSesion(datos.supervisorToken, ['supervisor']);
         if (!svGeo.ok) {
           return _respuestaJson({
-            ok: false, fueraGeocerca: true, distanciaMetros: distanciaMetros,
-            error: 'Fuera de la geocerca. Se requiere autorización de supervisor para registrar.'
+            ok: false, fueraGeocerca: true, gpsAusente: gpsAusente,
+            distanciaMetros: distanciaMetros,
+            error: gpsAusente
+              ? 'GPS no disponible. Se requiere autorización de supervisor para registrar sin ubicación.'
+              : 'Fuera de la geocerca. Se requiere autorización de supervisor para registrar.'
+          });
+        }
+      }
+
+      // REGLA SIN BIOMETRÍA: siempre exige supervisor, independiente de geocerca (tarea 3)
+      if (datos.sinBiometria === true) {
+        const svBio = _validarSesion(datos.supervisorToken, ['supervisor']);
+        if (!svBio.ok) {
+          return _respuestaJson({
+            ok: false,
+            error: 'Marcación sin reconocimiento facial requiere autorización de supervisor. ' + svBio.error
+          });
+        }
+      }
+
+      // REGLA DISTANCIA FACIAL: validar contra umbral del servidor (tarea 4)
+      if (datos.sinBiometria !== true) {
+        const dist = datos.distanciaFacial;
+        if (dist == null || dist === '') {
+          return _respuestaJson({ ok: false, error: 'Se requiere reconocimiento facial para registrar.' });
+        }
+        const distNum = parseFloat(dist);
+        if (isNaN(distNum) || distNum < 0 || distNum > 1) {
+          return _respuestaJson({ ok: false, error: 'Valor de reconocimiento facial inválido.' });
+        }
+        const umbral = parseFloat(appCfg.umbral) || 0.6;
+        if (distNum > umbral) {
+          return _respuestaJson({
+            ok: false,
+            error: 'Reconocimiento facial no coincide con el registro (distancia: ' + distNum.toFixed(3) + ', umbral: ' + umbral + ').'
           });
         }
       }
@@ -746,20 +842,18 @@ function doPost(e) {
       // Nombre, cargo y finca vienen del backend, no del payload
       const nombre = empleado.nombre;
       const cargo  = empleado.cargo;
-      const appCfg = (function() {
-        try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
-        catch (e) { return {}; }
-      })();
-      const finca = appCfg.fincaNombre || dv.finca || '';
+      const finca  = appCfg.fincaNombre || dv.finca || '';
 
       // Clasificar autorización para auditoría
-      const esFueraGeo = !dentroGeocerca && !sinConfigGeo;
       let resultadoFacial;
-      if      (datos.sinBiometria && esFueraGeo) resultadoFacial = 'SUPERVISOR_BIO_GEO';
-      else if (datos.sinBiometria)               resultadoFacial = 'SUPERVISOR_BIO';
-      else if (esFueraGeo)                       resultadoFacial = 'SUPERVISOR_GEO';
-      else if (datos.distanciaFacial != null)    resultadoFacial = 'FACIAL';
-      else                                       resultadoFacial = 'SIN_BIOMETRIA';
+      if      (datos.sinBiometria && esFueraGeo && gpsAusente) resultadoFacial = 'SUPERVISOR_BIO_GPS_GEO';
+      else if (datos.sinBiometria && gpsAusente)               resultadoFacial = 'SUPERVISOR_BIO_GPS';
+      else if (datos.sinBiometria && esFueraGeo)               resultadoFacial = 'SUPERVISOR_BIO_GEO';
+      else if (datos.sinBiometria)                             resultadoFacial = 'SUPERVISOR_BIO';
+      else if (gpsAusente)                                     resultadoFacial = 'SUPERVISOR_GPS';
+      else if (esFueraGeo)                                     resultadoFacial = 'SUPERVISOR_GEO';
+      else if (datos.distanciaFacial != null)                  resultadoFacial = 'FACIAL';
+      else                                                     resultadoFacial = 'SIN_BIOMETRIA';
 
       const hoja = obtenerOhCrearHoja();
       hoja.appendRow([
@@ -769,9 +863,9 @@ function doPost(e) {
         sanitizarCelda(cargo),
         sanitizarCelda(finca),
         tipo,
-        isNaN(lat) ? '' : lat,
-        isNaN(lng) ? '' : lng,
-        dentroGeocerca ? 'SI' : 'NO',
+        gpsValido ? lat : '',
+        gpsValido ? lng : '',
+        dentroGeocerca ? 'SI' : (gpsAusente ? 'GPS_AUSENTE' : 'NO'),
         datos.distanciaFacial != null ? parseFloat(datos.distanciaFacial).toFixed(3) : '',
         ahoraServidor,
         sanitizarCelda(dv.deviceId),
