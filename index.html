@@ -341,11 +341,13 @@
     </div>
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Seguridad</div>
-      <div style="font-size:12px;color:var(--t2);background:var(--bg);border-radius:10px;padding:12px 14px;line-height:1.7;">
-        El PIN se configura en el servidor.<br>
-        Abre Google Apps Script y ejecuta:<br>
-        <code style="font-size:11px;color:var(--dg);background:var(--xl);padding:2px 6px;border-radius:5px;">setPin('XXXX')</code>
-      </div>
+      <div class="fl">PIN actual</div>
+      <input type="password" id="cfgPinActual" maxlength="8" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
+      <div class="fl" style="margin-top:10px;">PIN nuevo (dejar vacío para no cambiar)</div>
+      <input type="password" id="cfgPinNuevo" maxlength="8" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
+      <div class="fl" style="margin-top:10px;">Confirmar PIN nuevo</div>
+      <input type="password" id="cfgPinConf" maxlength="8" inputmode="numeric" placeholder="••••" class="fi" style="letter-spacing:8px;font-size:20px;text-align:center;">
+      <div style="font-size:11px;color:var(--t2);margin-top:6px;">El PIN actual permite guardar configuración en el servidor. Nunca se almacena en el dispositivo.</div>
     </div>
     <button class="btn-ok" id="btnGuardarConfig">Guardar configuración</button>
     <button class="btn-sec" id="btnCancelarConfig">Cancelar</button>

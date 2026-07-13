@@ -16,6 +16,22 @@
 const SHEET_ID = "1ZjIJ_AHty-ltlFDJP_0MV4mIXAhs1oNKhKcYWNMlbC8";
 const HOJA_MARCACIONES = "Marcaciones";
 
+/* ── Helpers internos ── */
+
+function _respuestaJson(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// Verifica que el hash recibido coincida con PIN_HASH en PropertiesService.
+// Devuelve { ok: boolean, error?: string }
+function _verificarPin(hashRecibido) {
+  const h = String(hashRecibido || '').toLowerCase().trim();
+  if (!h || h.length !== 64) return { ok: false, error: 'hash inválido' };
+  const guardado = (PropertiesService.getScriptProperties().getProperty('PIN_HASH') || '').toLowerCase().trim();
+  if (!guardado) return { ok: false, error: 'PIN no configurado en servidor' };
+  return { ok: h === guardado };
+}
+
 // Evita inyección de fórmulas: si el valor empieza con =,+,-,@ o tab,
 // Sheets lo interpretaría como fórmula al mostrarlo.
 function sanitizarCelda(valor) {
@@ -132,21 +148,27 @@ function doPost(e) {
     // El PIN en claro NUNCA viaja por la red ni se almacena en el Sheet.
     // Para configurar el hash inicial: llamar setPin(pin) desde el editor de Apps Script.
     if (datos.accion === 'validarPin') {
-      const hashRecibido = String(datos.hash || '').toLowerCase().trim();
-      if (!hashRecibido || hashRecibido.length !== 64) {
-        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'hash inválido' }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      const props = PropertiesService.getScriptProperties();
-      const hashGuardado = (props.getProperty('PIN_HASH') || '').toLowerCase().trim();
-      if (!hashGuardado) {
-        // Sin PIN configurado en el backend: rechazar hasta que el admin lo configure
-        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'PIN no configurado en servidor' }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      const coincide = hashRecibido === hashGuardado;
-      return ContentService.createTextOutput(JSON.stringify({ ok: coincide }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return _respuestaJson(_verificarPin(datos.hash));
+    }
+
+    if (datos.accion === 'cambiarPin') {
+      const vActual = _verificarPin(datos.hashActual);
+      if (!vActual.ok) return _respuestaJson({ ok: false, error: vActual.error || 'PIN actual incorrecto' });
+      const hashNuevo = String(datos.hashNuevo || '').toLowerCase().trim();
+      if (!hashNuevo || hashNuevo.length !== 64) return _respuestaJson({ ok: false, error: 'hash inválido' });
+      PropertiesService.getScriptProperties().setProperty('PIN_HASH', hashNuevo);
+      return _respuestaJson({ ok: true });
+    }
+
+    if (datos.accion === 'guardarConfig') {
+      const v = _verificarPin(datos.hash);
+      if (!v.ok) return _respuestaJson({ ok: false, error: v.error || 'PIN incorrecto' });
+      const cfg = datos.config || {};
+      const permitidos = ['empresa', 'fincaNombre', 'fincaId', 'lat', 'lng', 'radio', 'entrada', 'salida', 'salidaSab', 'umbral'];
+      const seguro = {};
+      permitidos.forEach(k => { if (cfg[k] != null) seguro[k] = cfg[k]; });
+      PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));
+      return _respuestaJson({ ok: true });
     }
 
     if (datos.accion === 'registrarPersonal') {
@@ -246,6 +268,14 @@ function doGet(e) {
     }
     return ContentService.createTextOutput(JSON.stringify({ ok: true, marcas: marcas }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (accion === 'obtenerConfig') {
+    const props = PropertiesService.getScriptProperties();
+    const raw = props.getProperty('APP_CONFIG');
+    let config = {};
+    try { if (raw) config = JSON.parse(raw); } catch (e) {}
+    return _respuestaJson({ ok: true, config: config });
   }
 
   if (accion === 'listarPersonal') {
@@ -434,15 +464,9 @@ function calcularResumenDiario() {
 }
 
 /**
- * Utilitario para configurar el PIN del administrador desde el editor de Apps Script.
- * Ejecutar UNA SOLA VEZ después de desplegar, con el PIN deseado.
- * El PIN NUNCA se guarda en claro: se almacena solo el hash SHA-256(pin).
- *
- * Uso:
- *   1. En Apps Script, abrir el editor y ejecutar esta función manualmente.
- *      Ejemplo: setPin('1234')
- *   2. El hash queda en PropertiesService del script (no en el Sheet).
- *   3. El frontend envía SHA-256(pin) al endpoint validarPin y este compara.
+ * Configura el PIN del administrador desde el editor de Apps Script.
+ * Ejecutar UNA SOLA VEZ tras desplegar. El PIN en claro nunca se almacena.
+ * Ejemplo: setPin('1234')
  */
 function setPin(pin) {
   if (!pin || !/^\d{4,8}$/.test(String(pin))) {
@@ -453,4 +477,18 @@ function setPin(pin) {
     .join('');
   PropertiesService.getScriptProperties().setProperty('PIN_HASH', hash);
   Logger.log('PIN configurado. Hash: ' + hash);
+}
+
+/**
+ * Configura los parámetros de la empresa desde el editor de Apps Script.
+ * Estos valores se sincronizan al frontend al arrancar la app.
+ * Ejemplo:
+ *   setConfig({ empresa:'Mi Empresa', fincaNombre:'Sede Central', lat:4.710989, lng:-74.072092, radio:200 })
+ */
+function setConfig(config) {
+  const permitidos = ['empresa', 'fincaNombre', 'fincaId', 'lat', 'lng', 'radio', 'entrada', 'salida', 'salidaSab', 'umbral'];
+  const seguro = {};
+  permitidos.forEach(k => { if (config[k] != null) seguro[k] = config[k]; });
+  PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));
+  Logger.log('Configuración guardada: ' + JSON.stringify(seguro));
 }

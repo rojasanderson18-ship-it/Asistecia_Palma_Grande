@@ -133,8 +133,30 @@ async function cargarPersonalDesdeBackend() {
   }
 }
 
+/* ── Sincronización de configuración desde backend ── */
+// El backend es la fuente oficial. LocalStorage es solo caché para modo offline.
+// gsUrl no se sincroniza desde backend (necesario para conectar al backend).
+async function sincronizarConfigDesdeBackend() {
+  if (!CONFIG.GS_URL) return;
+  try {
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.ok && d.config && Object.keys(d.config).length) {
+      const prev = getCfgGuardada() || {};
+      // Backend sobreescribe campos configurables; gsUrl se preserva (solo local)
+      const merged = { ...prev, ...d.config };
+      localStorage.setItem('app_config', JSON.stringify(merged));
+      aplicarConfig(merged);
+      aplicarEmpresaUI();
+    }
+  } catch {
+    // Sin conexión: la caché local permanece activa
+  }
+}
+
 /* ── Aplicar al iniciar ── */
 aplicarConfig(getCfgGuardada());
 
-// aplicarEmpresaUI() se llama después de que el DOM está listo, desde app.js
+// aplicarEmpresaUI() y sincronizarConfigDesdeBackend() se llaman desde app.js
 // cargarPersonalDesdeBackend() se llama desde app.js tras DOMContentLoaded
