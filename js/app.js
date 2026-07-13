@@ -91,6 +91,8 @@ document.getElementById('teclado').addEventListener('click', e => {
   if (k === 'C') docInput.value = '';
   else if (k === '⌫') docInput.value = docInput.value.slice(0, -1);
   else if (docInput.value.length < 15) docInput.value += k;
+  const _dv = document.getElementById('docVal');
+  if (_dv) { _dv.classList.remove('doc-pop'); void _dv.offsetWidth; _dv.classList.add('doc-pop'); }
   procesarDoc(docInput.value);
 });
 

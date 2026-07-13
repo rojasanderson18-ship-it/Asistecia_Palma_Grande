@@ -136,8 +136,8 @@ body {
   border-bottom: 1px solid var(--k-border);
 }
 .hdr-logo {
-  width: 70px; height: 70px;
-  border-radius: 17px;
+  width: 91px; height: 91px;
+  border-radius: 22px;
   flex-shrink: 0;
   background: var(--g700);
   display: flex;
@@ -148,7 +148,7 @@ body {
   user-select: none;
   box-shadow: var(--sh-green);
 }
-.hdr-logo svg { width: 38px; height: 38px; }
+.hdr-logo svg { width: 50px; height: 50px; }
 .hdr-text { flex: 1; min-width: 0; }
 .hdr-empresa {
   font-size: 20px;
@@ -244,7 +244,7 @@ body {
 /* ── RELOJ KIOSCO ── */
 .kiosco-clock {
   text-align: center;
-  padding: 28px 0 20px;
+  padding: 16px 0 10px;
 }
 .kiosco-time {
   font-size: 72px;
@@ -293,22 +293,25 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 18px;
-  min-height: 64px;
+  padding: 18px 20px;
+  min-height: 72px;
+  border-bottom: 1px solid var(--k-border);
+  background: rgba(255,255,255,0.03);
 }
 .doc-number {
   flex: 1;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--k-text);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   line-height: 1;
 }
 .doc-number.ph {
   font-size: 15px;
   font-weight: 400;
   color: var(--k-muted);
+  letter-spacing: 0;
 }
 .doc-chk {
   width: 34px; height: 34px;
@@ -335,14 +338,14 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  padding: 16px;
+  padding: 14px 14px 16px;
 }
 .key {
-  aspect-ratio: 1.4 / 1;
+  aspect-ratio: 1.3 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--k-text);
   background: rgba(255,255,255,0.06);
@@ -356,13 +359,14 @@ body {
 }
 .key:active { background: rgba(255,255,255,0.12); transform: scale(0.96); }
 .key.del {
-  background: rgba(239,68,68,0.10);
-  border-color: rgba(239,68,68,0.15);
-  color: #F87171;
-  font-size: 16px;
+  background: rgba(220,38,38,0.18);
+  border-color: rgba(220,38,38,0.32);
+  color: #FF6B6B;
+  font-size: 18px;
+  font-weight: 700;
 }
-.key.del:active { background: rgba(239,68,68,0.20); }
-.key[data-k="C"] { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+.key.del:active { background: rgba(220,38,38,0.30); }
+.key[data-k="C"] { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; }
 
 /* ── ST-VAL (usado en sys-detail) ── */
 .st-val {
@@ -1670,8 +1674,8 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 .time-pick .tp-ampm { font-size: 12px; font-weight: 700; color: var(--g500); align-self: center; letter-spacing: 0.04em; margin-left: 2px; }
 
 /* ══ MICRO-INTERACCIONES ══ */
-/* Teclas: respuesta táctil más pronunciada */
-.key:active { background: rgba(255,255,255,0.14); transform: scale(0.94); transition: transform 0.08s; }
+/* Teclas: respuesta táctil pronunciada */
+.key:active { background: rgba(255,255,255,0.14); transform: scale(0.93); transition: transform 0.08s; }
 /* Botón principal */
 .btn-ok { transition: background 0.15s, box-shadow 0.15s, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .btn-ok:active { transform: scale(0.96); }
@@ -1800,10 +1804,18 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ══ HEADER: ajuste para logo más grande en phones pequeños ══ */
+/* ── Microanimación al teclear documento ── */
+@keyframes docPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.doc-pop { animation: docPop 0.18s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ══ HEADER: ajuste logo en phones pequeños ══ */
 @media (max-width: 360px) {
-  .hdr-logo { width: 56px; height: 56px; border-radius: 14px; }
-  .hdr-logo svg { width: 30px; height: 30px; }
+  .hdr-logo { width: 70px; height: 70px; border-radius: 17px; }
+  .hdr-logo svg { width: 38px; height: 38px; }
   .hdr-empresa { font-size: 16px; }
 }
 
@@ -1816,6 +1828,8 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
   .dash-cards  { gap: 12px; }
   .dash-card   { padding: 20px 12px 16px; }
   .rep-kpi-val { font-size: 36px; }
+  .hdr-logo { width: 100px; height: 100px; border-radius: 24px; }
+  .hdr-logo svg { width: 55px; height: 55px; }
 }
 
 /* ══════════════════════════════════════════════════

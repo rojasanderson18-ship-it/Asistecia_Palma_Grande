@@ -108,7 +108,10 @@ function aplicarEmpresaUI() {
   const finca = (cfg && cfg.fincaNombre) ? cfg.fincaNombre : CONFIG.FINCA.nombre;
   const empresa = (cfg && cfg.empresa) ? cfg.empresa : CONFIG.EMPRESA.nombre;
   const el = document.getElementById('nombreFinca');
-  if (el) el.textContent = finca;
+  const sep = document.querySelector('.hdr-sub-sep');
+  const isDefault = !finca || finca === 'Sin configurar';
+  if (el) { el.textContent = isDefault ? '' : finca; el.style.display = isDefault ? 'none' : ''; }
+  if (sep) sep.style.display = isDefault ? 'none' : '';
   const hdrEmpresa = document.getElementById('hdrEmpresa');
   if (hdrEmpresa) hdrEmpresa.textContent = empresa.toUpperCase();
 }
