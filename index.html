@@ -134,7 +134,7 @@
         <video id="video" autoplay muted playsinline></video>
         <canvas id="overlay"></canvas>
         <div class="cam-scan" id="camScan"></div>
-        <div class="cam-marco" id="camMarco"><div class="cam-marco-b"></div></div>
+        <div class="cam-marco" id="camMarco"><div class="cam-marco-b"><span class="cam-marco-bl"></span><span class="cam-marco-br"></span></div></div>
         <div class="cam-placeholder" id="camPlaceholder" style="display:flex;">
           <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           <p>Activando cámara…</p>
@@ -459,26 +459,32 @@
         <div class="rep-kpi">
           <div class="rep-kpi-val ok" id="repCntPresentes">0</div>
           <div class="rep-kpi-lbl">Presentes</div>
+          <div class="rep-kpi-bar"><div class="rep-kpi-bar-fill ok" style="width:0%"></div></div>
         </div>
         <div class="rep-kpi">
           <div class="rep-kpi-val ok" id="repCntCompletas">0</div>
           <div class="rep-kpi-lbl">Jornadas completas</div>
+          <div class="rep-kpi-bar"><div class="rep-kpi-bar-fill ok" style="width:0%"></div></div>
         </div>
         <div class="rep-kpi">
           <div class="rep-kpi-val warn" id="repCntTarde">0</div>
           <div class="rep-kpi-lbl">Llegadas tarde</div>
+          <div class="rep-kpi-bar"><div class="rep-kpi-bar-fill warn" style="width:0%"></div></div>
         </div>
         <div class="rep-kpi">
           <div class="rep-kpi-val warn" id="repCntTemprano">0</div>
           <div class="rep-kpi-lbl">Salidas anticipadas</div>
+          <div class="rep-kpi-bar"><div class="rep-kpi-bar-fill warn" style="width:0%"></div></div>
         </div>
         <div class="rep-kpi">
           <div class="rep-kpi-val muted" id="repCntPendientes">0</div>
           <div class="rep-kpi-lbl">Pendientes sync</div>
+          <div class="rep-kpi-bar"><div class="rep-kpi-bar-fill muted" style="width:0%"></div></div>
         </div>
         <div class="rep-kpi">
           <div class="rep-kpi-val err" id="repCntExcepciones">0</div>
           <div class="rep-kpi-lbl">Excepciones</div>
+          <div class="rep-kpi-bar"><div class="rep-kpi-bar-fill err" style="width:0%"></div></div>
         </div>
       </div>
       <!-- Deuda como dato secundario -->
