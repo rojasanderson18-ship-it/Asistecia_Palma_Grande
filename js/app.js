@@ -1,5 +1,16 @@
 /* ── MÓDULO: App — inicialización ── */
 
+/* ── Reloj kiosco ── */
+function _actualizarReloj() {
+  const now = new Date();
+  const te = document.getElementById('kioscoTime');
+  const de = document.getElementById('kioscoDate');
+  if (te) te.textContent = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (de) de.textContent = now.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+_actualizarReloj();
+setInterval(_actualizarReloj, 30000);
+
 /* ── Arranque: sincronizar config y personal desde backend ── */
 aplicarEmpresaUI();
 setTimeout(sincronizarConfigDesdeBackend, 800);
