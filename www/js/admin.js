@@ -29,7 +29,8 @@ function abrirPinScreen(dest) {
 document.getElementById('btnPinCancelar').onclick = () => mostrarPantalla('pantallaMarcacion');
 document.getElementById('btnPinConfirmar').onclick = () => {
   const val = document.getElementById('pinInput').value;
-  if (validatePin(val)) {
+  // Si no hay PIN configurado, acceso libre (primera configuración)
+  if (!hayPinConfigurado() || validatePin(val)) {
     if (_pinDest === 'enrolar') {
       _abrirEnrolar();
     } else if (_pinDest === 'agregar') {
@@ -38,7 +39,9 @@ document.getElementById('btnPinConfirmar').onclick = () => {
       mostrarPantalla('pantallaMenu');
     }
   } else {
-    alert('PIN incorrecto');
+    const errEl = document.getElementById('pinErr');
+    if (errEl) { errEl.textContent = 'PIN incorrecto'; errEl.style.display = 'block'; setTimeout(() => { errEl.textContent = ''; errEl.style.display = 'none'; }, 2000); }
+    else alert('PIN incorrecto');
   }
 };
 document.getElementById('pinInput').addEventListener('keydown', e => {
@@ -205,9 +208,13 @@ function abrirConfig() {
     if (!document.getElementById(id).querySelector('select')) buildTimePick(id);
   });
   const cfg = getCfgGuardada() || {};
-  document.getElementById('cfgNombreFinca').value = cfg.nombreFinca || CONFIG.FINCA.nombre;
-  document.getElementById('cfgLat').value = cfg.lat != null ? cfg.lat : CONFIG.FINCA.lat;
-  document.getElementById('cfgLng').value = cfg.lng != null ? cfg.lng : CONFIG.FINCA.lng;
+  const gsUrlEl = document.getElementById('cfgGsUrl');
+  if (gsUrlEl) gsUrlEl.value = cfg.gsUrl || '';
+  const empresaEl = document.getElementById('cfgEmpresa');
+  if (empresaEl) empresaEl.value = cfg.empresa || CONFIG.EMPRESA.nombre;
+  document.getElementById('cfgNombreFinca').value = cfg.fincaNombre || CONFIG.FINCA.nombre;
+  document.getElementById('cfgLat').value = cfg.lat != null ? cfg.lat : '';
+  document.getElementById('cfgLng').value = cfg.lng != null ? cfg.lng : '';
   document.getElementById('cfgRadio').value = cfg.radio != null ? cfg.radio : CONFIG.FINCA.radioMetros;
   setTimePick('cfgEntrada', cfg.entrada != null ? cfg.entrada : CONFIG.HORARIO.entrada);
   setTimePick('cfgSalida', cfg.salida != null ? cfg.salida : CONFIG.HORARIO.salida);
@@ -237,30 +244,43 @@ document.getElementById('btnGuardarConfig').addEventListener('click', () => {
   const pinNuevo = document.getElementById('cfgPin').value;
   const pinConf = document.getElementById('cfgPinConf').value;
   if (pinNuevo) {
-    if (!/^\d{4}$/.test(pinNuevo)) { alert('El PIN debe ser exactamente 4 dígitos'); return; }
+    if (!/^\d{4,8}$/.test(pinNuevo)) { alert('El PIN debe tener entre 4 y 8 dígitos'); return; }
     if (pinNuevo !== pinConf) { alert('Los PINs no coinciden'); return; }
   }
-  const nombre = document.getElementById('cfgNombreFinca').value.trim();
+  const gsUrlVal = (document.getElementById('cfgGsUrl') || {}).value || '';
+  const empresaVal = (document.getElementById('cfgEmpresa') || {}).value || '';
+  const fincaNombre = document.getElementById('cfgNombreFinca').value.trim();
   const lat = parseFloat(document.getElementById('cfgLat').value);
   const lng = parseFloat(document.getElementById('cfgLng').value);
   const radio = parseInt(document.getElementById('cfgRadio').value);
-  if (!nombre) { alert('Escribe el nombre de la finca'); return; }
+  if (!fincaNombre) { alert('Escribe el nombre de la finca'); return; }
   if (isNaN(lat) || isNaN(lng)) { alert('Las coordenadas no son válidas'); return; }
   if (isNaN(radio) || radio < 50) { alert('El radio mínimo es 50 metros'); return; }
+  const prev = getCfgGuardada() || {};
   const cfg = {
-    nombreFinca: nombre, lat, lng, radio,
+    ...prev,
+    gsUrl: gsUrlVal.trim() || prev.gsUrl || '',
+    empresa: empresaVal.trim() || prev.empresa || '',
+    fincaNombre, lat, lng, radio,
     entrada: getTimePick('cfgEntrada'),
     salida: getTimePick('cfgSalida'),
     salidaSab: getTimePick('cfgSalidaSab'),
-    umbral: parseFloat(document.getElementById('cfgUmbral').value)
+    umbral: parseFloat(document.getElementById('cfgUmbral').value),
   };
-  if (pinNuevo) cfg.pin = pinNuevo;
-  else { const prev = getCfgGuardada(); if (prev && prev.pin) cfg.pin = prev.pin; }
+  // Eliminar campos legacy y sensibles que no deben estar en el objeto
+  delete cfg.nombreFinca; // renombrado a fincaNombre
+  // PIN: usar auth.js para guardar con hash
+  if (pinNuevo) {
+    guardarPin(pinNuevo); // persiste en localStorage via auth.js
+  }
+  // Guardar todo excepto pin en claro
+  delete cfg.pin;
   localStorage.setItem('app_config', JSON.stringify(cfg));
   aplicarConfig(cfg);
+  aplicarEmpresaUI();
   mostrarPantalla('pantallaMenu');
   showToast('✓ Configuración guardada');
-  setTimeout(() => chkGps(), 500);
+  setTimeout(() => { chkGps(); cargarPersonalDesdeBackend(); }, 500);
 });
 document.getElementById('btnVolverDesdeConfig').addEventListener('click', () => mostrarPantalla('pantallaMenu'));
 document.getElementById('btnCancelarConfig').addEventListener('click', () => mostrarPantalla('pantallaMenu'));

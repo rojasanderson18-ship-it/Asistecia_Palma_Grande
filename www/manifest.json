@@ -1,6 +1,6 @@
 {
-  "name": "Control de Asistencia - Palma Grande S.A.S.",
-  "short_name": "Asistencia Palma",
+  "name": "Control de Asistencia Biométrica",
+  "short_name": "Asistencia",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
