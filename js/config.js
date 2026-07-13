@@ -26,13 +26,13 @@ const CONFIG = {
   GS_URL: '',
 
   EMPRESA: {
-    nombre: 'Mi Empresa',
-    nombreCorto: 'EMPRESA',
+    nombre: '',
+    nombreCorto: '',
   },
 
   FINCA: {
     id: 1,
-    nombre: 'Sin configurar',
+    nombre: '',
     lat: 0,
     lng: 0,
     radioMetros: 200,
@@ -109,11 +109,24 @@ function aplicarEmpresaUI() {
   const empresa = (cfg && cfg.empresa) ? cfg.empresa : CONFIG.EMPRESA.nombre;
   const el = document.getElementById('nombreFinca');
   const sep = document.querySelector('.hdr-sub-sep');
-  const isDefault = !finca || finca === 'Sin configurar';
-  if (el) { el.textContent = isDefault ? '' : finca; el.style.display = isDefault ? 'none' : ''; }
-  if (sep) sep.style.display = isDefault ? 'none' : '';
+  const hasF = !!finca;
+  if (el) { el.textContent = hasF ? finca : ''; el.style.display = hasF ? '' : 'none'; }
+  if (sep) sep.style.display = hasF ? '' : 'none';
   const hdrEmpresa = document.getElementById('hdrEmpresa');
-  if (hdrEmpresa) hdrEmpresa.textContent = empresa.toUpperCase();
+  if (hdrEmpresa) hdrEmpresa.textContent = empresa ? empresa.toUpperCase() : '';
+}
+
+/* ── Validación de configuración completa ── */
+function isAppConfigured() {
+  const cfg = getCfgGuardada();
+  if (!cfg) return false;
+  const gsUrl = cfg.gsUrl || '';
+  if (!gsUrl || !gsUrl.startsWith('https://')) return false;
+  if (!cfg.empresa) return false;
+  if (!cfg.fincaNombre) return false;
+  if (!cfg.lat || !cfg.lng) return false;
+  if (!localStorage.getItem('device_token')) return false;
+  return true;
 }
 
 /* ── Carga de personal desde backend ── */

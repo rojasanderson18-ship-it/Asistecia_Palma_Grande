@@ -2056,3 +2056,79 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 
 #importPreview { padding: 0 16px; }
 #btnConfirmarImport { margin-top: 16px; }
+
+/* ── Setup overlay (configuración inicial) ── */
+#setupOverlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: #0C1410; display: none;
+  align-items: center; justify-content: center;
+  padding: 24px 16px;
+}
+.setup-panel {
+  display: flex; flex-direction: column; align-items: center;
+  width: 100%; max-width: 420px; gap: 0;
+}
+.setup-device-ico {
+  width: 80px; height: 80px; border-radius: 20px;
+  background: rgba(26,122,74,0.12); border: 2px solid rgba(26,122,74,0.25);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+}
+.setup-tit {
+  font-size: 22px; font-weight: 700; color: #F0F4F1;
+  text-align: center; margin: 0 0 10px; letter-spacing: -.3px;
+}
+.setup-sub {
+  font-size: 14px; color: #7A9485; text-align: center;
+  margin: 0 0 32px; line-height: 1.55; max-width: 320px;
+}
+.setup-back-btn {
+  background: none; border: none; color: #7A9485;
+  font-size: 13px; cursor: pointer; padding: 8px 0 0;
+  text-decoration: underline; align-self: flex-start;
+}
+.setup-back-btn:hover { color: #F0F4F1; }
+.setup-field-wrap {
+  width: 100%; margin-bottom: 12px;
+}
+.setup-field-wrap label {
+  display: block; font-size: 11px; font-weight: 700;
+  color: #7A9485; text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.setup-url-input {
+  width: 100%; box-sizing: border-box;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: #F0F4F1; font-size: 14px;
+  padding: 12px 14px; outline: none; font-family: inherit;
+  transition: border-color .15s;
+}
+.setup-url-input:focus { border-color: #1A7A4A; }
+.setup-url-input::placeholder { color: #4A6458; }
+.setup-err {
+  font-size: 12px; color: #FF6B6B; margin: 6px 0 0;
+  padding: 8px 12px; background: rgba(220,38,38,0.1);
+  border-radius: 8px; border: 1px solid rgba(220,38,38,0.2);
+}
+.setup-steps {
+  width: 100%; display: flex; flex-direction: column;
+  gap: 12px; margin-bottom: 28px;
+}
+.setup-step-item {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.04); border-radius: 10px;
+  padding: 12px 14px;
+}
+.setup-step-item span:last-child {
+  font-size: 14px; color: #B0C8BC;
+}
+.ssi-ico {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); color: #7A9485;
+}
+.ssi-ico.ok  { background: rgba(26,122,74,0.2); color: #4ADE80; }
+.ssi-ico.err { background: rgba(220,38,38,0.15); color: #FF6B6B; }
+.ssi-ico.run { background: rgba(255,193,7,0.15); color: #FFC107; }
+.ssi-ico.pending { background: rgba(255,255,255,0.06); color: #4A6458; }

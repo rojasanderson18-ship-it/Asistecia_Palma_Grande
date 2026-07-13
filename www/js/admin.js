@@ -42,7 +42,9 @@ document.getElementById('btnPinConfirmar').onclick = async () => {
   btn.disabled = false;
   if (result.ok) {
     cargarPersonalDesdeBackend();
-    if (_pinDest === 'enrolar') {
+    if (_pinDest === 'setup') {
+      _ejecutarSetup();
+    } else if (_pinDest === 'enrolar') {
       _abrirEnrolar();
     } else if (_pinDest === 'agregar') {
       _abrirAgregarPersonal();
@@ -847,4 +849,138 @@ document.getElementById('btnConfirmarImport').addEventListener('click', async ()
   btn.disabled = false;
   showToast(`✓ ${ok} importado${ok!==1?'s':''} ${err ? '· ' + err + ' error' + (err!==1?'es':'') : ''}`);
   mostrarPantalla('pantallaPersonal'); renderPersonalList();
+});
+
+/* ══════════════════════════════════════════
+   MÓDULO: PRIMERA CONFIGURACIÓN (SETUP)
+══════════════════════════════════════════ */
+
+function _setupShowPanel(n) {
+  [1, 2, 3].forEach(i => {
+    const p = document.getElementById('setupPanel' + i);
+    if (p) p.style.display = (i === n) ? 'flex' : 'none';
+  });
+}
+
+function _setupStepEstado(icoId, estado) {
+  const el = document.getElementById(icoId);
+  if (!el) return;
+  if (estado === 'ok')      { el.textContent = '✓'; el.className = 'ssi-ico ok'; }
+  else if (estado === 'err') { el.textContent = '✗'; el.className = 'ssi-ico err'; }
+  else if (estado === 'run') { el.textContent = '⏳'; el.className = 'ssi-ico run'; }
+  else                       { el.textContent = '○'; el.className = 'ssi-ico pending'; }
+}
+
+async function _ejecutarSetup() {
+  const overlay = document.getElementById('setupOverlay');
+  if (overlay) overlay.style.display = 'flex';
+  _setupShowPanel(3);
+
+  const errEl = document.getElementById('setupErrMsg');
+  const reintBtn = document.getElementById('btnSetupReintentar');
+  if (errEl) errEl.style.display = 'none';
+  if (reintBtn) reintBtn.style.display = 'none';
+
+  function fallar(msg) {
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    if (reintBtn) reintBtn.style.display = '';
+    const tit = document.getElementById('setupPanel3Tit');
+    const sub = document.getElementById('setupPanel3Sub');
+    if (tit) tit.textContent = 'Error al configurar';
+    if (sub) sub.textContent = 'Corrígelo e intenta de nuevo.';
+  }
+
+  // Paso 1 + 2: obtener config del servidor
+  _setupStepEstado('sIco1', 'run');
+  let cfgData;
+  try {
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d || !d.ok || !d.config) throw new Error(d?.error || 'Respuesta inválida del servidor');
+    cfgData = d.config;
+    _setupStepEstado('sIco1', 'ok');
+  } catch (e) {
+    _setupStepEstado('sIco1', 'err');
+    fallar('No se pudo conectar al servidor: ' + e.message);
+    return;
+  }
+
+  _setupStepEstado('sIco2', 'run');
+  try {
+    if (!cfgData.empresa) throw new Error('El servidor no devolvió el nombre de la empresa');
+    if (!cfgData.fincaNombre) throw new Error('El servidor no devolvió el nombre de la finca');
+    const prev = getCfgGuardada() || {};
+    const merged = { ...prev, ...cfgData, gsUrl: CONFIG.GS_URL };
+    localStorage.setItem('app_config', JSON.stringify(merged));
+    aplicarConfig(merged);
+    aplicarEmpresaUI();
+    _setupStepEstado('sIco2', 'ok');
+  } catch (e) {
+    _setupStepEstado('sIco2', 'err');
+    fallar('Configuración incompleta: ' + e.message);
+    return;
+  }
+
+  // Paso 3: autorizar dispositivo
+  _setupStepEstado('sIco3', 'run');
+  const authR = await autorizarDispositivo('Kiosco');
+  if (!authR.ok) {
+    _setupStepEstado('sIco3', 'err');
+    fallar('No se pudo autorizar el dispositivo: ' + (authR.error || 'Error desconocido'));
+    return;
+  }
+  _setupStepEstado('sIco3', 'ok');
+
+  // Paso 4: sincronizar personal
+  _setupStepEstado('sIco4', 'run');
+  try {
+    await cargarPersonalDesdeBackend();
+  } catch { /* No crítico */ }
+  _setupStepEstado('sIco4', 'ok');
+
+  // Éxito
+  const tit = document.getElementById('setupPanel3Tit');
+  const sub = document.getElementById('setupPanel3Sub');
+  if (tit) tit.textContent = '¡Dispositivo configurado!';
+  if (sub) sub.textContent = 'El kiosco está listo para registrar asistencia.';
+
+  setTimeout(() => {
+    document.getElementById('setupOverlay').style.display = 'none';
+    mostrarPantalla('pantallaMarcacion');
+    setTimeout(sincronizarConfigDesdeBackend, 800);
+  }, 1400);
+}
+
+/* ── Event listeners: setup ── */
+document.getElementById('btnSetupComenzar').addEventListener('click', () => _setupShowPanel(2));
+
+document.getElementById('btnSetupAtras').addEventListener('click', () => _setupShowPanel(1));
+
+document.getElementById('btnSetupContinuar').addEventListener('click', () => {
+  const urlInput = document.getElementById('setupGsUrl');
+  const errEl = document.getElementById('setupUrlErr');
+  const url = (urlInput ? urlInput.value : '').trim();
+  if (!url || !url.startsWith('https://')) {
+    if (errEl) { errEl.textContent = 'Ingresa una URL válida (debe empezar con https://)'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  CONFIG.GS_URL = url;
+  // Guardar URL parcialmente para que el PIN pueda conectarse
+  const prev = getCfgGuardada() || {};
+  localStorage.setItem('app_config', JSON.stringify({ ...prev, gsUrl: url }));
+  // Ocultar overlay, abrir PIN
+  document.getElementById('setupOverlay').style.display = 'none';
+  abrirPinScreen('setup');
+});
+
+document.getElementById('btnSetupReintentar').addEventListener('click', () => {
+  // Resetear íconos
+  ['sIco1','sIco2','sIco3','sIco4'].forEach(id => _setupStepEstado(id, 'pending'));
+  document.getElementById('setupPanel3Tit').textContent = 'Configurando dispositivo…';
+  document.getElementById('setupPanel3Sub').textContent = 'No cierres esta pantalla.';
+  // Volver a panel 2 para que corrija la URL o reintente con nuevo PIN
+  document.getElementById('setupOverlay').style.display = 'flex';
+  _setupShowPanel(2);
 });

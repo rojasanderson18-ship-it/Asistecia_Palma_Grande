@@ -65,10 +65,14 @@ function mostrarBtnSupervisor(visible) {
 }
 window._mostrarBtnSupervisor = mostrarBtnSupervisor;
 
-/* ── Arranque: sincronizar config y personal desde backend ── */
+/* ── Arranque: configuración inicial o kiosco normal ── */
 aplicarEmpresaUI();
-setTimeout(sincronizarConfigDesdeBackend, 800);
-setTimeout(cargarPersonalDesdeBackend, 1500);
+if (!isAppConfigured()) {
+  document.getElementById('setupOverlay').style.display = 'flex';
+} else {
+  setTimeout(sincronizarConfigDesdeBackend, 800);
+  setTimeout(cargarPersonalDesdeBackend, 1500);
+}
 
 /* ── 5-TAP en logo → Admin ── */
 let _tapCount = 0, _tapTimer = null;
