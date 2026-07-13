@@ -703,45 +703,63 @@ function doPost(e) {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
 
-      // Validar tipo antes de cualquier operación costosa
       const tipo = String(datos.tipo || '').trim();
       if (tipo !== 'Entrada' && tipo !== 'Salida')
         return _respuestaJson({ ok: false, error: 'Tipo inválido. Solo se acepta Entrada o Salida.' });
 
-      // Validar que el documento exista en Personal
       const documento = String(datos.documento || '').trim();
       const empleado  = _buscarEmpleado(documento);
       if (!empleado.ok) return _respuestaJson({ ok: false, error: empleado.error });
 
-      // Fecha y hora del SERVIDOR (no del cliente)
+      // Fecha y hora del SERVIDOR (nunca del cliente)
       const ahoraServidor = new Date();
-      const hoyStr = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'dd/MM/yyyy');
+      const hoyStr  = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'dd/MM/yyyy');
       const horaStr = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'HH:mm:ss');
 
-      // Verificar secuencia de marcaciones del día
-      const marcasHoy = _obtenerMarcasDelDia(documento, hoyStr);
-      const sv = _validarSecuencia(marcasHoy, tipo);
-      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const marcasDelDia = _obtenerMarcasDelDia(documento, hoyStr);
+      const seqVal = _validarSecuencia(marcasDelDia, tipo);
+      if (!seqVal.ok) return _respuestaJson({ ok: false, error: seqVal.error });
 
       // Geocerca calculada en el backend (ignorar dentroGeocerca del frontend)
       const lat = parseFloat(datos.lat);
       const lng = parseFloat(datos.lng);
-      let dentroGeocerca = false;
-      let distanciaMetros = null;
+      let dentroGeocerca = false, distanciaMetros = null, sinConfigGeo = true;
       if (!isNaN(lat) && !isNaN(lng)) {
         const geo = _calcularGeocerca(lat, lng);
         dentroGeocerca  = geo.dentroGeocerca;
         distanciaMetros = geo.distancia;
+        sinConfigGeo    = !!geo.sinConfig;
+      }
+
+      // REGLA GEOCERCA: si hay configuración de geocerca y el trabajador está fuera,
+      // exigir token de supervisor válido para permitir la marcación.
+      if (!dentroGeocerca && !sinConfigGeo) {
+        const svGeo = _validarSesion(datos.supervisorToken, ['supervisor']);
+        if (!svGeo.ok) {
+          return _respuestaJson({
+            ok: false, fueraGeocerca: true, distanciaMetros: distanciaMetros,
+            error: 'Fuera de la geocerca. Se requiere autorización de supervisor para registrar.'
+          });
+        }
       }
 
       // Nombre, cargo y finca vienen del backend, no del payload
       const nombre = empleado.nombre;
       const cargo  = empleado.cargo;
-      const cfg    = (function() {
+      const appCfg = (function() {
         try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
         catch (e) { return {}; }
       })();
-      const finca  = cfg.fincaNombre || dv.finca || '';
+      const finca = appCfg.fincaNombre || dv.finca || '';
+
+      // Clasificar autorización para auditoría
+      const esFueraGeo = !dentroGeocerca && !sinConfigGeo;
+      let resultadoFacial;
+      if      (datos.sinBiometria && esFueraGeo) resultadoFacial = 'SUPERVISOR_BIO_GEO';
+      else if (datos.sinBiometria)               resultadoFacial = 'SUPERVISOR_BIO';
+      else if (esFueraGeo)                       resultadoFacial = 'SUPERVISOR_GEO';
+      else if (datos.distanciaFacial != null)    resultadoFacial = 'FACIAL';
+      else                                       resultadoFacial = 'SIN_BIOMETRIA';
 
       const hoja = obtenerOhCrearHoja();
       hoja.appendRow([
@@ -760,7 +778,7 @@ function doPost(e) {
         datos.precisionGPS != null ? parseFloat(datos.precisionGPS).toFixed(1) : '',
         sanitizarCelda(String(datos.appVersion || '')),
         datos.sinConexion ? 'OFFLINE' : 'ONLINE',
-        datos.sinBiometria ? 'SUPERVISOR' : (datos.distanciaFacial != null ? 'FACIAL' : 'SIN_BIOMETRIA')
+        resultadoFacial
       ]);
       SpreadsheetApp.flush();
 
@@ -770,9 +788,11 @@ function doPost(e) {
         try { calcularResumenDiario(); } catch (e) { Logger.log('calcularResumenDiario: ' + e.message); }
       }
 
-      return _respuestaJson({ ok: true, nombre: nombre, cargo: cargo, finca: finca,
-                              dentroGeocerca: dentroGeocerca, distanciaMetros: distanciaMetros,
-                              horaServidor: horaStr });
+      return _respuestaJson({
+        ok: true, nombre: nombre, cargo: cargo, finca: finca,
+        dentroGeocerca: dentroGeocerca, distanciaMetros: distanciaMetros,
+        horaServidor: horaStr
+      });
     }
 
     /* ── Acción desconocida: rechazar explícitamente ── */
