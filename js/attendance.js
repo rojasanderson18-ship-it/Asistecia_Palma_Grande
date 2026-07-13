@@ -85,19 +85,72 @@ function resetWorker() {
 }
 
 /* ── Lógica de tipo (Entrada/Salida) ── */
+
+// Cache local de marcas del día: { documento: ['Entrada','Salida',...] }
+// Se actualiza cada vez que se hace una marcación exitosa.
+function _getMarcasHoyCache() { try { return JSON.parse(localStorage.getItem('marcas_hoy_cache') || '{}'); } catch { return {}; } }
+function _setMarcasHoyCache(doc, marcas) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const stored = _getMarcasHoyCache();
+  // Invalidar si cambió el día
+  if (stored._fecha !== hoy) { localStorage.setItem('marcas_hoy_cache', JSON.stringify({ _fecha: hoy })); }
+  const fresh = _getMarcasHoyCache();
+  fresh[doc] = marcas;
+  localStorage.setItem('marcas_hoy_cache', JSON.stringify(fresh));
+}
+function _agregarMarcaLocal(doc, tipo) {
+  const cache = _getMarcasHoyCache();
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (cache._fecha !== hoy) { localStorage.setItem('marcas_hoy_cache', JSON.stringify({ _fecha: hoy })); }
+  const fresh = _getMarcasHoyCache();
+  if (!fresh[doc]) fresh[doc] = [];
+  if (!fresh[doc].includes(tipo)) fresh[doc].push(tipo);
+  localStorage.setItem('marcas_hoy_cache', JSON.stringify(fresh));
+}
+
+// Revisión de la cola offline: ¿hay marcaciones pendientes para este doc hoy?
+function _marcasPendientesEnCola(doc) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const cola = JSON.parse(localStorage.getItem('cola') || '[]');
+  return cola
+    .filter(m => String(m.documento) === String(doc) && m.fechaHora && m.fechaHora.startsWith(hoy))
+    .map(m => m.tipo);
+}
+
 async function getTipo(doc) {
-  if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) return {tipo:'Entrada', completo:false, marcas:[]};
-  try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`, {cache:'no-store'});
-    const d = await r.json();
-    const m = (d && d.marcas) || [];
-    if (m.includes('Salida')) return {tipo:'Salida', completo:true, marcas:m};
-    if (m.includes('Entrada')) return {tipo:'Salida', completo:false, marcas:m};
-    return {tipo:'Entrada', completo:false, marcas:m};
-  } catch {
-    const a = new Date(), h = a.getHours() + a.getMinutes() / 60;
-    return {tipo: h < (CONFIG.HORARIO.salida || 14.75) ? 'Entrada' : 'Salida', completo:false, marcas:[]};
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  // 1. Cache local del día (marcaciones ya confirmadas en esta sesión)
+  const cacheHoy = _getMarcasHoyCache();
+  let marcasConocidas = (cacheHoy._fecha === hoy && cacheHoy[doc]) ? [...cacheHoy[doc]] : [];
+
+  // 2. Cola offline pendiente (marcaciones aun no enviadas al backend)
+  const pendientes = _marcasPendientesEnCola(doc);
+  pendientes.forEach(t => { if (!marcasConocidas.includes(t)) marcasConocidas.push(t); });
+
+  // 3. Si ya conocemos el estado completo localmente, usarlo sin red
+  if (marcasConocidas.includes('Salida')) return { tipo: 'Salida', completo: true, marcas: marcasConocidas };
+  if (marcasConocidas.includes('Entrada')) return { tipo: 'Salida', completo: false, marcas: marcasConocidas };
+
+  // 4. Consultar backend si hay URL configurada
+  if (CONFIG.GS_URL) {
+    try {
+      const r = await fetch(`${CONFIG.GS_URL}?accion=marcasHoy&documento=${encodeURIComponent(doc)}&_=${Date.now()}`, { cache: 'no-store' });
+      const d = await r.json();
+      const m = (d && d.marcas) ? d.marcas : [];
+      // Actualizar cache con respuesta del backend
+      if (m.length) _setMarcasHoyCache(doc, m);
+      if (m.includes('Salida')) return { tipo: 'Salida', completo: true, marcas: m };
+      if (m.includes('Entrada')) return { tipo: 'Salida', completo: false, marcas: m };
+      return { tipo: 'Entrada', completo: false, marcas: m };
+    } catch {
+      // Backend no responde: continuar con lógica offline
+    }
   }
+
+  // 5. Último recurso: hora actual (solo si no hay ninguna información local ni backend)
+  const a = new Date(), h = a.getHours() + a.getMinutes() / 60;
+  return { tipo: h < (CONFIG.HORARIO.salida || 15.0) ? 'Entrada' : 'Salida', completo: false, marcas: [] };
 }
 
 /* ── Puntualidad ── */
@@ -141,6 +194,8 @@ function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   };
   enviar(payload);
   updColaBadge();
+  // Registrar en cache local del día para offline inteligente
+  if (pm) _agregarMarcaLocal(pm.documento, tipo);
   saveUltima(nombre, tipo, hora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}), gpsOk, Date.now());
   setWorkerState('CONFIRMED');
   showConf({

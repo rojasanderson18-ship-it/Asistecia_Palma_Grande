@@ -227,6 +227,20 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (accion === 'listarPersonal') {
+    // Devuelve el personal registrado en la hoja Personal del Sheet.
+    // El frontend cachea esta respuesta en localStorage('personal_cache').
+    const hoja = obtenerOhCrearHojaPersonal();
+    const datos = hoja.getDataRange().getValues();
+    const personal = [];
+    for (let i = 1; i < datos.length; i++) {
+      const [doc, nombre, cargo] = datos[i];
+      if (doc && nombre) personal.push({ documento: String(doc).trim(), nombre: String(nombre).trim(), cargo: String(cargo || '').trim() });
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, personal }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (accion === 'resumenDashboard') {
     return calcularResumenDashboard(e.parameter.fecha);
   }
@@ -297,9 +311,7 @@ function calcularResumenDashboard(fechaParam) {
     let horasLaboradas = "";
     if (p.Entrada && p.Salida) {
       jornadasCompletas++;
-      const tiempoAlmuerzo = (p["Inicio almuerzo"] && p["Fin almuerzo"])
-        ? horaADecimal(p["Fin almuerzo"]) - horaADecimal(p["Inicio almuerzo"]) : 0;
-      const horasDecimal = horaADecimal(p.Salida) - horaADecimal(p.Entrada) - tiempoAlmuerzo;
+      const horasDecimal = horaADecimal(p.Salida) - horaADecimal(p.Entrada);
       totalHoras += horasDecimal;
       const horasEnteras = Math.floor(horasDecimal);
       const minutos = Math.round((horasDecimal - horasEnteras) * 60);
@@ -349,11 +361,11 @@ function calcularResumenDiario() {
   const hoy = Utilities.formatDate(new Date(), "America/Bogota", "dd/MM/yyyy");
 
   const HORARIO = {
-    entrada: 6.0, almuerzoInicio: 12.0, almuerzoFin: 13.0,
+    entrada: 6.0,
     salida: 14.75, salidaSabado: 11.75
   };
 
-  const marcasHoy = {}; // { "Nombre|Finca": {Entrada:.., 'Inicio almuerzo':.., ...} }
+  const marcasHoy = {};
 
   for (let i = 1; i < datos.length; i++) {
     const [fecha, hora, nombre, documento, cargo, finca, tipo] = datos[i];
@@ -380,10 +392,7 @@ function calcularResumenDiario() {
     const salida = horaADecimal(m["Salida"]);
     const esSabado = new Date().getDay() === 6;
     const horaCierre = esSabado ? HORARIO.salidaSabado : HORARIO.salida;
-    const tiempoAlmuerzo = (m["Inicio almuerzo"] && m["Fin almuerzo"])
-      ? horaADecimal(m["Fin almuerzo"]) - horaADecimal(m["Inicio almuerzo"]) : 0;
-
-    const horasTrabajadas = (salida - entrada - tiempoAlmuerzo);
+    const horasTrabajadas = (salida - entrada);
     const deficitMin = Math.max(0, (HORARIO.entrada - entrada) * 60) + Math.max(0, (horaCierre - salida) * 60);
     const extraMin = Math.max(0, (salida - horaCierre) * 60);
 

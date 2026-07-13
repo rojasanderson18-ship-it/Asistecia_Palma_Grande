@@ -1,0 +1,43 @@
+name: Sync www/ → root (GitHub Pages)
+
+# Mantiene los archivos del root sincronizados con www/ en cada push a main.
+# www/ es la fuente única de verdad (usada también por Capacitor para el APK).
+# GitHub Pages sirve desde la raíz, por eso este paso los copia.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'www/**'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copiar www/ → root
+        run: |
+          cp -r www/css .
+          cp -r www/js .
+          cp www/index.html index.html
+          cp www/sw.js sw.js
+          cp www/manifest.json manifest.json
+
+      - name: Verificar diferencias
+        run: |
+          diff www/index.html index.html && echo "index.html OK"
+          diff www/sw.js sw.js && echo "sw.js OK"
+
+      - name: Commit si hay cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add css/ js/ index.html sw.js manifest.json
+          git diff --staged --quiet && echo "Sin cambios" || git commit -m "chore: sync www/ → root [skip ci]"
+          git push

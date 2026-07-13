@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asistencia-palma-v7';
+const CACHE_NAME = 'asistencia-v8';
 const ARCHIVOS_CACHE = [
   './index.html',
   './manifest.json',
@@ -7,6 +7,7 @@ const ARCHIVOS_CACHE = [
   './css/styles.css',
   './js/audio.js',
   './js/config.js',
+  './js/auth.js',
   './js/geolocation.js',
   './js/offline-queue.js',
   './js/face-recognition.js',
