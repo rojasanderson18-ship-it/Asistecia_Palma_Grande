@@ -137,6 +137,23 @@ function resetIdleTimer() {
 });
 resetIdleTimer();
 
+/* ── Animación slide-in al mostrar bloque scan ── */
+(function() {
+  const block = document.getElementById('wkScanBlock');
+  if (!block) return;
+  let _wasHidden = true;
+  new MutationObserver(() => {
+    const hidden = block.style.display === 'none' || block.style.display === '';
+    if (_wasHidden && !hidden) {
+      block.classList.remove('anim-slide-in');
+      void block.offsetWidth;
+      block.classList.add('anim-slide-in');
+      setTimeout(() => block.classList.remove('anim-slide-in'), 280);
+    }
+    _wasHidden = hidden;
+  }).observe(block, { attributes: true, attributeFilter: ['style'] });
+})();
+
 /* ── Service Worker ── */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
