@@ -703,7 +703,8 @@ function doPost(e) {
     if (accion === 'sincronizarPersonalKiosco') {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
-      if (datos.deviceId && String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+      if (!datos.deviceId) return _respuestaJson({ ok: false, error: 'deviceId requerido.' });
+      if (String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
         return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
       _actualizarUltimaConexion(datos.deviceToken);
       // Cache del catálogo para no leer la hoja en cada arranque
@@ -733,7 +734,8 @@ function doPost(e) {
     if (accion === 'marcasHoy') {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
-      if (datos.deviceId && String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+      if (!datos.deviceId) return _respuestaJson({ ok: false, error: 'deviceId requerido.' });
+      if (String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
         return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
       const documento = String(datos.documento || '').trim();
       if (!documento) return _respuestaJson({ ok: false, error: 'documento requerido' });
@@ -747,8 +749,9 @@ function doPost(e) {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
 
-      // Verificar que deviceId del payload corresponda al token (tarea 6)
-      if (datos.deviceId && String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+      // deviceId siempre obligatorio — no se acepta omitirlo
+      if (!datos.deviceId) return _respuestaJson({ ok: false, error: 'deviceId requerido.' });
+      if (String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
         return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
 
       const tipo = String(datos.tipo || '').trim();
@@ -794,6 +797,24 @@ function doPost(e) {
         sinConfigGeo = false;
       }
 
+      // Validar precisión GPS (tarea 3)
+      if (gpsValido && datos.precisionGPS != null) {
+        const prec = parseFloat(datos.precisionGPS);
+        if (isNaN(prec) || prec < 0 || prec > 50000) {
+          return _respuestaJson({ ok: false, error: 'Valor de precisión GPS inválido.' });
+        }
+        if (prec > 100) {
+          const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
+          if (!svPrec.ok) {
+            return _respuestaJson({
+              ok: false,
+              error: 'Precisión GPS insuficiente (' + Math.round(prec) + ' m de incertidumbre). Mejora la señal GPS o solicita autorización de supervisor.'
+            });
+          }
+        }
+        // 51–100 m: aceptar con advertencia (se registra en ResultadoFacial)
+      }
+
       // REGLA GEOCERCA/GPS: si está fuera o sin GPS (y hay config), exigir supervisor
       const esFueraGeo = !dentroGeocerca && !sinConfigGeo;
       if (esFueraGeo) {
@@ -830,7 +851,10 @@ function doPost(e) {
         if (isNaN(distNum) || distNum < 0 || distNum > 1) {
           return _respuestaJson({ ok: false, error: 'Valor de reconocimiento facial inválido.' });
         }
-        const umbral = parseFloat(appCfg.umbral) || 0.6;
+        const umbral = parseFloat(appCfg.umbral);
+        if (isNaN(umbral) || umbral <= 0 || umbral > 1) {
+          return _respuestaJson({ ok: false, error: 'Umbral facial no configurado en el servidor. Configura el parámetro umbral antes de registrar marcaciones biométricas.' });
+        }
         if (distNum > umbral) {
           return _respuestaJson({
             ok: false,
@@ -1069,6 +1093,30 @@ function setConfig(config) {
   permitidos.forEach(function(k) { if (config[k] != null) seguro[k] = config[k]; });
   PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));
   Logger.log('Config guardada: ' + JSON.stringify(seguro));
+}
+
+/**
+ * Completa la columna Estado en filas de Personal que la tengan vacía.
+ * Asigna ACTIVO a las filas sin estado definido.
+ * Ejecutar manualmente desde el editor de Apps Script.
+ */
+function migrarEstadoPersonal() {
+  const hoja  = obtenerOhCrearHojaPersonal();
+  const datos = hoja.getDataRange().getValues();
+  let actualizadas = 0;
+  for (let i = 1; i < datos.length; i++) {
+    const estado = String(datos[i][5] || '').trim();
+    if (!estado) {
+      hoja.getRange(i + 1, 6).setValue('ACTIVO');
+      actualizadas++;
+    }
+  }
+  if (actualizadas > 0) SpreadsheetApp.flush();
+  Logger.log('=== Migración Estado Personal ===');
+  Logger.log('Total filas de empleados: ' + (datos.length - 1));
+  Logger.log('Filas actualizadas a ACTIVO: ' + actualizadas);
+  Logger.log('Filas ya con estado definido: ' + (datos.length - 1 - actualizadas));
+  return { total: datos.length - 1, actualizadas: actualizadas };
 }
 
 /**

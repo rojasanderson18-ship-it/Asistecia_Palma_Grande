@@ -136,10 +136,11 @@ async function getTipo(doc) {
   const deviceTok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
   if (CONFIG.GS_URL && deviceTok) {
     try {
+      const deviceDid = (typeof getDeviceId === 'function') ? getDeviceId() : null;
       const r = await fetch(CONFIG.GS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ accion: 'marcasHoy', deviceToken: deviceTok, documento: doc }),
+        body: JSON.stringify({ accion: 'marcasHoy', deviceToken: deviceTok, deviceId: deviceDid, documento: doc }),
       });
       const d = await r.json();
       const m = (d && d.marcas) ? d.marcas : [];
@@ -204,8 +205,22 @@ async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
 
   const horaStr = hora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
 
-  /* ── MODO OFFLINE: encolar directamente ── */
+  /* ── MODO OFFLINE: verificar si la marcación puede encolarse sin supervisor ── */
   if (!navigator.onLine || !CONFIG.GS_URL) {
+    // Supervisor token caduca en 5 min: las excepciones (sinBiometria, fuera de geocerca)
+    // no pueden encolarse offline porque el token ya no será válido al sincronizar.
+    const geocercaConfiguradaLocal = CONFIG.FINCA.lat !== 0 && CONFIG.FINCA.lng !== 0;
+    const sinGpsLocal = !gpsCoords;
+    const fueraGeocercaLocal = geocercaConfiguradaLocal && (sinGpsLocal || !gpsOk);
+
+    if (sinBiometria || fueraGeocercaLocal) {
+      setWorkerState('IDLE');
+      showRes('warn', 'Conexión requerida',
+        'Esta marcación excepcional requiere conexión para ser autorizada por el supervisor.',
+        ['Activa la conexión a internet e intenta nuevamente']);
+      return;
+    }
+
     payload.sinConexion = true;
     _encolarOfflineConMeta(payload);
     updColaBadge();
