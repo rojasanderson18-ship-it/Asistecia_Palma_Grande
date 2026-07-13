@@ -10,7 +10,7 @@
  * 4. Implementar > Nueva implementación > Aplicación web
  *    - Ejecutar como: Yo
  *    - Quién tiene acceso: Cualquier usuario
- * 5. Copia la URL que termina en /exec y pégala en CONFIG.GS_URL del index.html
+ * 5. Copia la URL que termina en /exec y pégala en Configuración → URL del servidor dentro de la app
  ***********************************************************/
 
 const SHEET_ID = "1ZjIJ_AHty-ltlFDJP_0MV4mIXAhs1oNKhKcYWNMlbC8";
@@ -127,6 +127,27 @@ function guardarFotoPersonal(documento, fotoDataUrl, nombre, cargo) {
 function doPost(e) {
   try {
     const datos = JSON.parse(e.postData.contents);
+
+    // Validación de PIN: recibe hash SHA-256, compara contra hash guardado en PropertiesService.
+    // El PIN en claro NUNCA viaja por la red ni se almacena en el Sheet.
+    // Para configurar el hash inicial: llamar setPin(pin) desde el editor de Apps Script.
+    if (datos.accion === 'validarPin') {
+      const hashRecibido = String(datos.hash || '').toLowerCase().trim();
+      if (!hashRecibido || hashRecibido.length !== 64) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'hash inválido' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const props = PropertiesService.getScriptProperties();
+      const hashGuardado = (props.getProperty('PIN_HASH') || '').toLowerCase().trim();
+      if (!hashGuardado) {
+        // Sin PIN configurado en el backend: rechazar hasta que el admin lo configure
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'PIN no configurado en servidor' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const coincide = hashRecibido === hashGuardado;
+      return ContentService.createTextOutput(JSON.stringify({ ok: coincide }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
     if (datos.accion === 'registrarPersonal') {
       const hojaPersonal = obtenerOhCrearHojaPersonal();
@@ -410,4 +431,41 @@ function calcularResumenDiario() {
   if (filasNuevas.length) {
     hojaResumen.getRange(hojaResumen.getLastRow() + 1, 1, filasNuevas.length, filasNuevas[0].length).setValues(filasNuevas);
   }
+}
+
+/**
+ * Utilitario para configurar el PIN del administrador desde el editor de Apps Script.
+ * Ejecutar UNA SOLA VEZ después de desplegar, con el PIN deseado.
+ * El PIN NUNCA se guarda en claro: se almacena solo el hash SHA-256.
+ *
+ * Uso:
+ *   1. En Apps Script, abrir el editor y ejecutar esta función manualmente.
+ *   2. El hash queda en PropertiesService del script (no en el Sheet).
+ *
+ * IMPORTANTE: el salt debe coincidir con el que usa el frontend (location.origin + ':asistencia:v2').
+ * Para instalaciones múltiples, cada dominio tiene su propio salt y su propio hash.
+ */
+function setPin(pin) {
+  if (!pin || !/^\d{4,8}$/.test(String(pin))) {
+    throw new Error('El PIN debe tener entre 4 y 8 dígitos numéricos');
+  }
+  // El salt debe ser idéntico al que genera el frontend para ese dominio.
+  // Ajustar origin según el dominio de GitHub Pages o APK de la instalación.
+  const origin = PropertiesService.getScriptProperties().getProperty('ORIGIN') || 'https://rojasanderson18-ship-it.github.io';
+  const salt = origin + ':asistencia:v2';
+  const texto = pin + salt;
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, texto)
+    .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
+    .join('');
+  PropertiesService.getScriptProperties().setProperty('PIN_HASH', hash);
+  Logger.log('PIN configurado. Hash: ' + hash);
+}
+
+/**
+ * Configura el dominio de origen para el cálculo del salt.
+ * Ejecutar antes de setPin() si el dominio no es el predeterminado.
+ */
+function setOrigin(origin) {
+  PropertiesService.getScriptProperties().setProperty('ORIGIN', origin);
+  Logger.log('Origin configurado: ' + origin);
 }

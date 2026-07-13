@@ -1,87 +1,109 @@
 /* ── MÓDULO: Autenticación administrativa ── */
 
 /*
- * Estado actual: PIN validado localmente contra hash en localStorage.
- * El PIN en texto plano NUNCA se guarda — solo el hash (btoa simple, upgradar
- * a bcrypt/PBKDF2 en el backend cuando esté disponible).
+ * El PIN NUNCA se almacena en texto plano.
+ * El PIN NUNCA se almacena como hash reversible.
+ * La sal NUNCA se almacena junto al hash en el mismo storage.
+ *
+ * Mecanismo actual (Fase 2):
+ *   - El hash es SHA-256 del PIN + salt fijo derivado del dispositivo.
+ *   - El salt no es secreto pero no está en localStorage: se deriva de
+ *     la URL de instalación (origin) para que el hash sea específico
+ *     del dispositivo/dominio y no sea transferible.
+ *   - La validación definitiva ocurre en el backend (validatePinBackend).
+ *   - La validación local es solo para fallback offline.
  *
  * Roadmap:
- *   Fase 1 (actual) : hash local en localStorage — sin PIN en código fuente
- *   Fase 2 (próximo): validatePinRemoto() llama al endpoint GAS con hash SHA-256
- *   Fase 3 (futuro) : JWT + sesión, roles de supervisor vs. gerente
+ *   Fase 2 (actual) : SHA-256 local + validación remota en GAS
+ *   Fase 3 (futuro) : JWT de sesión, roles supervisor/gerente, TOTP
  */
 
-// Simple hash sin librería externa: btoa(pin + salt) no es criptográfico
-// pero es significativamente mejor que guardar el PIN en texto plano.
-// Salt = primer día de la configuración actual (cambia si se reconfigura).
-function _hashPin(pin) {
-  const cfg = getCfgGuardada();
-  const salt = (cfg && cfg._salt) ? cfg._salt : 'palma2024';
-  return btoa(unescape(encodeURIComponent(pin + salt)));
+// Salt derivado del origin (no secreto, pero específico al dominio instalado)
+function _salt() {
+  return (location.origin || 'app') + ':asistencia:v2';
 }
 
-function _generarSalt() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+async function _sha256(texto) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(texto);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/* ── Validación local (Fase 1) ── */
-function validatePin(pin) {
+/* ── API pública ── */
+
+async function guardarPin(pinNuevo) {
+  if (!pinNuevo || !/^\d{4,8}$/.test(pinNuevo)) return false;
+  const hash = await _sha256(pinNuevo + _salt());
+  const cfg = getCfgGuardada() || {};
+  // Guardar solo el hash; eliminar cualquier vestigio de PIN en claro o hash reversible
+  delete cfg.pin;
+  delete cfg.pinHash;
+  delete cfg._salt;
+  cfg.pinSha = hash;
+  localStorage.setItem('app_config', JSON.stringify(cfg));
+  aplicarConfig(cfg);
+  return true;
+}
+
+// Validación local (fallback offline)
+async function validatePin(pin) {
   if (!pin) return false;
   try {
     const cfg = getCfgGuardada();
     if (!cfg) return false;
-    // Formato nuevo: hash almacenado
-    if (cfg.pinHash) return _hashPin(pin) === cfg.pinHash;
-    // Formato legacy (migración): PIN en claro — migrar al guardar
-    if (cfg.pin) {
-      const ok = pin === cfg.pin;
-      if (ok) _migrarPinAHash(pin, cfg);
-      return ok;
+
+    // Formato actual: SHA-256
+    if (cfg.pinSha) {
+      const hash = await _sha256(pin + _salt());
+      return hash === cfg.pinSha;
     }
+
+    // Formatos legados — migrar al guardar, no aceptar
+    // (si solo hay cfg.pin o cfg.pinHash, forzar reconfiguración)
     return false;
   } catch { return false; }
 }
 
-// Migración silenciosa: si encuentra PIN en claro, lo convierte a hash
-function _migrarPinAHash(pin, cfg) {
-  try {
-    const salt = _generarSalt();
-    const hash = btoa(unescape(encodeURIComponent(pin + salt)));
-    const nueva = { ...cfg, pinHash: hash, _salt: salt };
-    delete nueva.pin;
-    localStorage.setItem('app_config', JSON.stringify(nueva));
-  } catch {}
-}
-
-function guardarPin(pinNuevo) {
-  if (!pinNuevo || !/^\d{4,8}$/.test(pinNuevo)) return false;
-  const cfg = getCfgGuardada() || {};
-  const salt = _generarSalt();
-  const hash = btoa(unescape(encodeURIComponent(pinNuevo + salt)));
-  const nueva = { ...cfg, pinHash: hash, _salt: salt };
-  delete nueva.pin; // eliminar formato legado si existía
-  localStorage.setItem('app_config', JSON.stringify(nueva));
-  aplicarConfig(nueva);
-  return true;
-}
-
 function hayPinConfigurado() {
   const cfg = getCfgGuardada();
-  return !!(cfg && (cfg.pinHash || cfg.pin));
+  return !!(cfg && cfg.pinSha);
 }
 
-/* ── Stub para validación remota (Fase 2 — conectar cuando el backend esté listo) ── */
-async function validatePinRemoto(pin) {
-  if (!CONFIG.GS_URL) return { ok: false, error: 'Sin URL de backend' };
+/* ── Validación remota en Google Apps Script ── */
+// Envía el hash SHA-256 al backend, que verifica sin conocer el PIN en claro.
+// El backend almacena solo el hash del PIN configurado por el administrador.
+async function validatePinBackend(pin) {
+  if (!CONFIG.GS_URL) return { ok: false, offline: true };
   try {
-    const hash = _hashPin(pin);
+    const hash = await _sha256(pin + _salt());
     const r = await fetch(CONFIG.GS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ accion: 'validarPin', hash }),
     });
-    return await r.json();
-  } catch (e) {
-    return { ok: false, error: e.message };
+    const d = await r.json();
+    return d;
+  } catch {
+    return { ok: false, offline: true };
   }
+}
+
+/* ── Wrapper para uso en admin.js ── */
+// Intenta validación remota primero; si no hay red, cae en local.
+// Devuelve una Promise<boolean>.
+async function autenticarPin(pin) {
+  if (!pin) return false;
+
+  // Intentar backend si hay URL
+  if (CONFIG.GS_URL) {
+    const res = await validatePinBackend(pin);
+    if (!res.offline) return !!res.ok;
+    // offline: continuar con validación local
+  }
+
+  // Sin red: validación local con hash SHA-256
+  if (!hayPinConfigurado()) return true; // primera instalación: sin PIN aún
+  return await validatePin(pin);
 }
