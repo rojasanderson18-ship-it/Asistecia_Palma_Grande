@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#122B1A">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..900;1,14..32,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script src="lib/face-api/face-api.min.js"></script>
 <script src="js/audio.js"></script>
@@ -54,6 +54,11 @@
   <!-- BLOQUE IDLE: teclado + doc display -->
   <div id="wkDocBlock">
     <div class="scroll">
+      <!-- Reloj kiosco -->
+      <div class="kiosco-clock">
+        <div class="kiosco-time" id="kioscoTime">--:--</div>
+        <div class="kiosco-date" id="kioscoDate"></div>
+      </div>
       <div class="blk">
         <div class="blk-hdr">
           <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
