@@ -365,8 +365,10 @@ async function cargarReporte() {
   const estEl = document.getElementById('repEstado');
   const tabEl = document.getElementById('repTabla');
   const resEl = document.getElementById('repResumen');
+  const btnCar = document.getElementById('btnRepCargar');
   estEl.style.display = 'block'; estEl.textContent = 'Cargando...';
   tabEl.innerHTML = ''; resEl.style.display = 'none';
+  if (btnCar) btnCar.classList.add('loading');
   if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) {
     estEl.textContent = '⚠️ Configura la URL del servidor primero.'; return;
   }
@@ -376,6 +378,7 @@ async function cargarReporte() {
                                      fecha: fechaVal, finca: CONFIG.FINCA.nombre });
     if (j && Array.isArray(j.filas)) datos = j.filas;
   } catch {}
+  if (btnCar) btnCar.classList.remove('loading');
   if (!datos.length) {
     const cola = JSON.parse(localStorage.getItem('cola') || '[]');
     const marcasFecha = cola.filter(m => m.fechaHora && m.fechaHora.startsWith(fechaVal));
@@ -409,6 +412,18 @@ async function cargarReporte() {
   _setKpi('repCntPendientes', colaPendientes);
   _setKpi('repCntExcepciones', totalExcepciones);
   _setKpi('repCntDeuda', totalMin);
+  // Mini-barras KPI
+  const totalEmpleados = Math.max(getPC().length, 1);
+  const _setBar = (id, val, max) => {
+    const fill = document.getElementById(id)?.closest('.rep-kpi')?.querySelector('.rep-kpi-bar-fill');
+    if (fill) setTimeout(() => { fill.style.width = Math.min(100, (val / Math.max(max, 1)) * 100) + '%'; }, 60);
+  };
+  _setBar('repCntPresentes',   totalPresentes,   totalEmpleados);
+  _setBar('repCntCompletas',   totalCompletas,   Math.max(totalPresentes, 1));
+  _setBar('repCntTarde',       totalTarde,       Math.max(totalPresentes, 1));
+  _setBar('repCntTemprano',    totalTemprano,    Math.max(totalPresentes, 1));
+  _setBar('repCntPendientes',  colaPendientes,   Math.max(colaPendientes, 10));
+  _setBar('repCntExcepciones', totalExcepciones, Math.max(totalPresentes, 1));
   tabEl.innerHTML = datos.map(e => {
     const tieneDeuda = (e.minutosDeuda || 0) > 0;
     return `<div style="background:var(--wh);border-radius:14px;padding:14px;border:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px;">
