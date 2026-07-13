@@ -30,11 +30,13 @@ function _esErrorDispositivo(errorMsg) {
   return _ERRORES_DISPOSITIVO.some(function(e) { return msg.indexOf(e) !== -1; });
 }
 
-// Enriquece el payload con deviceToken y appVersion antes de enviarlo
+// Enriquece el payload con deviceToken, deviceId y appVersion antes de enviarlo
 function _enriquecerPayload(p) {
   const tok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
+  const did = (typeof getDeviceId === 'function') ? getDeviceId() : null;
   const base = Object.assign({}, p);
   if (tok && !base.deviceToken) base.deviceToken = tok;
+  if (did && !base.deviceId) base.deviceId = did;
   if (!base.appVersion) base.appVersion = APP_VERSION_CLIENT;
   return base;
 }
@@ -62,7 +64,7 @@ function enviarConResp(p) {
   if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) return Promise.resolve(null);
   return fetch(CONFIG.GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload)})
     .then(r => r.json())
-    .catch(e => ({ok:false, error:e.message}));
+    .catch(e => ({ok: false, networkError: true, error: e.message}));
 }
 
 let _reintentando = false;

@@ -225,7 +225,7 @@ async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   }
 
   /* Error de red real → encolar offline */
-  if (!r) {
+  if (!r || r.networkError) {
     payload.sinConexion = true;
     _encolarOfflineConMeta(payload);
     updColaBadge();
@@ -236,22 +236,22 @@ async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
     return;
   }
 
-  /* Fuera de geocerca → abrir modal supervisor si aún no hay token ── */
+  /* Fuera de geocerca o GPS ausente → abrir modal supervisor si aún no hay token */
   if (r.fueraGeocerca) {
     const tieneSupervisorToken = !!(typeof getSupervisorToken === 'function' && getSupervisorToken());
     if (tieneSupervisorToken) {
-      // El token estaba presente pero el servidor lo rechazó de todas formas
       if (typeof clearSupervisorToken === 'function') clearSupervisorToken();
       setWorkerState('IDLE');
-      showRes('err', 'Fuera de la geocerca',
-        `${r.distanciaMetros != null ? 'A ' + r.distanciaMetros + ' m del predio. ' : ''}Supervisor no autorizado.`,
+      const det = r.gpsAusente
+        ? 'GPS no disponible. Supervisor no autorizado.'
+        : `${r.distanciaMetros != null ? 'A ' + r.distanciaMetros + ' m del predio. ' : ''}Supervisor no autorizado.`;
+      showRes('err', r.gpsAusente ? 'Sin señal GPS' : 'Fuera de la geocerca', det,
         ['PIN de supervisor incorrecto o expirado']);
     } else {
-      // Primera vez: abrir modal supervisor para autorizar geocerca
-      abrirModalSupervisor(
-        `<b>${xh(nombre)}</b> está fuera del predio${r.distanciaMetros != null ? ' (' + r.distanciaMetros + ' m)' : ''}. Autorizar con PIN de supervisor.`,
-        () => ejecutarMarcacion(nombre, tipo, confPct, sinBiometria)
-      );
+      const msg = r.gpsAusente
+        ? `GPS no disponible para <b>${xh(nombre)}</b>. Autorizar con PIN de supervisor.`
+        : `<b>${xh(nombre)}</b> está fuera del predio${r.distanciaMetros != null ? ' (' + r.distanciaMetros + ' m)' : ''}. Autorizar con PIN de supervisor.`;
+      abrirModalSupervisor(msg, () => ejecutarMarcacion(nombre, tipo, confPct, sinBiometria));
     }
     return;
   }
