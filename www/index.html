@@ -73,22 +73,6 @@
         </div>
       </div>
 
-      <!-- Última marcación -->
-      <div id="ultimaSection" style="display:none;">
-        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:7px;padding-left:2px;">Última marcación</div>
-        <div class="ultima-card">
-          <div class="ul-av"><span id="ulInic">—</span></div>
-          <div class="ul-bd">
-            <div class="ul-nom" id="ulNombre">—</div>
-            <div class="ul-meta">
-              <span class="ul-tag" id="ulTipo">—</span>
-              <span class="ul-hr" id="ulHora">—</span>
-            </div>
-          </div>
-          <div class="ul-hace" id="ulHace">—</div>
-        </div>
-      </div>
-
       <!-- Barra de estado (siempre visible) -->
       <div class="status-bar">
         <div class="st-item">
@@ -180,7 +164,6 @@
   <!-- Footer fijo -->
   <div class="app-footer">
     <div class="footer-links">
-      <span class="link-d" id="btnEnrolar">Enrolar empleado</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div id="colaBadge" style="display:none;background:var(--or);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;cursor:pointer;">
@@ -340,12 +323,7 @@
     </div>
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Reconocimiento facial</div>
-      <div class="fl" style="margin-bottom:6px;">Minutos de almuerzo (se descuentan al autorizar)</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="number" id="cfgAlmuerzoMin" min="15" max="90" step="5" style="width:80px;padding:10px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);font-size:16px;font-weight:700;text-align:center;color:var(--tx);outline:none;">
-        <span style="font-size:12px;color:var(--t2);">min (12:00 – 1:00 p.m.)</span>
-      </div>
-      <div class="fl" style="margin-top:14px;">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
+      <div class="fl" style="margin-top:0;">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
         <input type="range" id="cfgUmbral" min="0.30" max="0.60" step="0.01" style="flex:1;accent-color:var(--dg);">
         <span id="cfgUmbralVal" style="font-size:14px;font-weight:800;color:var(--dg);min-width:36px;text-align:right;">0.45</span>
