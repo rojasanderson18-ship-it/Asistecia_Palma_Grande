@@ -42,7 +42,9 @@ document.getElementById('btnPinConfirmar').onclick = async () => {
   btn.disabled = false;
   if (result.ok) {
     cargarPersonalDesdeBackend();
-    if (_pinDest === 'enrolar') {
+    if (_pinDest === 'setup') {
+      _ejecutarSetup();
+    } else if (_pinDest === 'enrolar') {
       _abrirEnrolar();
     } else if (_pinDest === 'agregar') {
       _abrirAgregarPersonal();
@@ -355,6 +357,9 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
 document.getElementById('btnVolverDesdeConfig').addEventListener('click', () => mostrarPantalla('pantallaMenu'));
 document.getElementById('btnCancelarConfig').addEventListener('click', () => mostrarPantalla('pantallaMenu'));
 
+/* ── Menú personal (unificado) ── */
+document.getElementById('menuPersonal').onclick = abrirPersonal;
+
 /* ── Reporte de deuda ── */
 document.getElementById('btnVolverDesdeReporte').onclick = () => mostrarPantalla('pantallaMenu');
 document.getElementById('btnRepCargar').onclick = cargarReporte;
@@ -442,3 +447,540 @@ async function cargarReporte() {
     </div>`;
   }).join('') || '<div style="text-align:center;color:var(--t2);font-size:13px;padding:20px 0;">Sin registros</div>';
 }
+
+/* ══════════════════════════════════════════
+   MÓDULO: GESTIÓN DE PERSONAL
+══════════════════════════════════════════ */
+
+let _persNombreActual = null;
+let _persFormModo = 'crear';
+let _importDatos = [];
+
+/* ── Listado ── */
+function abrirPersonal() {
+  renderPersonalList();
+  mostrarPantalla('pantallaPersonal');
+}
+
+function renderPersonalList() {
+  const query = (document.getElementById('persSearch')?.value || '').toLowerCase();
+  const filtroEstado = document.getElementById('persFiltroEstado')?.value || '';
+  const filtroRostro = document.getElementById('persFiltroRostro')?.value || '';
+  const todos = getPC();
+  const rostros = getRostros();
+  const activos   = todos.filter(p => p.activo !== false);
+  const inactivos = todos.filter(p => p.activo === false);
+  const enrolados = todos.filter(p => rostros[p.nombre]);
+  const sinRostro = activos.filter(p => !rostros[p.nombre]);
+  const kpiEl = document.getElementById('persKpiRow');
+  if (kpiEl) kpiEl.innerHTML = `
+    <div class="pers-kpi"><div class="pers-kpi-val ok">${activos.length}</div><div class="pers-kpi-lbl">Activos</div></div>
+    <div class="pers-kpi"><div class="pers-kpi-val muted">${inactivos.length}</div><div class="pers-kpi-lbl">Inactivos</div></div>
+    <div class="pers-kpi"><div class="pers-kpi-val ok">${enrolados.length}</div><div class="pers-kpi-lbl">Enrolados</div></div>
+    <div class="pers-kpi"><div class="pers-kpi-val warn">${sinRostro.length}</div><div class="pers-kpi-lbl">Sin rostro</div></div>
+  `;
+  let lista = todos.filter(p => {
+    if (query) {
+      if (!(p.nombre||'').toLowerCase().includes(query) && !(p.documento||'').includes(query)) return false;
+    }
+    if (filtroEstado === 'activo'   && p.activo === false) return false;
+    if (filtroEstado === 'inactivo' && p.activo !== false) return false;
+    if (filtroRostro === 'enrolado'   && !rostros[p.nombre]) return false;
+    if (filtroRostro === 'sin-rostro' &&  rostros[p.nombre]) return false;
+    return true;
+  });
+  const listaEl = document.getElementById('persLista');
+  if (!listaEl) return;
+  if (!lista.length) {
+    listaEl.innerHTML = '<div class="pers-empty">No hay trabajadores que coincidan</div>';
+    return;
+  }
+  listaEl.innerHTML = lista.map(p => {
+    const enrol  = !!rostros[p.nombre];
+    const activo = p.activo !== false;
+    return `
+      <div class="pers-row" data-nombre="${encodeURIComponent(p.nombre)}">
+        <div class="pers-av" style="background:${activo ? 'var(--xl)' : 'rgba(255,255,255,0.06)'};">
+          <span style="color:${activo ? 'var(--dg)' : 'var(--t2)'};">${xh(inic(p.nombre))}</span>
+        </div>
+        <div class="pers-info">
+          <div class="pers-nombre">${xh(p.nombre)}</div>
+          <div class="pers-sub">${xh(p.cargo || '—')} · <span style="font-variant-numeric:tabular-nums;">${xh(p.documento || '—')}</span></div>
+        </div>
+        <div class="pers-badges">
+          ${enrol  ? '<span class="pers-badge bio">✓ Bio</span>' : '<span class="pers-badge sin-bio">Sin rostro</span>'}
+          ${!activo ? '<span class="pers-badge inac">Inactivo</span>' : ''}
+        </div>
+        <div class="pers-row-actions">
+          <button class="pers-act-btn" title="Editar" data-accion="editar" data-nombre="${encodeURIComponent(p.nombre)}">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="pers-act-btn ${enrol ? '' : 'pers-act-btn-green'}" title="${enrol ? 'Re-enrolar' : 'Enrolar'}" data-accion="enrolar" data-nombre="${encodeURIComponent(p.nombre)}">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  listaEl.onclick = e => {
+    const btn = e.target.closest('[data-accion]');
+    if (btn) {
+      e.stopPropagation();
+      const nombre = decodeURIComponent(btn.dataset.nombre);
+      if (btn.dataset.accion === 'editar') { _persNombreActual = nombre; abrirFormPersonal('editar'); }
+      else { _persNombreActual = nombre; _iniciarEnrolDesdePersonal(nombre); }
+      return;
+    }
+    const row = e.target.closest('.pers-row');
+    if (row) { _persNombreActual = decodeURIComponent(row.dataset.nombre); abrirFichaPersonal(_persNombreActual); }
+  };
+}
+
+/* ── Ficha ── */
+function abrirFichaPersonal(nombre) {
+  _persNombreActual = nombre;
+  const p = getPC().find(t => t.nombre === nombre);
+  if (!p) { showToast('Trabajador no encontrado'); return; }
+  const rostros = getRostros(), meta = getRostrosMeta();
+  const enrol  = !!rostros[nombre];
+  const activo = p.activo !== false;
+  const metaDatos = meta[nombre];
+  const fechaEnrol = metaDatos ? new Date(metaDatos.fecha).toLocaleDateString('es-CO', {day:'2-digit', month:'long', year:'numeric'}) : null;
+  const capturas = metaDatos?.v === 2 ? '5 capturas' : '1 captura (enrolamiento antiguo)';
+  const fichaEl = document.getElementById('fichaContenido');
+  if (!fichaEl) return;
+  fichaEl.innerHTML = `
+    <div class="ficha-hero">
+      <div class="ficha-av" style="background:${activo ? 'var(--xl)' : 'rgba(255,255,255,0.08)'};">
+        <span style="color:${activo ? 'var(--dg)' : 'var(--t2)'};">${xh(inic(nombre))}</span>
+      </div>
+      <div class="ficha-hero-info">
+        <div class="ficha-hero-nombre">${xh(nombre)}</div>
+        <div class="ficha-hero-cargo">${xh(p.cargo || '—')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <span class="pers-badge ${activo ? 'bio' : 'inac'}">${activo ? 'Activo' : 'Inactivo'}</span>
+          ${enrol ? '<span class="pers-badge bio">✓ Biometría</span>' : '<span class="pers-badge sin-bio">Sin rostro</span>'}
+        </div>
+      </div>
+    </div>
+    <div class="ficha-info-grid">
+      <div class="ficha-info-card">
+        <div class="ficha-info-lbl">Documento</div>
+        <div class="ficha-info-val" style="font-variant-numeric:tabular-nums;">${xh(p.documento || '—')}</div>
+      </div>
+      <div class="ficha-info-card">
+        <div class="ficha-info-lbl">Cargo</div>
+        <div class="ficha-info-val">${xh(p.cargo || '—')}</div>
+      </div>
+      <div class="ficha-info-card">
+        <div class="ficha-info-lbl">Finca</div>
+        <div class="ficha-info-val">${xh((getCfgGuardada()||{}).fincaNombre || CONFIG.FINCA.nombre || '—')}</div>
+      </div>
+      <div class="ficha-info-card">
+        <div class="ficha-info-lbl">Estado</div>
+        <div class="ficha-info-val" style="color:${activo ? 'var(--dg)' : 'var(--t2)'};">${activo ? 'Activo' : 'Inactivo'}</div>
+      </div>
+    </div>
+    <div class="ficha-section">
+      <div class="ficha-section-tit">Reconocimiento facial</div>
+      ${enrol ? `
+        <div class="ficha-bio-row ok">
+          <div class="ficha-bio-ico ok"><svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div>
+            <div style="font-size:13px;font-weight:700;">Biometría registrada</div>
+            <div style="font-size:11px;color:var(--t2);margin-top:2px;">${fechaEnrol ? 'Enrolado el ' + fechaEnrol + ' · ' : ''}${capturas}</div>
+          </div>
+        </div>
+        <div class="ficha-bio-actions">
+          <button class="btn-sm btn-sm-green" id="fichaBtnReenrolar">Re-enrolar</button>
+          <button class="btn-sm btn-sm-danger" id="fichaBtnBorrarRostro">Eliminar biometría</button>
+        </div>
+      ` : `
+        <div class="ficha-bio-row warn">
+          <div class="ficha-bio-ico warn"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div style="font-size:13px;font-weight:600;color:var(--t1);">Sin biometría — no puede marcar asistencia</div>
+        </div>
+        <div class="ficha-bio-actions">
+          <button class="btn-sm btn-sm-green" id="fichaBtnEnrolar">Enrolar ahora</button>
+        </div>
+      `}
+    </div>
+    <div class="ficha-danger">
+      <div class="ficha-danger-tit">Zona de peligro</div>
+      <div class="ficha-danger-actions">
+        <button class="btn-sm btn-sm-danger" id="fichaBtnToggleActivo">${activo ? 'Inactivar trabajador' : 'Reactivar trabajador'}</button>
+        <button class="btn-sm btn-sm-danger" id="fichaBtnEliminar">Eliminar trabajador</button>
+      </div>
+    </div>
+  `;
+  const enrolBtn = fichaEl.querySelector('#fichaBtnEnrolar') || fichaEl.querySelector('#fichaBtnReenrolar');
+  if (enrolBtn) enrolBtn.onclick = () => _iniciarEnrolDesdePersonal(nombre);
+  const borrarRostroBtn = fichaEl.querySelector('#fichaBtnBorrarRostro');
+  if (borrarRostroBtn) borrarRostroBtn.onclick = () => {
+    if (!confirm(`¿Eliminar la biometría de ${nombre}? Deberá enrolarse nuevamente.`)) return;
+    deleteRostro(nombre); showToast('Biometría eliminada'); abrirFichaPersonal(nombre);
+  };
+  fichaEl.querySelector('#fichaBtnToggleActivo').onclick = () => {
+    const nuevoEstado = !activo;
+    if (!confirm(`¿${nuevoEstado ? 'Reactivar' : 'Inactivar'} a ${nombre}?`)) return;
+    const ex = getPE(); const idx = ex.findIndex(t => t.nombre === nombre);
+    if (idx >= 0) { ex[idx].activo = nuevoEstado; savePE(ex); }
+    showToast(nuevoEstado ? '✓ Trabajador reactivado' : '✓ Trabajador inactivado');
+    abrirFichaPersonal(nombre);
+  };
+  fichaEl.querySelector('#fichaBtnEliminar').onclick = async () => {
+    if (!confirm(`¿Eliminar permanentemente a ${nombre}? Esta acción no se puede deshacer.`)) return;
+    const delBtn = fichaEl.querySelector('#fichaBtnEliminar'); delBtn.disabled = true;
+    const r = await enviarConResp({accion:'eliminarPersonal', token:getAdminToken(), nombre});
+    delBtn.disabled = false;
+    if (r && r.ok) {
+      const ex = getPE().filter(t => t.nombre !== nombre); savePE(ex);
+      deleteRostro(nombre); showToast('✓ Trabajador eliminado');
+      mostrarPantalla('pantallaPersonal'); renderPersonalList();
+    } else { showToast('Error: ' + ((r && r.error) || 'No se pudo eliminar')); }
+  };
+  mostrarPantalla('pantallaFichaPersonal');
+}
+
+/* ── Formulario crear / editar ── */
+function abrirFormPersonal(modo) {
+  _persFormModo = modo;
+  const tit = document.getElementById('formPersonalTit');
+  if (tit) tit.textContent = modo === 'editar' ? 'Editar trabajador' : 'Nuevo trabajador';
+  const docInput = document.getElementById('fpDocumento');
+  const nomInput = document.getElementById('fpNombre');
+  const carSelect = document.getElementById('fpCargo');
+  const activoToggle = document.getElementById('fpActivo');
+  const dupErr = document.getElementById('fpDupErr');
+  if (dupErr) dupErr.style.display = 'none';
+  if (modo === 'editar' && _persNombreActual) {
+    const p = getPC().find(t => t.nombre === _persNombreActual);
+    if (p) {
+      if (docInput) { docInput.value = p.documento || ''; docInput.readOnly = true; docInput.style.opacity = '.5'; }
+      if (nomInput) nomInput.value = p.nombre || '';
+      if (carSelect) carSelect.value = p.cargo || '';
+      if (activoToggle) activoToggle.checked = p.activo !== false;
+    }
+  } else {
+    if (docInput) { docInput.value = ''; docInput.readOnly = false; docInput.style.opacity = ''; }
+    if (nomInput) nomInput.value = '';
+    if (carSelect) carSelect.value = '';
+    if (activoToggle) activoToggle.checked = true;
+  }
+  mostrarPantalla('pantallaFormPersonal');
+}
+
+/* ── Enrolamiento desde personal ── */
+function _iniciarEnrolDesdePersonal(nombre) {
+  nombreEnrolando = nombre;
+  modoActual = 'enrolar';
+  errE = 0;
+  _persNombreActual = nombre;
+  mostrarPantalla('pantallaMarcacion');
+  procesarEnrolar();
+}
+
+/* ── Importar personal ── */
+function abrirImportarPersonal() {
+  _importDatos = [];
+  const prevEl = document.getElementById('importPreview');
+  const btnImp = document.getElementById('btnConfirmarImport');
+  const fileInput = document.getElementById('importFileInput');
+  if (prevEl) prevEl.style.display = 'none';
+  if (btnImp) btnImp.style.display = 'none';
+  if (fileInput) fileInput.value = '';
+  mostrarPantalla('pantallaImportarPersonal');
+}
+
+function _parsearCSV(texto) {
+  const lineas = texto.trim().split('\n').filter(l => l.trim());
+  if (!lineas.length) return [];
+  const sep = lineas[0].includes(';') ? ';' : ',';
+  const headers = lineas[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+  const existentes = getPC();
+  return lineas.slice(1).map((linea, idx) => {
+    const cols = linea.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ''));
+    const row = {};
+    headers.forEach((h, i) => { row[h] = cols[i] || ''; });
+    const doc = row['documento'] || row['cedula'] || row['id'] || '';
+    const nom = row['nombre'] || row['name'] || '';
+    const car = row['cargo'] || row['position'] || '';
+    const errores = [];
+    if (!doc) errores.push('Sin documento');
+    else if (!/^\d+$/.test(doc)) errores.push('Doc. inválido');
+    else if (existentes.find(p => p.documento === doc)) errores.push('Doc. duplicado');
+    if (!nom) errores.push('Sin nombre');
+    else if (existentes.find(p => p.nombre.toLowerCase() === nom.toLowerCase())) errores.push('Nombre duplicado');
+    return { fila: idx + 2, doc, nom, car, errores };
+  });
+}
+
+function _renderImportPreview(datos) {
+  const prevEl = document.getElementById('importPreview');
+  const btnImp = document.getElementById('btnConfirmarImport');
+  if (!prevEl) return;
+  const validos = datos.filter(d => !d.errores.length);
+  const conError = datos.filter(d => d.errores.length > 0);
+  prevEl.innerHTML = `
+    <div class="import-stats">
+      <span class="import-stat ok">${validos.length} válido${validos.length !== 1 ? 's' : ''}</span>
+      ${conError.length ? `<span class="import-stat err">${conError.length} con error${conError.length !== 1 ? 'es' : ''}</span>` : ''}
+    </div>
+    <div style="overflow-x:auto;border-radius:var(--r-md);border:1px solid var(--bd);margin-top:12px;">
+      <table class="import-table">
+        <thead><tr><th>Fila</th><th>Documento</th><th>Nombre</th><th>Cargo</th><th>Estado</th></tr></thead>
+        <tbody>${datos.map(d => `
+          <tr class="${d.errores.length ? 'import-row-err' : ''}">
+            <td>${d.fila}</td>
+            <td style="font-variant-numeric:tabular-nums;">${xh(d.doc||'—')}</td>
+            <td>${xh(d.nom||'—')}</td>
+            <td>${xh(d.car||'—')}</td>
+            <td>${d.errores.length ? `<span class="import-err-tag">${xh(d.errores.join(', '))}</span>` : '<span class="import-ok-tag">✓</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  prevEl.style.display = 'block';
+  _importDatos = validos;
+  if (validos.length && btnImp) {
+    btnImp.textContent = `Importar ${validos.length} trabajador${validos.length !== 1 ? 'es' : ''}`;
+    btnImp.style.display = 'block';
+  } else if (btnImp) { btnImp.style.display = 'none'; }
+}
+
+/* ── Event listeners: módulo personal ── */
+document.getElementById('btnVolverDesdePersonal').addEventListener('click', () => mostrarPantalla('pantallaMenu'));
+document.getElementById('persSearch').addEventListener('input', renderPersonalList);
+document.getElementById('persFiltroEstado').addEventListener('change', renderPersonalList);
+document.getElementById('persFiltroRostro').addEventListener('change', renderPersonalList);
+document.getElementById('btnNuevoPersonal').addEventListener('click', () => { _persNombreActual = null; abrirFormPersonal('crear'); });
+document.getElementById('btnImportarPersonal').addEventListener('click', abrirImportarPersonal);
+
+document.getElementById('btnVolverDesdeFicha').addEventListener('click', () => { mostrarPantalla('pantallaPersonal'); renderPersonalList(); });
+document.getElementById('btnEditarPersonal').addEventListener('click', () => { if (_persNombreActual) abrirFormPersonal('editar'); });
+
+document.getElementById('btnVolverDesdeForm').addEventListener('click', () => {
+  if (_persFormModo === 'editar' && _persNombreActual) abrirFichaPersonal(_persNombreActual);
+  else mostrarPantalla('pantallaPersonal');
+});
+document.getElementById('btnCancelarFormPersonal').addEventListener('click', () => {
+  if (_persFormModo === 'editar' && _persNombreActual) abrirFichaPersonal(_persNombreActual);
+  else mostrarPantalla('pantallaPersonal');
+});
+
+document.getElementById('btnGuardarFormPersonal').addEventListener('click', async () => {
+  const doc = document.getElementById('fpDocumento').value.trim();
+  const nom = document.getElementById('fpNombre').value.trim();
+  const car = document.getElementById('fpCargo').value;
+  const activo = document.getElementById('fpActivo').checked;
+  const dupErr = document.getElementById('fpDupErr');
+  if (dupErr) dupErr.style.display = 'none';
+  if (!doc || !/^\d+$/.test(doc)) { alert('Escribe un número de documento válido (solo dígitos)'); return; }
+  if (!nom) { alert('Escribe el nombre completo'); return; }
+  if (!car) { alert('Selecciona un cargo'); return; }
+  if (_persFormModo === 'crear') {
+    if (getPC().some(p => p.nombre.toLowerCase() === nom.toLowerCase())) {
+      if (dupErr) { dupErr.textContent = 'Ya existe un trabajador con ese nombre'; dupErr.style.display = 'block'; } return;
+    }
+    if (getPorDoc(doc)) {
+      if (dupErr) { dupErr.textContent = 'Ya existe un trabajador con ese documento'; dupErr.style.display = 'block'; } return;
+    }
+  }
+  const btn = document.getElementById('btnGuardarFormPersonal'); btn.disabled = true;
+  if (_persFormModo === 'crear') {
+    const r = await enviarConResp({accion:'registrarPersonal', token:getAdminToken(), documento:doc, nombre:nom, cargo:car, fechaHora:new Date().toISOString()});
+    btn.disabled = false;
+    if (!r || !r.ok) { showToast('Error: ' + ((r && r.error) || 'No se pudo guardar en el servidor')); return; }
+    const ex = getPE(); ex.push({documento:doc, nombre:nom, cargo:car, activo:true}); savePE(ex);
+    showToast('✓ Trabajador registrado'); _persNombreActual = nom; abrirFichaPersonal(nom);
+  } else {
+    const ex = getPE(); const idx = ex.findIndex(t => t.nombre === _persNombreActual);
+    if (idx >= 0) { ex[idx].cargo = car; ex[idx].activo = activo; savePE(ex); }
+    const r = await enviarConResp({accion:'actualizarPersonal', token:getAdminToken(), nombre:_persNombreActual, cargo:car, activo, fechaHora:new Date().toISOString()});
+    btn.disabled = false;
+    if (r && !r.ok) showToast('Guardado localmente · ' + (r.error || 'Error al sincronizar'));
+    else showToast('✓ Datos actualizados');
+    abrirFichaPersonal(_persNombreActual);
+  }
+});
+
+document.getElementById('btnVolverDesdeImportar').addEventListener('click', () => mostrarPantalla('pantallaPersonal'));
+
+document.getElementById('importFileInput').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => _renderImportPreview(_parsearCSV(ev.target.result));
+  reader.readAsText(file, 'UTF-8');
+});
+
+(function() {
+  const drop = document.getElementById('importDrop');
+  if (!drop) return;
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => _renderImportPreview(_parsearCSV(ev.target.result));
+    reader.readAsText(file, 'UTF-8');
+  });
+})();
+
+document.getElementById('btnDescargarPlantilla').addEventListener('click', () => {
+  const csv = 'documento,nombre,cargo\n1000000001,Juan Pérez García,Operario de campo / cosechero\n1000000002,María López Ruiz,Supervisor';
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'plantilla_personal.csv';
+  a.click();
+});
+
+document.getElementById('btnConfirmarImport').addEventListener('click', async () => {
+  if (!_importDatos.length) return;
+  const btn = document.getElementById('btnConfirmarImport');
+  btn.disabled = true; btn.textContent = 'Importando…';
+  let ok = 0, err = 0;
+  for (const d of _importDatos) {
+    const r = await enviarConResp({accion:'registrarPersonal', token:getAdminToken(), documento:d.doc, nombre:d.nom, cargo:d.car, fechaHora:new Date().toISOString()});
+    if (r && r.ok) { const ex = getPE(); ex.push({documento:d.doc, nombre:d.nom, cargo:d.car, activo:true}); savePE(ex); ok++; }
+    else { err++; }
+  }
+  btn.disabled = false;
+  showToast(`✓ ${ok} importado${ok!==1?'s':''} ${err ? '· ' + err + ' error' + (err!==1?'es':'') : ''}`);
+  mostrarPantalla('pantallaPersonal'); renderPersonalList();
+});
+
+/* ══════════════════════════════════════════
+   MÓDULO: PRIMERA CONFIGURACIÓN (SETUP)
+══════════════════════════════════════════ */
+
+function _setupShowPanel(n) {
+  [1, 2, 3].forEach(i => {
+    const p = document.getElementById('setupPanel' + i);
+    if (p) p.style.display = (i === n) ? 'flex' : 'none';
+  });
+}
+
+function _setupStepEstado(icoId, estado) {
+  const el = document.getElementById(icoId);
+  if (!el) return;
+  if (estado === 'ok')      { el.textContent = '✓'; el.className = 'ssi-ico ok'; }
+  else if (estado === 'err') { el.textContent = '✗'; el.className = 'ssi-ico err'; }
+  else if (estado === 'run') { el.textContent = '⏳'; el.className = 'ssi-ico run'; }
+  else                       { el.textContent = '○'; el.className = 'ssi-ico pending'; }
+}
+
+async function _ejecutarSetup() {
+  const overlay = document.getElementById('setupOverlay');
+  if (overlay) overlay.style.display = 'flex';
+  _setupShowPanel(3);
+
+  const errEl = document.getElementById('setupErrMsg');
+  const reintBtn = document.getElementById('btnSetupReintentar');
+  if (errEl) errEl.style.display = 'none';
+  if (reintBtn) reintBtn.style.display = 'none';
+
+  function fallar(msg) {
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    if (reintBtn) reintBtn.style.display = '';
+    const tit = document.getElementById('setupPanel3Tit');
+    const sub = document.getElementById('setupPanel3Sub');
+    if (tit) tit.textContent = 'Error al configurar';
+    if (sub) sub.textContent = 'Corrígelo e intenta de nuevo.';
+  }
+
+  // Paso 1 + 2: obtener config del servidor
+  _setupStepEstado('sIco1', 'run');
+  let cfgData;
+  try {
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d || !d.ok || !d.config) throw new Error(d?.error || 'Respuesta inválida del servidor');
+    cfgData = d.config;
+    _setupStepEstado('sIco1', 'ok');
+  } catch (e) {
+    _setupStepEstado('sIco1', 'err');
+    fallar('No se pudo conectar al servidor: ' + e.message);
+    return;
+  }
+
+  _setupStepEstado('sIco2', 'run');
+  try {
+    if (!cfgData.empresa) throw new Error('El servidor no devolvió el nombre de la empresa');
+    if (!cfgData.fincaNombre) throw new Error('El servidor no devolvió el nombre de la finca');
+    const prev = getCfgGuardada() || {};
+    const merged = { ...prev, ...cfgData, gsUrl: CONFIG.GS_URL };
+    localStorage.setItem('app_config', JSON.stringify(merged));
+    aplicarConfig(merged);
+    aplicarEmpresaUI();
+    _setupStepEstado('sIco2', 'ok');
+  } catch (e) {
+    _setupStepEstado('sIco2', 'err');
+    fallar('Configuración incompleta: ' + e.message);
+    return;
+  }
+
+  // Paso 3: autorizar dispositivo
+  _setupStepEstado('sIco3', 'run');
+  const authR = await autorizarDispositivo('Kiosco');
+  if (!authR.ok) {
+    _setupStepEstado('sIco3', 'err');
+    fallar('No se pudo autorizar el dispositivo: ' + (authR.error || 'Error desconocido'));
+    return;
+  }
+  _setupStepEstado('sIco3', 'ok');
+
+  // Paso 4: sincronizar personal
+  _setupStepEstado('sIco4', 'run');
+  try {
+    await cargarPersonalDesdeBackend();
+  } catch { /* No crítico */ }
+  _setupStepEstado('sIco4', 'ok');
+
+  // Éxito
+  const tit = document.getElementById('setupPanel3Tit');
+  const sub = document.getElementById('setupPanel3Sub');
+  if (tit) tit.textContent = '¡Dispositivo configurado!';
+  if (sub) sub.textContent = 'El kiosco está listo para registrar asistencia.';
+
+  setTimeout(() => {
+    document.getElementById('setupOverlay').style.display = 'none';
+    mostrarPantalla('pantallaMarcacion');
+    setTimeout(sincronizarConfigDesdeBackend, 800);
+  }, 1400);
+}
+
+/* ── Event listeners: setup ── */
+document.getElementById('btnSetupComenzar').addEventListener('click', () => _setupShowPanel(2));
+
+document.getElementById('btnSetupAtras').addEventListener('click', () => _setupShowPanel(1));
+
+document.getElementById('btnSetupContinuar').addEventListener('click', () => {
+  const urlInput = document.getElementById('setupGsUrl');
+  const errEl = document.getElementById('setupUrlErr');
+  const url = (urlInput ? urlInput.value : '').trim();
+  if (!url || !url.startsWith('https://')) {
+    if (errEl) { errEl.textContent = 'Ingresa una URL válida (debe empezar con https://)'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  CONFIG.GS_URL = url;
+  // Guardar URL parcialmente para que el PIN pueda conectarse
+  const prev = getCfgGuardada() || {};
+  localStorage.setItem('app_config', JSON.stringify({ ...prev, gsUrl: url }));
+  // Ocultar overlay, abrir PIN
+  document.getElementById('setupOverlay').style.display = 'none';
+  abrirPinScreen('setup');
+});
+
+document.getElementById('btnSetupReintentar').addEventListener('click', () => {
+  // Resetear íconos
+  ['sIco1','sIco2','sIco3','sIco4'].forEach(id => _setupStepEstado(id, 'pending'));
+  document.getElementById('setupPanel3Tit').textContent = 'Configurando dispositivo…';
+  document.getElementById('setupPanel3Sub').textContent = 'No cierres esta pantalla.';
+  // Volver a panel 2 para que corrija la URL o reintente con nuevo PIN
+  document.getElementById('setupOverlay').style.display = 'flex';
+  _setupShowPanel(2);
+});

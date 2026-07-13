@@ -239,25 +239,19 @@
     <div class="dash-group">
       <div class="dash-group-label">Personal y Biometría</div>
       <div class="dash-cards">
-        <div class="dash-card" id="menuAgregar">
+        <div class="dash-card dash-card-personal" id="menuPersonal">
           <div class="dash-card-ico">
-            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <div class="dash-card-lbl">Personal</div>
-        </div>
-        <div class="dash-card" id="menuEnrolar">
-          <div class="dash-card-ico">
-            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div class="dash-card-lbl">Enrolamiento</div>
-        </div>
-        <div class="dash-card" id="menuRostros">
-          <div class="dash-card-ico">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
-          <div class="dash-card-lbl" id="menuRostrosSub">Rostros</div>
+          <div class="dash-card-lbl">Gestión de personal</div>
         </div>
       </div>
+    </div>
+    <!-- IDs preservados para compatibilidad -->
+    <div style="display:none;">
+      <div id="menuAgregar"></div>
+      <div id="menuEnrolar"></div>
+      <div id="menuRostros"><span id="menuRostrosSub"></span></div>
     </div>
 
     <!-- GRUPO: Operación -->
@@ -514,6 +508,153 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     PANTALLA GESTIÓN DE PERSONAL (Listado)
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaPersonal">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdePersonal"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Gestión de personal</span>
+      <div class="pers-hdr-actions">
+        <button class="btn-pers-sec" id="btnImportarPersonal">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          Importar
+        </button>
+        <button class="btn-pers-primary" id="btnNuevoPersonal">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo
+        </button>
+      </div>
+    </div>
+    <!-- KPIs -->
+    <div class="pers-kpi-row" id="persKpiRow">
+      <div class="pers-kpi"><div class="pers-kpi-val ok">—</div><div class="pers-kpi-lbl">Activos</div></div>
+      <div class="pers-kpi"><div class="pers-kpi-val muted">—</div><div class="pers-kpi-lbl">Inactivos</div></div>
+      <div class="pers-kpi"><div class="pers-kpi-val ok">—</div><div class="pers-kpi-lbl">Enrolados</div></div>
+      <div class="pers-kpi"><div class="pers-kpi-val warn">—</div><div class="pers-kpi-lbl">Sin rostro</div></div>
+    </div>
+    <!-- Búsqueda y filtros -->
+    <div class="pers-search-bar">
+      <div class="pers-search-wrap">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--t2)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="persSearch" class="pers-search-input" placeholder="Buscar por nombre o cédula…">
+      </div>
+      <div class="pers-filters">
+        <select id="persFiltroEstado" class="pers-select">
+          <option value="">Todos</option>
+          <option value="activo">Activos</option>
+          <option value="inactivo">Inactivos</option>
+        </select>
+        <select id="persFiltroRostro" class="pers-select">
+          <option value="">Biometría</option>
+          <option value="enrolado">Enrolados</option>
+          <option value="sin-rostro">Sin rostro</option>
+        </select>
+      </div>
+    </div>
+    <!-- Lista de trabajadores -->
+    <div id="persLista"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA FICHA TRABAJADOR
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaFichaPersonal">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeFicha"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Ficha del trabajador</span>
+      <button class="btn-pers-sec" id="btnEditarPersonal">Editar</button>
+    </div>
+    <div id="fichaContenido"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA FORMULARIO PERSONAL (Crear/Editar)
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaFormPersonal">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeForm"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit" id="formPersonalTit">Nuevo trabajador</span>
+    </div>
+    <div class="form-c">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Identificación</div>
+      <div class="fl">Número de documento</div>
+      <input type="text" id="fpDocumento" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 1121816934" class="fi">
+      <div class="fl" style="margin-top:10px;">Nombre completo</div>
+      <input type="text" id="fpNombre" placeholder="Ej: Pedro Pablo Ramírez" class="fi">
+      <div id="fpDupErr" style="display:none;font-size:11.5px;color:var(--re);font-weight:700;margin-top:6px;padding:8px 12px;background:var(--rl);border-radius:8px;"></div>
+    </div>
+    <div class="form-c">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Asignación</div>
+      <div class="fl">Cargo</div>
+      <select id="fpCargo" class="fi">
+        <option value="">Selecciona un cargo</option>
+        <option>Operario de campo / cosechero</option>
+        <option>Supervisor</option>
+        <option>Conductor</option>
+        <option>Mecánico / taller</option>
+        <option>Administrativo</option>
+        <option>Aplicador (fertilización/sanidad)</option>
+      </select>
+      <div class="form-toggle-row" style="margin-top:14px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--tx);">Activo</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;">Puede registrar asistencia</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="fpActivo" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="form-c" style="background:rgba(46,173,110,0.05);border-color:rgba(46,173,110,0.15);">
+      <div style="font-size:11.5px;color:var(--t2);line-height:1.55;">
+        La biometría facial se registra desde la ficha del trabajador después de guardarlo.
+      </div>
+    </div>
+    <button class="btn-ok" id="btnGuardarFormPersonal">Guardar trabajador</button>
+    <button class="btn-sec" id="btnCancelarFormPersonal">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA IMPORTAR PERSONAL
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaImportarPersonal">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeImportar"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Importación masiva</span>
+    </div>
+    <!-- Plantilla -->
+    <div class="import-template-card">
+      <div class="import-template-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--dg)" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div class="import-template-txt">
+        <div style="font-size:13px;font-weight:700;">Plantilla CSV</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px;">Columnas: documento, nombre, cargo</div>
+      </div>
+      <button class="btn-pers-sec" id="btnDescargarPlantilla">Descargar</button>
+    </div>
+    <!-- Drop zone -->
+    <label class="import-drop" id="importDrop" for="importFileInput">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="1.5" width="36" height="36"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-top:12px;">Arrastra tu archivo CSV aquí</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:4px;">o toca para seleccionar</div>
+      <input type="file" id="importFileInput" accept=".csv,.txt" style="display:none;">
+    </label>
+    <!-- Vista previa -->
+    <div id="importPreview" style="display:none;"></div>
+    <button class="btn-ok" id="btnConfirmarImport" style="display:none;">Importar</button>
+  </div>
+</div>
+
 <!-- Modal autorización supervisor -->
 <div id="modalSupervisor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--wh);border-radius:18px;padding:24px 20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2);">
@@ -525,6 +666,78 @@
     <button class="btn-ok" id="modalPinOk">Autorizar</button>
     <button class="btn-sec" id="modalPinCancel" style="margin-top:10px;">Cancelar</button>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     OVERLAY PRIMERA CONFIGURACIÓN
+     (position:fixed — cubre todo el kiosco)
+══════════════════════════════════════════ -->
+<div id="setupOverlay" style="display:none;">
+
+  <!-- Panel 1: dispositivo sin configurar -->
+  <div id="setupPanel1" class="setup-panel">
+    <div class="setup-device-ico">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="40" height="28" rx="4" stroke="#2EAD6E" stroke-width="2.5"/>
+        <path d="M16 36h16M24 36v4" stroke="#2EAD6E" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="34" cy="14" r="7" fill="#0C1410" stroke="#F59E0B" stroke-width="2"/>
+        <path d="M34 11v3.5l2 2" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="setup-tit">Dispositivo sin configurar</div>
+    <div class="setup-sub">Este kiosco aún no está conectado a ningún servidor.<br>Configúralo para comenzar a registrar asistencia.</div>
+    <button class="btn-ok" id="btnSetupComenzar">Configurar dispositivo</button>
+  </div>
+
+  <!-- Panel 2: ingresar URL -->
+  <div id="setupPanel2" class="setup-panel" style="display:none;">
+    <button class="setup-back-btn" id="btnSetupAtras">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+      Atrás
+    </button>
+    <div class="setup-device-ico">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="18" stroke="#2EAD6E" stroke-width="2.5"/>
+        <ellipse cx="24" cy="24" rx="7" ry="18" stroke="#2EAD6E" stroke-width="2"/>
+        <path d="M6 24h36M8 16h32M8 32h32" stroke="#2EAD6E" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="setup-tit">Servidor de datos</div>
+    <div class="setup-sub">Ingresa la URL del Google Apps Script de tu planilla de asistencia.</div>
+    <div class="setup-field-wrap">
+      <div class="fl">URL del servidor</div>
+      <input type="url" id="setupGsUrl" class="fi setup-url-input" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="setupUrlErr" class="setup-err" style="display:none;"></div>
+    <button class="btn-ok" id="btnSetupContinuar">Continuar con PIN →</button>
+  </div>
+
+  <!-- Panel 3: progreso del setup -->
+  <div id="setupPanel3" class="setup-panel" style="display:none;">
+    <div class="setup-tit" id="setupPanel3Tit">Configurando dispositivo…</div>
+    <div class="setup-sub" id="setupPanel3Sub">No cierres esta pantalla.</div>
+    <div class="setup-steps" id="setupSteps">
+      <div class="setup-step-item" id="sStep1">
+        <span class="ssi-ico" id="sIco1">⏳</span>
+        <span class="ssi-lbl">Verificando servidor</span>
+      </div>
+      <div class="setup-step-item" id="sStep2">
+        <span class="ssi-ico pending" id="sIco2">○</span>
+        <span class="ssi-lbl">Descargando configuración</span>
+      </div>
+      <div class="setup-step-item" id="sStep3">
+        <span class="ssi-ico pending" id="sIco3">○</span>
+        <span class="ssi-lbl">Autorizando dispositivo</span>
+      </div>
+      <div class="setup-step-item" id="sStep4">
+        <span class="ssi-ico pending" id="sIco4">○</span>
+        <span class="ssi-lbl">Sincronizando personal</span>
+      </div>
+    </div>
+    <div id="setupErrMsg" class="setup-err" style="display:none;"></div>
+    <button class="btn-sec" id="btnSetupReintentar" style="display:none;margin-top:16px;">← Reintentar</button>
+  </div>
+
 </div>
 
 <!-- Scripts en orden de dependencia -->

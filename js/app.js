@@ -65,10 +65,14 @@ function mostrarBtnSupervisor(visible) {
 }
 window._mostrarBtnSupervisor = mostrarBtnSupervisor;
 
-/* ── Arranque: sincronizar config y personal desde backend ── */
+/* ── Arranque: configuración inicial o kiosco normal ── */
 aplicarEmpresaUI();
-setTimeout(sincronizarConfigDesdeBackend, 800);
-setTimeout(cargarPersonalDesdeBackend, 1500);
+if (!isAppConfigured()) {
+  document.getElementById('setupOverlay').style.display = 'flex';
+} else {
+  setTimeout(sincronizarConfigDesdeBackend, 800);
+  setTimeout(cargarPersonalDesdeBackend, 1500);
+}
 
 /* ── 5-TAP en logo → Admin ── */
 let _tapCount = 0, _tapTimer = null;
@@ -91,6 +95,8 @@ document.getElementById('teclado').addEventListener('click', e => {
   if (k === 'C') docInput.value = '';
   else if (k === '⌫') docInput.value = docInput.value.slice(0, -1);
   else if (docInput.value.length < 15) docInput.value += k;
+  const _dv = document.getElementById('docVal');
+  if (_dv) { _dv.classList.remove('doc-pop'); void _dv.offsetWidth; _dv.classList.add('doc-pop'); }
   procesarDoc(docInput.value);
 });
 
