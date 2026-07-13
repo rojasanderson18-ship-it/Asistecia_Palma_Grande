@@ -18,7 +18,6 @@
  *   salida:      number
  *   salidaSab:   number
  *   umbral:      number   — distancia facial (0.30–0.60)
- *   pin:         string   — hash bcrypt del PIN (validación pendiente migrar a backend)
  * }
  */
 
@@ -119,9 +118,11 @@ let _personalCargando = false;
 
 async function cargarPersonalDesdeBackend() {
   if (_personalCargando || !CONFIG.GS_URL) return;
+  const tok = (typeof getAdminToken === 'function') ? getAdminToken() : null;
+  if (!tok) return;
   _personalCargando = true;
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=listarPersonal&_=${Date.now()}`, { cache: 'no-store' });
+    const r = await fetch(`${CONFIG.GS_URL}?accion=listarPersonal&token=${encodeURIComponent(tok)}&_=${Date.now()}`, { cache: 'no-store' });
     const d = await r.json();
     if (d && Array.isArray(d.personal) && d.personal.length) {
       savePersonalCache(d.personal);

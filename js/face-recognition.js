@@ -182,8 +182,8 @@ async function procesarEnrolar() {
     showRes('err', 'Rostro guardado, foto no', `<b>${xh(nombreEnrolando)}</b> puede marcar pero no se guardó la foto.`, []);
     setTimeout(() => mostrarPantalla('pantallaMarcacion'), 4000); return;
   }
-  const r = await enviarConResp({accion:'guardarFotoPersonal', documento:pe.documento, foto, nombre:pe.nombre, cargo:pe.cargo});
-  if (!r || !r.ok || !r.fotoURL) {
+  const r = await enviarConResp({accion:'guardarFotoPersonal', token:getAdminToken(), documento:pe.documento, foto, nombre:pe.nombre, cargo:pe.cargo});
+  if (!r || !r.ok) {
     showRes('err', 'Rostro guardado, foto no', `<b>${xh(nombreEnrolando)}</b> puede marcar pero hubo un error en Drive.`, []);
     setTimeout(() => mostrarPantalla('pantallaMarcacion'), 4000); return;
   }

@@ -32,9 +32,10 @@ document.getElementById('btnPinConfirmar').onclick = async () => {
   const val = document.getElementById('pinInput').value;
   const errEl = document.getElementById('pinErr');
   btn.disabled = true;
-  const result = await autenticarPin(val);
+  const result = await login(val);
   btn.disabled = false;
   if (result.ok) {
+    cargarPersonalDesdeBackend();
     if (_pinDest === 'enrolar') {
       _abrirEnrolar();
     } else if (_pinDest === 'agregar') {
@@ -107,7 +108,7 @@ document.getElementById('btnGuardarPersonal').onclick = async () => {
   if (getPC().some(p => p.nombre.toLowerCase() === nom.toLowerCase())) { alert('Ya existe ese nombre'); return; }
   if (getPorDoc(doc)) { alert('Ya existe ese documento'); return; }
   const btn = document.getElementById('btnGuardarPersonal'); btn.disabled = true;
-  const r = await enviarConResp({accion:'registrarPersonal', documento:doc, nombre:nom, cargo:car, fechaHora:new Date().toISOString()});
+  const r = await enviarConResp({accion:'registrarPersonal', token:getAdminToken(), documento:doc, nombre:nom, cargo:car, fechaHora:new Date().toISOString()});
   btn.disabled = false;
   if (!r || !r.ok) { showRes('err', 'No se pudo registrar', `<b>${xh(nom)}</b> no se guardó en el servidor.<br><small>${xh((r && r.error) || 'Sin conexión')}</small>`, []); return; }
   const ex = getPE(); ex.push({documento:doc, nombre:nom, cargo:car}); savePE(ex);
@@ -279,7 +280,6 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
     showToast('✓ PIN actualizado en el servidor');
   }
 
-  // 2. Guardar en LocalStorage (siempre, para offline)
   const prev = getCfgGuardada() || {};
   const cfg = {
     ...prev,
@@ -288,16 +288,23 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
     fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral,
   };
   delete cfg.pin; delete cfg.pinHash; delete cfg.pinSha; delete cfg._salt; delete cfg.nombreFinca;
+
+  // 2. Si hay URL de servidor: guardar PRIMERO en backend; solo guardar local si el backend acepta
+  if (CONFIG.GS_URL || cfg.gsUrl) {
+    if (cfg.gsUrl && !CONFIG.GS_URL) CONFIG.GS_URL = cfg.gsUrl;
+    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral };
+    const rb = await guardarConfigBackend(cfgBackend);
+    if (!rb.ok) {
+      btn.disabled = false;
+      showToast('Cambio no aplicado: no fue posible validar con el servidor');
+      alert('Cambio no aplicado: no fue posible validar con el servidor\n' + (rb.error || ''));
+      return;
+    }
+  }
+
+  // 3. Backend aceptó (o no hay URL de servidor): guardar en LocalStorage
   localStorage.setItem('app_config', JSON.stringify(cfg));
   aplicarConfig(cfg);
-
-  // 3. Guardar en backend si hay PIN actual (autenticación requerida)
-  if (pinActual && CONFIG.GS_URL) {
-    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral };
-    guardarConfigBackend(pinActual, cfgBackend).then(r => {
-      if (!r.ok) showToast('⚠ Config local guardada, pero sin sincronizar al servidor: ' + r.error);
-    });
-  }
 
   btn.disabled = false;
   aplicarEmpresaUI();
