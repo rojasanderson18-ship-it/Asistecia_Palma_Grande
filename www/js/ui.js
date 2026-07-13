@@ -26,8 +26,14 @@ function showConf(d) {
   if (navigator.vibrate) navigator.vibrate([200, 50, 200]);
 
   const primerNombre = d.nombre.split(' ')[0];
-  const saludo = d.tipo === 'Entrada' ? '¡BIENVENIDO!' : '¡HASTA PRONTO!';
-  const bg = d.tipo === 'Entrada' ? '#071510' : '#070D18';
+  const esEntrada = d.tipo === 'Entrada';
+  const bg = esEntrada ? '#061410' : '#08091A';
+  const ico = esEntrada
+    ? `<svg class="conf-ico-chk" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="32" fill="rgba(74,222,128,0.10)"/>
+        <polyline points="16 32 27 43 48 20" stroke="#4ADE80" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+       </svg>`
+    : `<div class="conf-ico-wave">👋</div>`;
 
   let alerts = '';
   if (d.offline) alerts += `<div class="conf-alert fuera">📶 Sin conexión — pendiente de sincronización</div>`;
@@ -38,30 +44,20 @@ function showConf(d) {
 
   document.getElementById('resultadoContenido').innerHTML = `
     <div class="conf-full" style="background:${bg}">
-      <div class="conf-av">${xh(inic(d.nombre))}</div>
-      <div class="conf-ring">
-        <svg viewBox="0 0 44 44" fill="none" width="50" height="50">
-          <polyline points="9 22 19 32 35 13" stroke="#4ADE80" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="conf-saludo">${saludo}</div>
+      <div class="conf-ico">${ico}</div>
+      <div class="conf-saludo">${esEntrada ? 'BIENVENIDO' : 'HASTA PRONTO'}</div>
       <div class="conf-nombre">${xh(primerNombre)}</div>
-      <div class="conf-badges">
-        <span class="conf-tipo-bdg">${xh(d.tipo)}</span>
-        <span class="conf-hora-txt">${d.hora}</span>
-      </div>
+      <div class="conf-subtipo">${xh(d.tipo)} registrada · ${d.hora}</div>
       ${alerts ? `<div class="conf-alerts">${alerts}</div>` : ''}
       <div class="conf-pgbar-wrap"><div class="conf-pgbar" id="confPBar" style="width:100%"></div></div>
-      <button class="conf-back" id="btnConfOk">Continuar</button>
     </div>`;
 
   mostrarPantalla('pantallaResultado');
 
-  // Barra de progreso descendente (4 segundos)
   setTimeout(() => {
     const bar = document.getElementById('confPBar');
     if (bar) bar.style.width = '0%';
-  }, 50);
+  }, 60);
 
   function volverInicio() {
     if (_cdInterval) clearInterval(_cdInterval);
@@ -72,10 +68,8 @@ function showConf(d) {
     mostrarPantalla('pantallaMarcacion');
   }
 
-  const btnOk = document.getElementById('btnConfOk');
-  if (btnOk) btnOk.onclick = volverInicio;
   if (_cdInterval) clearInterval(_cdInterval);
-  let secs = 4;
+  let secs = 3;
   _cdInterval = setInterval(() => { secs--; if (secs <= 0) { clearInterval(_cdInterval); _cdInterval = null; volverInicio(); } }, 1000);
 }
 
