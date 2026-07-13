@@ -178,6 +178,24 @@ function calcularPuntualidad(tipo, hora) {
   return {estado:'ok', msg:'', minutos:0};
 }
 
+/* ── Verificación local: ¿la marcación requeriría supervisión que no puede encolarse offline? ──
+ * El token de supervisor dura 5 min y habrá expirado antes de que la cola sincronice.
+ * Bloquear cuando: sinBiometria, GPS ausente/baja precisión con geocerca, fuera de geocerca.
+ */
+function _requiereSupervisorLocal(sinBiometria) {
+  if (sinBiometria) return true;
+  const geocercaLocal = CONFIG.FINCA.lat !== 0 && CONFIG.FINCA.lng !== 0;
+  if (!geocercaLocal) return false;
+  if (!gpsCoords) return true;                           // sin GPS y hay geocerca
+  if (!gpsOk) return true;                              // fuera de geocerca
+  // precision null o >100 m con geocerca configurada: backend exigiría supervisor
+  const prec = gpsCoords.precision;
+  if (prec == null || prec > 100) return true;
+  return false;
+}
+
+const _MSG_REQUIERE_CONEXION = 'Esta marcación excepcional requiere conexión para ser autorizada por el supervisor.';
+
 /* ── Marcación ── */
 async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
   const hora = new Date();
@@ -205,22 +223,14 @@ async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
 
   const horaStr = hora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
 
-  /* ── MODO OFFLINE: verificar si la marcación puede encolarse sin supervisor ── */
+  /* ── MODO OFFLINE: solo encolar si no requiere supervisor ── */
   if (!navigator.onLine || !CONFIG.GS_URL) {
-    // Supervisor token caduca en 5 min: las excepciones (sinBiometria, fuera de geocerca)
-    // no pueden encolarse offline porque el token ya no será válido al sincronizar.
-    const geocercaConfiguradaLocal = CONFIG.FINCA.lat !== 0 && CONFIG.FINCA.lng !== 0;
-    const sinGpsLocal = !gpsCoords;
-    const fueraGeocercaLocal = geocercaConfiguradaLocal && (sinGpsLocal || !gpsOk);
-
-    if (sinBiometria || fueraGeocercaLocal) {
+    if (_requiereSupervisorLocal(sinBiometria)) {
       setWorkerState('IDLE');
-      showRes('warn', 'Conexión requerida',
-        'Esta marcación excepcional requiere conexión para ser autorizada por el supervisor.',
+      showRes('warn', 'Conexión requerida', _MSG_REQUIERE_CONEXION,
         ['Activa la conexión a internet e intenta nuevamente']);
       return;
     }
-
     payload.sinConexion = true;
     _encolarOfflineConMeta(payload);
     updColaBadge();
@@ -239,8 +249,14 @@ async function ejecutarMarcacion(nombre, tipo, confPct, sinBiometria) {
     r = null;
   }
 
-  /* Error de red real → encolar offline */
+  /* Error de red real → encolar solo si no requiere supervisor */
   if (!r || r.networkError) {
+    if (_requiereSupervisorLocal(sinBiometria)) {
+      setWorkerState('IDLE');
+      showRes('warn', 'Conexión requerida', _MSG_REQUIERE_CONEXION,
+        ['Verifica la conexión a internet e intenta nuevamente']);
+      return;
+    }
     payload.sinConexion = true;
     _encolarOfflineConMeta(payload);
     updColaBadge();
