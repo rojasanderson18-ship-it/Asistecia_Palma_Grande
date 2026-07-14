@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asistencia-v30';
+const CACHE_NAME = 'asistencia-v31';
 const ARCHIVOS_CACHE = [
   './index.html',
   './manifest.json',
