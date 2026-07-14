@@ -1,12 +1,18 @@
 /* ── MÓDULO: Asistencia — flujo del trabajador ── */
 
+/* ── Fecha local Colombia (evita desfase UTC después de las 7 p.m.) ── */
+function fechaLocalISO() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+}
+
 const WORKER = {
   state: 'IDLE',   // IDLE | SCANNING | VALIDATING | CONFIRMED
   nombre: null,
   tipo: null,
   doc: null,
+  tScanInicio: null,  // timestamp al entrar a SCANNING (para métricas)
 };
-const SCAN_TIMEOUT_MS = 35000;      // 35s sin reconocimiento → error
+const SCAN_TIMEOUT_MS = 20000;      // 20s sin reconocimiento → error
 const DUPLICATE_WINDOW_MS = 5 * 60 * 1000; // 5 min ventana duplicados
 const _lastMarked = {};             // { nombre: timestamp }
 let _scanTimeoutHandle = null;
@@ -39,14 +45,32 @@ function _renderWorkerState() {
       if (scanBlock) scanBlock.style.display = '';
       if (valOverlay) valOverlay.style.display = 'none';
       _updatePersonBanner();
+      WORKER.tScanInicio = Date.now();
       iniciarCamara();
-      // Timeout de escaneo
+      // A los 8s: mostrar pista visual al trabajador
+      _scanTimeoutHandle = setTimeout(() => {
+        if (WORKER.state === 'SCANNING') {
+          if (typeof _setCamEstado === 'function') {
+            _setCamEstado('Acérquese · mire de frente · mejore iluminación');
+          }
+        }
+      }, 8000);
+      // A los 20s: error con alternativa de supervisor
       _scanTimeoutHandle = setTimeout(() => {
         if (WORKER.state === 'SCANNING') {
           setWorkerState('IDLE');
-          showRes('err', 'No se reconoció el rostro',
-            'El sistema no pudo identificar tu rostro.',
-            ['Mala iluminación', 'Rostro no enrolado', 'Cámara cubierta']);
+          const nombre = WORKER.nombre;
+          const tipo   = WORKER.tipo;
+          if (nombre && tipo) {
+            abrirModalSupervisor(
+              `No se reconoció el rostro de <b>${xh(nombre)}</b>. Un supervisor puede autorizar la marcación con su PIN.`,
+              () => ejecutarMarcacion(nombre, tipo, null, true)
+            );
+          } else {
+            showRes('err', 'No se reconoció el rostro',
+              'El sistema no pudo identificar tu rostro.',
+              ['Acércate más', 'Mira de frente', 'Mejora la iluminación', 'Solicita autorización al supervisor']);
+          }
         }
       }, SCAN_TIMEOUT_MS);
       break;
@@ -90,7 +114,7 @@ function resetWorker() {
 // Se actualiza cada vez que se hace una marcación exitosa.
 function _getMarcasHoyCache() { try { return JSON.parse(localStorage.getItem('marcas_hoy_cache') || '{}'); } catch { return {}; } }
 function _setMarcasHoyCache(doc, marcas) {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaLocalISO();
   const stored = _getMarcasHoyCache();
   // Invalidar si cambió el día
   if (stored._fecha !== hoy) { localStorage.setItem('marcas_hoy_cache', JSON.stringify({ _fecha: hoy })); }
@@ -100,7 +124,7 @@ function _setMarcasHoyCache(doc, marcas) {
 }
 function _agregarMarcaLocal(doc, tipo) {
   const cache = _getMarcasHoyCache();
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaLocalISO();
   if (cache._fecha !== hoy) { localStorage.setItem('marcas_hoy_cache', JSON.stringify({ _fecha: hoy })); }
   const fresh = _getMarcasHoyCache();
   if (!fresh[doc]) fresh[doc] = [];
@@ -110,7 +134,7 @@ function _agregarMarcaLocal(doc, tipo) {
 
 // Revisión de la cola offline: ¿hay marcaciones pendientes para este doc hoy?
 function _marcasPendientesEnCola(doc) {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaLocalISO();
   const cola = JSON.parse(localStorage.getItem('cola') || '[]');
   return cola
     .filter(m => String(m.documento) === String(doc) && m.fechaHora && m.fechaHora.startsWith(hoy))
@@ -118,7 +142,7 @@ function _marcasPendientesEnCola(doc) {
 }
 
 async function getTipo(doc) {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaLocalISO();
 
   // 1. Cache local del día (marcaciones ya confirmadas en esta sesión)
   const cacheHoy = _getMarcasHoyCache();
@@ -159,23 +183,38 @@ async function getTipo(doc) {
 }
 
 /* ── Puntualidad ── */
+function _horaStrADecimal(s) {
+  if (!s) return null;
+  const p = String(s).split(':');
+  if (p.length < 2) return null;
+  return parseInt(p[0]) + parseInt(p[1]) / 60;
+}
+
 function calcularPuntualidad(tipo, hora) {
+  const horario = getHorarioDelDia(hora.getDay());
+  if (!horario || !horario.activo) return { estado: 'ok', msg: '', minutos: 0 };
+
   const h = hora.getHours() + hora.getMinutes() / 60;
-  const GRACIA = 15 / 60;
-  const esSabado = hora.getDay() === 6;
+
   if (tipo === 'Entrada') {
-    const entrada = CONFIG.HORARIO.entrada || 6.0;
-    if (h <= entrada + GRACIA) return {estado:'ok', msg:'A tiempo', minutos:0};
-    const min = Math.round((h - entrada) * 60);
-    return {estado:'tarde', msg:`Tarde ${min} min`, minutos:min};
+    const entradaDec = _horaStrADecimal(horario.entrada);
+    if (entradaDec === null) return { estado: 'ok', msg: '', minutos: 0 };
+    const tolMin = (horario.tolEntrada != null ? horario.tolEntrada : 10) / 60;
+    if (h <= entradaDec + tolMin) return { estado: 'ok', msg: 'A tiempo', minutos: 0 };
+    const min = Math.round((h - entradaDec) * 60);
+    return { estado: 'tarde', msg: `Tarde ${min} min`, minutos: min };
   }
+
   if (tipo === 'Salida') {
-    const salida = esSabado ? (CONFIG.HORARIO.salidaSabado || 11.75) : (CONFIG.HORARIO.salida || 14.75);
-    if (h >= salida) return {estado:'ok', msg:'A tiempo', minutos:0};
-    const min = Math.round((salida - h) * 60);
-    return {estado:'temprano', msg:`Salida ${min} min antes`, minutos:min};
+    const salidaDec = _horaStrADecimal(horario.salida);
+    if (salidaDec === null) return { estado: 'ok', msg: '', minutos: 0 };
+    const tolMin = (horario.tolSalida != null ? horario.tolSalida : 5) / 60;
+    if (h >= salidaDec - tolMin) return { estado: 'ok', msg: 'A tiempo', minutos: 0 };
+    const min = Math.round((salidaDec - h) * 60);
+    return { estado: 'temprano', msg: `Salida ${min} min antes`, minutos: min };
   }
-  return {estado:'ok', msg:'', minutos:0};
+
+  return { estado: 'ok', msg: '', minutos: 0 };
 }
 
 /* ── Verificación local: ¿la marcación requeriría supervisión que no puede encolarse offline? ──
@@ -370,9 +409,17 @@ setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
     return;
   }
 
-  // Registrar métrica de velocidad
+  // Registrar métricas (desde inicio de SCANNING, no desde el match)
   if (typeof registrarMetrica === 'function') {
-    registrarMetrica({ evento: 'reconocimiento', nombre: nombre.slice(0, 3) + '***', dist: dist.toFixed(3), msHastaMatch: Date.now() - tMatch, confPct });
+    const tAhora = Date.now();
+    registrarMetrica({
+      evento: 'reconocimiento',
+      nombre: nombre.slice(0, 3) + '***',
+      dist: dist.toFixed(3),
+      confPct,
+      msScanTotal: WORKER.tScanInicio ? tAhora - WORKER.tScanInicio : null,
+      msHastaConfirmacion: tAhora - tMatch,
+    });
   }
 
   await ejecutarMarcacion(nombre, tipo, confPct, false);
