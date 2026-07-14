@@ -10,6 +10,22 @@
 
 let _adminToken = null;
 let _supervisorToken = null;
+let _adminSessionTimer = null;
+const _ADMIN_SESSION_MS = 15 * 60 * 1000;
+const _ADMIN_AVISO_MS  = 13 * 60 * 1000;
+
+function _programarExpiracionAdmin() {
+  if (_adminSessionTimer) clearTimeout(_adminSessionTimer);
+  _adminSessionTimer = setTimeout(() => {
+    if (typeof showToast === 'function') showToast('⚠ Sesión admin expira en 2 minutos — guarda los cambios');
+    _adminSessionTimer = setTimeout(() => {
+      _adminToken = null;
+      _adminSessionTimer = null;
+      if (typeof showToast === 'function') showToast('Sesión admin expirada — ingresa el PIN nuevamente');
+      if (typeof mostrarPantalla === 'function') mostrarPantalla('pantallaMarcacion');
+    }, _ADMIN_SESSION_MS - _ADMIN_AVISO_MS);
+  }, _ADMIN_AVISO_MS);
+}
 
 function _getDeviceId() {
   let id = localStorage.getItem('device_id');
@@ -28,14 +44,24 @@ async function _sha256(texto) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function _postGs(payload) {
-  const r = await fetch(CONFIG.GS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) return { ok: false, error: 'Error del servidor (' + r.status + ')' };
-  return r.json();
+async function _postGs(payload, timeoutMs) {
+  const ctrl = new AbortController();
+  const timo = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
+  try {
+    const r = await fetch(CONFIG.GS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) return { ok: false, error: 'Error del servidor (' + r.status + ')' };
+    return r.json();
+  } catch (e) {
+    if (e.name === 'AbortError') return { ok: false, error: 'Sin respuesta del servidor (tiempo agotado)' };
+    return { ok: false, error: e.message || 'Error de red' };
+  } finally {
+    clearTimeout(timo);
+  }
 }
 
 /* ── Login admin: valida PIN y obtiene token de sesión (15 min) ── */
@@ -48,6 +74,7 @@ async function login(pin) {
     const d = await _postGs({ accion: 'login', hash, deviceId });
     if (d.ok && d.token) {
       _adminToken = d.token;
+      _programarExpiracionAdmin();
       return { ok: true, token: d.token, expiresIn: d.expiresIn };
     }
     return { ok: false, error: d.error || 'PIN incorrecto' };
@@ -86,6 +113,7 @@ function getDeviceId() { return _getDeviceId(); }
 function logout() {
   _adminToken = null;
   _supervisorToken = null;
+  if (_adminSessionTimer) { clearTimeout(_adminSessionTimer); _adminSessionTimer = null; }
 }
 
 function clearSupervisorToken() {

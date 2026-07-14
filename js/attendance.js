@@ -137,12 +137,18 @@ async function getTipo(doc) {
   if (CONFIG.GS_URL && deviceTok) {
     try {
       const deviceDid = (typeof getDeviceId === 'function') ? getDeviceId() : null;
-      const r = await fetch(CONFIG.GS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ accion: 'marcasHoy', deviceToken: deviceTok, deviceId: deviceDid, documento: doc }),
-      });
-      const d = await r.json();
+      const tCtrl = new AbortController();
+      const tTimo = setTimeout(() => tCtrl.abort(), 7000);
+      let r, d;
+      try {
+        r = await fetch(CONFIG.GS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ accion: 'marcasHoy', deviceToken: deviceTok, deviceId: deviceDid, documento: doc }),
+          signal: tCtrl.signal,
+        });
+        d = await r.json();
+      } finally { clearTimeout(tTimo); }
       const m = (d && d.marcas) ? d.marcas : [];
       if (m.length) _setMarcasHoyCache(doc, m);
       if (m.includes('Salida')) return { tipo: 'Salida', completo: true, marcas: m };
@@ -373,15 +379,16 @@ setFaceMatchCallback(function onFaceMatch(nombre, dist) {
       const ref = rostros[nombre];
       if (!ref) {
         _autoMarkPending = false; setWorkerState('IDLE');
-        // No tiene rostro enrolado — ofrecer autorización supervisor
         abrirModalSupervisor(
           `<b>${xh(nombre)}</b> no tiene rostro enrolado. Un supervisor puede autorizar la marcación con su PIN.`,
           () => ejecutarMarcacion(nombre, tipo, null, true)
         );
         return;
       }
-      const finalDist = faceapi.euclideanDistance(det.descriptor, new Float32Array(ref));
-      if (finalDist > CONFIG.UMBRAL_FACIAL) {
+      // Usa _distanciaMedia2Mejores para soportar descriptores v1 y v2 (multi-pose)
+      const finalDist = _distanciaMedia2Mejores(det.descriptor, nombre);
+      const umbralFinal = _umbralParaNombre(nombre);
+      if (finalDist > umbralFinal) {
         _autoMarkPending = false; setWorkerState('SCANNING');
         return;
       }

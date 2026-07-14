@@ -59,12 +59,22 @@ function enviar(p) {
     });
 }
 
-function enviarConResp(p) {
+async function enviarConResp(p) {
   const payload = _enriquecerPayload(p);
-  if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) return Promise.resolve(null);
-  return fetch(CONFIG.GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload)})
-    .then(r => r.json())
-    .catch(e => ({ok: false, networkError: true, error: e.message}));
+  if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) return null;
+  const ctrl = new AbortController();
+  const timo = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(CONFIG.GS_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload), signal: ctrl.signal,
+    });
+    return r.json();
+  } catch (e) {
+    return { ok: false, networkError: true, error: e.message };
+  } finally {
+    clearTimeout(timo);
+  }
 }
 
 let _reintentando = false;
@@ -97,9 +107,12 @@ async function reintentarCola() {
     delete payload._meta;
 
     let r = null;
+    const iCtrl = new AbortController();
+    const iTimo = setTimeout(() => iCtrl.abort(), 12000);
     try {
       const resp = await fetch(CONFIG.GS_URL, {
-        method: 'POST', headers: {'Content-Type':'text/plain'}, body: JSON.stringify(payload)
+        method: 'POST', headers: {'Content-Type':'text/plain'},
+        body: JSON.stringify(payload), signal: iCtrl.signal,
       });
       r = await resp.json();
     } catch {
@@ -109,6 +122,8 @@ async function reintentarCola() {
         _meta: { ...meta, intentos: meta.intentos + 1, ultimoIntento: new Date().toISOString(), ultimoError: 'Error de red', estado: 'pendiente' }
       });
       continue;
+    } finally {
+      clearTimeout(iTimo);
     }
 
     if (r && r.ok) {
