@@ -83,20 +83,9 @@ if (!isAppConfigured()) {
   setTimeout(cargarPersonalDesdeBackend, 1500);
 }
 
-/* ── 5-TAP en logo → Admin (sin revelar el hint) ── */
-let _tapCount = 0, _tapTimer = null;
-// Fix 9: title eliminado desde JS para no exponerlo en HTML
+/* ── Logo: solo eliminar title para no exponer hint ── */
 const _logoEl = document.getElementById('hdrLogo');
 if (_logoEl) _logoEl.removeAttribute('title');
-_logoEl && _logoEl.addEventListener('click', () => {
-  _tapCount++;
-  if (_tapTimer) clearTimeout(_tapTimer);
-  _tapTimer = setTimeout(() => { _tapCount = 0; }, 2000);
-  if (_tapCount >= 5) {
-    _tapCount = 0; clearTimeout(_tapTimer);
-    abrirPinScreen('menu');
-  }
-});
 
 /* ══════════════════════════════════════════
    TECLADO — debounce + requestId anticarrera
