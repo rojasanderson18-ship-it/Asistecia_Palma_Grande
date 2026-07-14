@@ -740,6 +740,18 @@
 
 </div>
 
+<!-- Modal genérico: reemplaza alert() y confirm() nativos -->
+<div id="modalGen" style="display:none;position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div class="mgen-backdrop"></div>
+  <div class="mgen-box">
+    <div class="mgen-msg" id="mgenMsg"></div>
+    <div class="mgen-btns">
+      <button class="mgen-cancel" id="mgenCancel">Cancelar</button>
+      <button class="mgen-ok" id="mgenOk">Aceptar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Scripts en orden de dependencia -->
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
