@@ -314,6 +314,32 @@ async function procesarEnrolar() {
   document.getElementById('bloqueCamera').style.display = '';
   mostrarBannerEnrolar(nombreEnrolando);
 
+  // La cámara no se inicia automáticamente en modo enrolamiento (el worker no pasa por SCANNING),
+  // así que hay que arrancarla aquí explícitamente.
+  if (!stream) {
+    _setCamEstado('Iniciando cámara…');
+    iniciarCamara();
+    // Esperar a que el video esté listo (readyState ≥ 2) con timeout de 10 s
+    const video = document.getElementById('video');
+    const tCam  = Date.now();
+    while (Date.now() - tCam < 10000) {
+      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+      if (stream && video && video.readyState >= 2) break;
+      await new Promise(r => setTimeout(r, 150));
+    }
+    if (!stream || !video || video.readyState < 2) {
+      _setCamEstado('No se pudo acceder a la cámara.');
+      modoActual = null; nombreEnrolando = null;
+      ocultarBannerEnrolar();
+      detenerCamara();
+      showRes('err', 'Cámara no disponible',
+        'No se pudo iniciar la cámara. Verifique que el navegador tenga permiso de cámara y que ninguna otra aplicación la esté usando.',
+        ['Revise los permisos del navegador', 'Cierre otras apps que usen la cámara', 'Recargue la página e intente de nuevo']);
+      setTimeout(() => mostrarPantalla('pantallaAdmin'), 5000);
+      return;
+    }
+  }
+
   const descriptores = [];
   let fotoCapturada  = null;
   setProgreso(0, CAPTURAS_ENROLAR);
