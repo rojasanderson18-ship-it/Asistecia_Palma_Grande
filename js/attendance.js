@@ -6,7 +6,7 @@ const WORKER = {
   tipo: null,
   doc: null,
 };
-const SCAN_TIMEOUT_MS = 20000;      // 20s sin reconocimiento → error
+const SCAN_TIMEOUT_MS = 35000;      // 35s sin reconocimiento → error
 const DUPLICATE_WINDOW_MS = 5 * 60 * 1000; // 5 min ventana duplicados
 const _lastMarked = {};             // { nombre: timestamp }
 let _scanTimeoutHandle = null;

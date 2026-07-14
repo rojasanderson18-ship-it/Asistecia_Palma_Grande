@@ -361,7 +361,7 @@ async function loopDeteccion() {
     try {
       const det = await faceapi.detectSingleFace(
         video,
-        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.48 })
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 })
       ).withFaceLandmarks().withFaceDescriptor();
 
       const duracion = Date.now() - t0;
