@@ -73,6 +73,7 @@ function _renderWorkerState() {
       if (camWrap) camWrap.classList.remove('scanning', 'face-ok');
       _autoMarkPending = false;
       if (typeof detenerCamara === 'function') detenerCamara();
+      if (typeof window._mostrarBtnSupervisor === 'function') window._mostrarBtnSupervisor(false);
       break;
 
     case 'SCANNING':
@@ -90,24 +91,24 @@ function _renderWorkerState() {
           }
         }
       }, 8000);
-      // A los 20s: error con alternativa de supervisor
+      // A los 20s: mostrar opción de supervisor sin cerrar la cámara
       _scanTimeoutHandle = setTimeout(() => {
-        if (WORKER.state === 'SCANNING') {
-          const nombre = WORKER.nombre;
-          const tipo   = WORKER.tipo;
-          WORKER.tipoExcepcion = 'FALLO_RECONOCIMIENTO';
-          setWorkerState('IDLE');
-          if (nombre && tipo) {
-            abrirModalSupervisor(
-              `No se reconoció el rostro de <b>${xh(nombre)}</b>. Un supervisor puede autorizar la marcación con su PIN.`,
-              () => ejecutarMarcacion(nombre, tipo, null, true, 'FALLO_RECONOCIMIENTO')
-            );
-          } else {
-            showRes('err', 'No se reconoció el rostro',
-              'El sistema no pudo identificar su rostro.',
-              ['Acérquese un poco', 'Mire directamente a la cámara', 'Mejore la iluminación', 'Solicite autorización al supervisor']);
-          }
+        if (WORKER.state !== 'SCANNING') return;
+        WORKER.tipoExcepcion = 'FALLO_RECONOCIMIENTO';
+        if (typeof _setCamEstado === 'function') {
+          _setCamEstado('No se reconoció — intente de nuevo o use PIN de supervisor');
         }
+        if (typeof window._mostrarBtnSupervisor === 'function') window._mostrarBtnSupervisor(true);
+        // Segundo timeout: si pasan otros 30s sin reconocimiento, volver al inicio
+        _scanTimeoutHandle = setTimeout(() => {
+          if (WORKER.state === 'SCANNING') {
+            setWorkerState('IDLE');
+            if (typeof window._mostrarBtnSupervisor === 'function') window._mostrarBtnSupervisor(false);
+            showRes('err', 'Sin reconocimiento facial',
+              'No se pudo identificar el rostro. Solicite ayuda al supervisor.',
+              ['Acérquese a la cámara', 'Mejore la iluminación', 'Use el botón de supervisor']);
+          }
+        }, 30000);
       }, SCAN_TIMEOUT_MS);
       break;
 
