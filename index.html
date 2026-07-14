@@ -21,7 +21,7 @@
      HEADER
 ══════════════════════════════════════════ -->
 <header class="hdr">
-  <div class="hdr-logo" id="hdrLogo" title="5 toques para admin">
+  <div class="hdr-logo" id="hdrLogo">
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <rect x="21" y="28" width="5" height="13" rx="2.5" fill="#fff"/>
       <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#fff" transform="rotate(-30 24 21)"/>
@@ -85,7 +85,7 @@
       <div class="sys-status-wrap">
         <div class="sys-status" id="sysStatus" onclick="toggleSysDetail()">
           <span class="sys-dot" id="sysDot"></span>
-          <span class="sys-label" id="sysLabel">Sistema listo</span>
+          <span class="sys-label" id="sysLabel">Verificando sistema…</span>
           <span class="sys-chevron" id="sysChevron">›</span>
         </div>
         <!-- Detalle técnico (flota sobre el layout; IDs preservados para geolocation.js) -->
@@ -100,7 +100,7 @@
           </div>
           <div class="sys-detail-row">
             <span class="sys-detail-lbl">Internet</span>
-            <span class="st-val ok" id="stInternet">OK</span>
+            <span class="st-val na" id="stInternet">…</span>
           </div>
         </div>
       </div>

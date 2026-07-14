@@ -11,29 +11,40 @@ function _actualizarReloj() {
 _actualizarReloj();
 setInterval(_actualizarReloj, 30000);
 
-/* ── Estado del sistema (línea discreta) ── */
+/* ── Estado del sistema ── */
 function _actualizarSysStatus() {
   const dot = document.getElementById('sysDot');
   const lbl = document.getElementById('sysLabel');
   if (!dot || !lbl) return;
-  const geoOk  = (document.getElementById('stGeocerca')?.textContent || '').includes('OK');
-  const gpsOkT = (document.getElementById('stUbicacion')?.textContent || '').includes('Dentro');
-  const netOk  = navigator.onLine;
+  const netOk = navigator.onLine;
+  // Usar gpsEstado explícito en lugar de leer texto del DOM
+  const dentroGeocerca = (typeof gpsEstado !== 'undefined') ? gpsEstado === 'DENTRO' : false;
+  const buscando       = (typeof gpsEstado !== 'undefined') ? gpsEstado === 'BUSCANDO' : true;
+
   if (!netOk) {
     dot.className = 'sys-dot warn';
     lbl.textContent = 'Sin conexión — modo offline';
-  } else if (!geoOk || !gpsOkT) {
+  } else if (buscando) {
     dot.className = 'sys-dot warn';
-    lbl.textContent = 'Fuera del predio';
+    lbl.textContent = 'Verificando sistema…';
+  } else if (!dentroGeocerca && CONFIG.FINCA.lat !== 0 && CONFIG.FINCA.lng !== 0) {
+    dot.className = 'sys-dot warn';
+    const estado = typeof gpsEstado !== 'undefined' ? gpsEstado : 'ERROR';
+    lbl.textContent = estado === 'SIN_PERMISO'
+      ? 'Sin permiso de ubicación'
+      : estado === 'NO_DISPONIBLE'
+        ? 'GPS no disponible'
+        : 'Fuera del predio';
   } else {
     dot.className = 'sys-dot';
     lbl.textContent = 'Sistema listo';
   }
 }
-setInterval(_actualizarSysStatus, 5000);
+setInterval(_actualizarSysStatus, 3000);
 window.addEventListener('online',  _actualizarSysStatus);
 window.addEventListener('offline', _actualizarSysStatus);
-setTimeout(_actualizarSysStatus, 2000);
+// Comenzar siempre como "Verificando" — se resolverá cuando GPS responda
+setTimeout(_actualizarSysStatus, 500);
 
 /* ── Toggle detalle sistema ── */
 function toggleSysDetail() {
@@ -46,14 +57,10 @@ function toggleSysDetail() {
 
 /* ── Indicadores pantalla scan ── */
 function _actualizarScanIndicadores() {
-  const r = document.getElementById('scanIndRostro');
   const g = document.getElementById('scanIndGps');
   const n = document.getElementById('scanIndRed');
-  if (!r) return;
-  // Rostro: lo actualiza face-recognition.js via confFill/confPct — aquí solo red y gps
-  const geoTxt = document.getElementById('stGeocerca')?.textContent || '';
-  const gpsOn  = (document.getElementById('stUbicacion')?.textContent || '').includes('Dentro');
-  if (g) g.className = 'scan-ind-dot ' + (gpsOn ? 'ok' : 'warn');
+  const dentroGeocerca = (typeof gpsEstado !== 'undefined') ? gpsEstado === 'DENTRO' : false;
+  if (g) g.className = 'scan-ind-dot ' + (dentroGeocerca ? 'ok' : 'warn');
   if (n) n.className = 'scan-ind-dot ' + (navigator.onLine ? 'ok' : 'warn');
 }
 setInterval(_actualizarScanIndicadores, 3000);
@@ -74,9 +81,12 @@ if (!isAppConfigured()) {
   setTimeout(cargarPersonalDesdeBackend, 1500);
 }
 
-/* ── 5-TAP en logo → Admin ── */
+/* ── 5-TAP en logo → Admin (sin revelar el hint) ── */
 let _tapCount = 0, _tapTimer = null;
-document.getElementById('hdrLogo').addEventListener('click', () => {
+// Fix 9: title eliminado desde JS para no exponerlo en HTML
+const _logoEl = document.getElementById('hdrLogo');
+if (_logoEl) _logoEl.removeAttribute('title');
+_logoEl && _logoEl.addEventListener('click', () => {
   _tapCount++;
   if (_tapTimer) clearTimeout(_tapTimer);
   _tapTimer = setTimeout(() => { _tapCount = 0; }, 2000);
@@ -86,33 +96,78 @@ document.getElementById('hdrLogo').addEventListener('click', () => {
   }
 });
 
-/* ── Teclado numérico ── */
+/* ══════════════════════════════════════════
+   TECLADO — debounce + requestId anticarrera
+══════════════════════════════════════════ */
+let _docDebounceTimer = null;
+let _docRequestId     = 0;   // incrementa con cada tecla; procesarDoc lo ignora si cambió
+
+/* resetDocumentoInicio(): cancela todo y vuelve a estado limpio */
+function resetDocumentoInicio() {
+  // 1. Invalidar cualquier request en vuelo
+  _docRequestId++;
+  if (_docDebounceTimer) { clearTimeout(_docDebounceTimer); _docDebounceTimer = null; }
+
+  // 2. Limpiar input
+  const docInput = document.getElementById('documentoInput');
+  if (docInput) docInput.value = '';
+
+  // 3. Limpiar display
+  const dv = document.getElementById('docVal');
+  const ds = document.getElementById('docSub');
+  const dc = document.getElementById('docChk');
+  if (dv) { dv.textContent = 'Digite su cédula'; dv.className = 'doc-number ph'; }
+  if (ds) ds.style.display = 'none';
+  if (dc) dc.classList.remove('show');
+
+  // 4. Detener cámara si estaba activa y resetear worker
+  if (typeof detenerCamara === 'function') detenerCamara();
+  if (typeof resetWorker   === 'function') resetWorker();
+}
+
 document.getElementById('teclado').addEventListener('click', e => {
   const t = e.target.closest('.key'); if (!t) return;
   resetIdleTimer();
   const k = t.dataset.k;
   const docInput = document.getElementById('documentoInput');
-  if (k === 'C') docInput.value = '';
-  else if (k === '⌫') docInput.value = docInput.value.slice(0, -1);
+
+  if (k === 'C') {
+    // C cancela todo inmediatamente
+    resetDocumentoInicio();
+    return;
+  }
+  if (k === '⌫') docInput.value = docInput.value.slice(0, -1);
   else if (docInput.value.length < 15) docInput.value += k;
 
-  // Actualizar display inmediatamente (antes de cualquier llamada async)
-  const _dv = document.getElementById('docVal');
-  const _ds = document.getElementById('docSub');
   const val = docInput.value.replace(/\D/g, '');
-  if (_dv) {
+
+  // Actualizar display inmediatamente
+  const dv = document.getElementById('docVal');
+  const ds = document.getElementById('docSub');
+  if (dv) {
     if (!val) {
-      _dv.textContent = 'Digite su cédula';
-      _dv.className = 'doc-number ph';
+      dv.textContent = 'Digite su cédula';
+      dv.className = 'doc-number ph';
     } else {
-      _dv.textContent = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      _dv.className = 'doc-number';
-      _dv.classList.remove('doc-pop'); void _dv.offsetWidth; _dv.classList.add('doc-pop');
+      dv.textContent = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      dv.className = 'doc-number';
+      dv.classList.remove('doc-pop'); void dv.offsetWidth; dv.classList.add('doc-pop');
     }
   }
-  if (_ds && !val) _ds.style.display = 'none';
+  if (ds && !val) ds.style.display = 'none';
 
-  procesarDoc(docInput.value);
+  // Si borraron hasta vacío, cancelar todo
+  if (!val) { resetDocumentoInicio(); return; }
+
+  // Invalidar request anterior e iniciar debounce de 300ms
+  _docRequestId++;
+  const myId = _docRequestId;
+  if (_docDebounceTimer) clearTimeout(_docDebounceTimer);
+  _docDebounceTimer = setTimeout(() => {
+    _docDebounceTimer = null;
+    // Solo ejecutar si este request sigue siendo el actual
+    if (myId === _docRequestId) procesarDoc(docInput.value, myId);
+  }, 300);
 });
 
 /* ── Cola badge click ── */
@@ -121,10 +176,9 @@ document.getElementById('colaBadge').addEventListener('click', () => {
   if (c.length) showToast(`${c.length} marcación(es) pendientes de enviar`);
 });
 
-/* ── Cancelar scan ── */
+/* ── Cancelar scan (Cambiar cédula) ── */
 document.getElementById('btnWkCancel').onclick = () => {
-  resetWorker();
-  document.getElementById('documentoInput').value = '';
+  resetDocumentoInicio();
 };
 
 /* ── Autorización supervisor desde scan ── */
@@ -146,15 +200,13 @@ function resetIdleTimer() {
   if (_idleTimer) clearTimeout(_idleTimer);
   _idleTimer = setTimeout(() => {
     if (WORKER.state !== 'IDLE' && WORKER.state !== 'CONFIRMED') {
-      resetWorker();
-      document.getElementById('documentoInput').value = '';
+      resetDocumentoInicio();
     }
   }, IDLE_TIMEOUT);
 }
 
-// Resetear en cualquier interacción
 ['touchstart', 'mousedown', 'keydown'].forEach(ev => {
-  document.addEventListener(ev, resetIdleTimer, {passive: true});
+  document.addEventListener(ev, resetIdleTimer, { passive: true });
 });
 resetIdleTimer();
 

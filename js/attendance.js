@@ -426,34 +426,34 @@ setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
 });
 
 /* ── Entrada por documento ── */
-// Contador de generación: descarta respuestas async de llamadas anteriores
+// procesarDoc recibe requestId de app.js — descarta si cambió (anticarrera)
 let _procesarDocGen = 0;
 
-async function procesarDoc(docVal) {
-  const gen = ++_procesarDocGen;
+async function procesarDoc(docVal, requestId) {
+  // requestId viene del debounce de app.js; si no se pasa, generar uno interno
+  const gen = (requestId != null) ? requestId : ++_procesarDocGen;
+  // Referencia al _docRequestId de app.js para la comprobación final
+  const getActiveId = () => (typeof _docRequestId !== 'undefined') ? _docRequestId : gen;
+
   const docNum = String(docVal).replace(/\D/g, '');
-  const docValEl = document.getElementById('docVal');
   const docSubEl = document.getElementById('docSub');
   const docChkEl = document.getElementById('docChk');
 
   if (!docNum) {
-    if (docValEl) { docValEl.textContent = 'Digite su cédula'; docValEl.className = 'doc-number ph'; }
     if (docSubEl) docSubEl.style.display = 'none';
     if (docChkEl) docChkEl.classList.remove('show');
     setWorkerState('IDLE');
     return;
   }
 
-  // Display formateado (inmediato, sin esperar async)
-  if (docValEl) {
-    docValEl.textContent = docNum.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    docValEl.className = 'doc-number';
-  }
-
   const persona = getPorDoc(docNum);
   if (!persona) {
-    if (docSubEl) { docSubEl.textContent = 'Documento no encontrado'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
-    if (docChkEl) docChkEl.classList.remove('show');
+    // Solo mostrar "no encontrado" si coincide con el input actual
+    const inputActual = (document.getElementById('documentoInput')?.value || '').replace(/\D/g, '');
+    if (docNum === inputActual) {
+      if (docSubEl) { docSubEl.textContent = 'Documento no encontrado'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+      if (docChkEl) docChkEl.classList.remove('show');
+    }
     return;
   }
 
@@ -462,8 +462,9 @@ async function procesarDoc(docVal) {
 
   const res = await getTipo(docNum);
 
-  // Si el usuario ya digitó otro número, descartar esta respuesta
-  if (gen !== _procesarDocGen) return;
+  // Verificación final: el documento en pantalla sigue siendo el mismo
+  const inputActualPost = (document.getElementById('documentoInput')?.value || '').replace(/\D/g, '');
+  if (gen !== getActiveId() || docNum !== inputActualPost) return;
 
   if (res.completo) {
     if (docSubEl) { docSubEl.textContent = 'Ya completaste tu jornada hoy'; docSubEl.className = 'doc-info er'; }
@@ -471,7 +472,6 @@ async function procesarDoc(docVal) {
     return;
   }
 
-  // Sin estado conocido y sin conexión: no avanzar, informar al operario
   if (res.sinEstado) {
     if (docSubEl) { docSubEl.textContent = 'Sin conexión — activa el internet para verificar marcaciones'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
     if (docChkEl) docChkEl.classList.remove('show');
@@ -481,7 +481,7 @@ async function procesarDoc(docVal) {
   if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo; docSubEl.className = 'doc-info'; docSubEl.style.display = 'block'; }
 
   WORKER.nombre = persona.nombre;
-  WORKER.tipo = res.tipo;
-  WORKER.doc = docNum;
-  setWorkerState('SCANNING', {nombre: persona.nombre, tipo: res.tipo, doc: docNum});
+  WORKER.tipo   = res.tipo;
+  WORKER.doc    = docNum;
+  setWorkerState('SCANNING', { nombre: persona.nombre, tipo: res.tipo, doc: docNum });
 }
