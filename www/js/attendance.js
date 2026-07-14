@@ -379,7 +379,11 @@ setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
 });
 
 /* ── Entrada por documento ── */
+// Contador de generación: descarta respuestas async de llamadas anteriores
+let _procesarDocGen = 0;
+
 async function procesarDoc(docVal) {
+  const gen = ++_procesarDocGen;
   const docNum = String(docVal).replace(/\D/g, '');
   const docValEl = document.getElementById('docVal');
   const docSubEl = document.getElementById('docSub');
@@ -393,7 +397,7 @@ async function procesarDoc(docVal) {
     return;
   }
 
-  // Display formateado
+  // Display formateado (inmediato, sin esperar async)
   if (docValEl) {
     docValEl.textContent = docNum.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     docValEl.className = 'doc-number';
@@ -410,6 +414,10 @@ async function procesarDoc(docVal) {
   if (docChkEl) docChkEl.classList.add('show');
 
   const res = await getTipo(docNum);
+
+  // Si el usuario ya digitó otro número, descartar esta respuesta
+  if (gen !== _procesarDocGen) return;
+
   if (res.completo) {
     if (docSubEl) { docSubEl.textContent = 'Ya completaste tu jornada hoy'; docSubEl.className = 'doc-info er'; }
     if (docChkEl) docChkEl.classList.remove('show');

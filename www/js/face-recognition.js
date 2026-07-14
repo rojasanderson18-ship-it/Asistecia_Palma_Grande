@@ -184,19 +184,7 @@ function _evaluarCalidad(det, video) {
   }
 
   // Score de detección (confianza)
-  if (det.detection.score < 0.55) { issues.push('Mejora la iluminación'); }
-
-  // Landmarks: verificar visibilidad de ojos (puntos 36-41 ojo izq, 42-47 ojo der)
-  if (det.landmarks) {
-    const pts = det.landmarks.positions;
-    if (pts && pts.length >= 48) {
-      const ojoDer = pts.slice(36, 42);
-      const ojoIzq = pts.slice(42, 48);
-      const spanDer = Math.abs(ojoDer[3].x - ojoDer[0].x);
-      const spanIzq = Math.abs(ojoIzq[3].x - ojoIzq[0].x);
-      if (spanDer < 5 || spanIzq < 5) issues.push('Mira de frente, ojos visibles');
-    }
-  }
+  if (det.detection.score < 0.52) { issues.push('Mejora la iluminación'); }
 
   return issues;
 }

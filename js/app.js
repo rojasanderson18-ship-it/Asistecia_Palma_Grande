@@ -95,8 +95,23 @@ document.getElementById('teclado').addEventListener('click', e => {
   if (k === 'C') docInput.value = '';
   else if (k === '⌫') docInput.value = docInput.value.slice(0, -1);
   else if (docInput.value.length < 15) docInput.value += k;
+
+  // Actualizar display inmediatamente (antes de cualquier llamada async)
   const _dv = document.getElementById('docVal');
-  if (_dv) { _dv.classList.remove('doc-pop'); void _dv.offsetWidth; _dv.classList.add('doc-pop'); }
+  const _ds = document.getElementById('docSub');
+  const val = docInput.value.replace(/\D/g, '');
+  if (_dv) {
+    if (!val) {
+      _dv.textContent = 'Digite su cédula';
+      _dv.className = 'doc-number ph';
+    } else {
+      _dv.textContent = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      _dv.className = 'doc-number';
+      _dv.classList.remove('doc-pop'); void _dv.offsetWidth; _dv.classList.add('doc-pop');
+    }
+  }
+  if (_ds && !val) _ds.style.display = 'none';
+
   procesarDoc(docInput.value);
 });
 
