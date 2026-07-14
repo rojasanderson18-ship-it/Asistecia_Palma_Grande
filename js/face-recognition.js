@@ -98,6 +98,7 @@ function detenerCamara() {
   _cameraSessionId++;           // invalida getUserMedia o loadeddata en vuelo
   loopActivo = false;
   _inferenciaPendiente = false;
+  _erroresLoop = 0;
   _consecutivo = { nombre: null, t0: null, count: 0 };
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   const video = document.getElementById('video');
@@ -392,11 +393,22 @@ async function procesarEnrolar() {
   const pe   = getPC().find(p => p.nombre === nombreGuardado);
   const foto = fotoCapturada || '';
 
+  function _volverMenuTrasEnrolar() {
+    mostrarPantalla('pantallaMenu');
+  }
+  function _patchBotonesEnrolar() {
+    const b1 = document.getElementById('resBtn1');
+    const b2 = document.getElementById('resBtn2');
+    if (b1) b1.onclick = _volverMenuTrasEnrolar;
+    if (b2) b2.onclick = _volverMenuTrasEnrolar;
+  }
+
   if (!pe || !foto) {
     _guardarFotoPendiente(nombreGuardado, foto);
     showRes('ok', 'Biometría lista · foto pendiente',
       `<b>${xh(nombreGuardado)}</b> puede marcar asistencia. La foto se enviará al recuperar conexión.`, []);
-    setTimeout(() => mostrarPantalla('pantallaMenu'), 4000);
+    _patchBotonesEnrolar();
+    setTimeout(_volverMenuTrasEnrolar, 4000);
     return;
   }
 
@@ -418,7 +430,8 @@ async function procesarEnrolar() {
       `<b>${xh(nombreGuardado)}</b> ya puede marcar asistencia.`, []);
   }
 
-  setTimeout(() => mostrarPantalla('pantallaMenu'), 3000);
+  _patchBotonesEnrolar();
+  setTimeout(_volverMenuTrasEnrolar, 3000);
 }
 
 /* ── Foto pendiente: persiste localmente y reintenta en reconexión ── */
@@ -463,8 +476,10 @@ window.addEventListener('online', _enviarFotosPendientes);
    — Umbrales por versión de descriptor
 ══════════════════════════════════════════ */
 let _consecutivo = { nombre: null, t0: null, count: 0 };
-const VENTANA_CONSEC_MS = 1800;
-const HITS_REQUERIDOS   = 2;
+const VENTANA_CONSEC_MS   = 1800;
+const HITS_REQUERIDOS     = 2;
+const MAX_ERRORES_LOOP    = 10;   // errores de inferencia consecutivos antes de avisar
+let _erroresLoop = 0;
 
 async function loopDeteccion() {
   loopActivo = true;
@@ -497,6 +512,7 @@ async function loopDeteccion() {
 
       const duracion = Date.now() - t0;
       _intervaloDyn = Math.max(180, Math.min(600, Math.round(duracion * 0.65)));
+      _erroresLoop = 0;
 
       const camWrap = document.getElementById('camWrap');
 
@@ -568,7 +584,12 @@ async function loopDeteccion() {
           _setCamEstado('Analizando…');
         }
       }
-    } catch { /* ignorar errores de frame */ }
+    } catch {
+      _erroresLoop++;
+      if (_erroresLoop >= MAX_ERRORES_LOOP) {
+        _setCamEstado('Error en reconocimiento — recargue la página');
+      }
+    }
 
     _inferenciaPendiente = false;
   }

@@ -194,38 +194,6 @@ document.getElementById('btnBorrarTodosRostros').onclick = () => {
 };
 
 /* ── Configuración ── */
-function buildTimePick(id) {
-  const wrap = document.getElementById(id); if (!wrap) return;
-  const selH = document.createElement('select');
-  for (let h = 0; h < 24; h++) { const o = document.createElement('option'); o.value = h; o.textContent = String(h).padStart(2, '0'); selH.appendChild(o); }
-  const selM = document.createElement('select');
-  [0, 15, 30, 45].forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = String(m).padStart(2, '0'); selM.appendChild(o); });
-  const sep = document.createElement('span'); sep.className = 'tp-sep'; sep.textContent = ':';
-  const ampm = document.createElement('span'); ampm.className = 'tp-ampm';
-  selH.addEventListener('change', () => _updAmpm(selH, ampm));
-  wrap.innerHTML = ''; wrap.append(selH, sep, selM, ampm);
-  return {selH, selM, ampm};
-}
-function _updAmpm(selH, ampm) { ampm.textContent = parseInt(selH.value) < 12 ? 'a.m.' : 'p.m.'; }
-function setTimePick(id, decimal) {
-  const wrap = document.getElementById(id); if (!wrap) return;
-  const selH = wrap.querySelector('select:nth-child(1)');
-  const selM = wrap.querySelector('select:nth-child(3)');
-  const ampm = wrap.querySelector('.tp-ampm');
-  if (!selH || !selM) return;
-  const hh = Math.floor(decimal), mm = Math.round((decimal - hh) * 60);
-  selH.value = hh;
-  const mq = [0, 15, 30, 45].reduce((a, b) => Math.abs(b - mm) < Math.abs(a - mm) ? b : a, 0);
-  selM.value = mq;
-  if (ampm) _updAmpm(selH, ampm);
-}
-function getTimePick(id) {
-  const wrap = document.getElementById(id); if (!wrap) return null;
-  const selH = wrap.querySelector('select:nth-child(1)');
-  const selM = wrap.querySelector('select:nth-child(3)');
-  if (!selH || !selM) return null;
-  return parseInt(selH.value) + parseInt(selM.value) / 60;
-}
 
 /* ── Tabla de horarios (7 días) ── */
 function _renderHorTabla(horarios) {
