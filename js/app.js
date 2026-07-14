@@ -27,17 +27,19 @@ function _actualizarSysStatus() {
   } else if (buscando) {
     dot.className = 'sys-dot warn';
     lbl.textContent = 'Verificando sistema…';
-  } else if (!dentroGeocerca && CONFIG.FINCA.lat !== 0 && CONFIG.FINCA.lng !== 0) {
+  } else if (dentroGeocerca || CONFIG.FINCA.lat === 0 && CONFIG.FINCA.lng === 0) {
+    dot.className = 'sys-dot';
+    lbl.textContent = 'Sistema listo';
+  } else {
     dot.className = 'sys-dot warn';
     const estado = typeof gpsEstado !== 'undefined' ? gpsEstado : 'ERROR';
     lbl.textContent = estado === 'SIN_PERMISO'
       ? 'Sin permiso de ubicación'
       : estado === 'NO_DISPONIBLE'
         ? 'GPS no disponible'
-        : 'Fuera del predio';
-  } else {
-    dot.className = 'sys-dot';
-    lbl.textContent = 'Sistema listo';
+        : estado === 'ERROR'
+          ? 'Error obteniendo ubicación'
+          : 'Fuera del predio';
   }
 }
 setInterval(_actualizarSysStatus, 3000);

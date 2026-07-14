@@ -126,5 +126,14 @@ window.addEventListener('offline', _actualizarInternet);
 // Inicializar desde el estado real (no desde HTML estático)
 _actualizarInternet();
 
+/* ── Reintento cuando el usuario vuelve de Ajustes (SIN_PERMISO) ── */
+function _reintentarSiSinPermiso() {
+  if (gpsEstado === 'SIN_PERMISO') _iniciarWatchGPS();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') _reintentarSiSinPermiso();
+});
+window.addEventListener('pageshow', _reintentarSiSinPermiso);
+
 /* ── Arranque ── */
 _iniciarWatchGPS();

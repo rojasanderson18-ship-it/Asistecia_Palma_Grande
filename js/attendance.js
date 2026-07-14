@@ -15,12 +15,18 @@ const WORKER = {
 const SCAN_TIMEOUT_MS = 20000;      // 20s sin reconocimiento → error
 const DUPLICATE_WINDOW_MS = 5 * 60 * 1000; // 5 min ventana duplicados
 const _lastMarked = {};             // { nombre: timestamp }
-let _scanTimeoutHandle = null;
-let _autoMarkPending = false;
+let _scanHintHandle    = null;  // timer 8s (instrucciones)
+let _scanTimeoutHandle = null;  // timer 20s (error/supervisor)
+let _autoMarkPending   = false;
+
+function _cancelarTimersScan() {
+  if (_scanHintHandle)    { clearTimeout(_scanHintHandle);    _scanHintHandle    = null; }
+  if (_scanTimeoutHandle) { clearTimeout(_scanTimeoutHandle); _scanTimeoutHandle = null; }
+}
 
 /* ── Estado worker ── */
 function setWorkerState(state, data) {
-  if (_scanTimeoutHandle) { clearTimeout(_scanTimeoutHandle); _scanTimeoutHandle = null; }
+  _cancelarTimersScan();
   WORKER.state = state;
   if (data) Object.assign(WORKER, data);
   _renderWorkerState();
@@ -48,7 +54,7 @@ function _renderWorkerState() {
       WORKER.tScanInicio = Date.now();
       iniciarCamara();
       // A los 8s: mostrar pista visual al trabajador
-      _scanTimeoutHandle = setTimeout(() => {
+      _scanHintHandle = setTimeout(() => {
         if (WORKER.state === 'SCANNING') {
           if (typeof _setCamEstado === 'function') {
             _setCamEstado('Acérquese · mire de frente · mejore iluminación');
@@ -97,6 +103,10 @@ function _updatePersonBanner() {
 
 function resetWorker() {
   _autoMarkPending = false;
+  WORKER.nombre = null;
+  WORKER.tipo = null;
+  WORKER.doc = null;
+  WORKER.tScanInicio = null;
   setWorkerState('IDLE');
   setConf(0, false);
   // Limpiar doc display
