@@ -82,24 +82,26 @@
       </div>
 
       <!-- Estado del sistema — una sola línea discreta -->
-      <div class="sys-status" id="sysStatus" onclick="toggleSysDetail()">
-        <span class="sys-dot" id="sysDot"></span>
-        <span class="sys-label" id="sysLabel">Sistema listo</span>
-        <span class="sys-chevron" id="sysChevron">›</span>
-      </div>
-      <!-- Detalle técnico (colapsado; IDs preservados para geolocation.js) -->
-      <div class="sys-detail" id="sysDetail">
-        <div class="sys-detail-row">
-          <span class="sys-detail-lbl">Geocerca</span>
-          <span class="st-val na" id="stGeocerca">—</span>
+      <div class="sys-status-wrap">
+        <div class="sys-status" id="sysStatus" onclick="toggleSysDetail()">
+          <span class="sys-dot" id="sysDot"></span>
+          <span class="sys-label" id="sysLabel">Sistema listo</span>
+          <span class="sys-chevron" id="sysChevron">›</span>
         </div>
-        <div class="sys-detail-row">
-          <span class="sys-detail-lbl">GPS</span>
-          <span class="st-val na" id="stUbicacion">—</span>
-        </div>
-        <div class="sys-detail-row">
-          <span class="sys-detail-lbl">Internet</span>
-          <span class="st-val ok" id="stInternet">OK</span>
+        <!-- Detalle técnico (flota sobre el layout; IDs preservados para geolocation.js) -->
+        <div class="sys-detail" id="sysDetail">
+          <div class="sys-detail-row">
+            <span class="sys-detail-lbl">Geocerca</span>
+            <span class="st-val na" id="stGeocerca">—</span>
+          </div>
+          <div class="sys-detail-row">
+            <span class="sys-detail-lbl">GPS</span>
+            <span class="st-val na" id="stUbicacion">—</span>
+          </div>
+          <div class="sys-detail-row">
+            <span class="sys-detail-lbl">Internet</span>
+            <span class="st-val ok" id="stInternet">OK</span>
+          </div>
         </div>
       </div>
     </div>
