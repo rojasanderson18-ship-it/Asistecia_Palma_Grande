@@ -140,6 +140,8 @@ async function cargarPersonalDesdeBackend() {
   const deviceTok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
   if (!adminTok && !deviceTok) return;
   _personalCargando = true;
+  const pCtrl = new AbortController();
+  const pTimo = setTimeout(() => pCtrl.abort(), 15000);
   try {
     let d;
     if (adminTok) {
@@ -147,6 +149,7 @@ async function cargarPersonalDesdeBackend() {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ accion: 'listarPersonal', token: adminTok }),
+        signal: pCtrl.signal,
       });
       d = await r.json();
     } else {
@@ -155,6 +158,7 @@ async function cargarPersonalDesdeBackend() {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ accion: 'sincronizarPersonalKiosco', deviceToken: deviceTok, deviceId: deviceDid }),
+        signal: pCtrl.signal,
       });
       d = await r.json();
     }
@@ -164,6 +168,7 @@ async function cargarPersonalDesdeBackend() {
   } catch {
     // Sin conexión: usa caché existente silenciosamente
   } finally {
+    clearTimeout(pTimo);
     _personalCargando = false;
   }
 }
@@ -173,8 +178,12 @@ async function cargarPersonalDesdeBackend() {
 // gsUrl no se sincroniza desde backend (necesario para conectar al backend).
 async function sincronizarConfigDesdeBackend() {
   if (!CONFIG.GS_URL) return;
+  const cCtrl = new AbortController();
+  const cTimo = setTimeout(() => cCtrl.abort(), 10000);
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, {
+      cache: 'no-store', signal: cCtrl.signal,
+    });
     if (!r.ok) return;
     const d = await r.json();
     if (d && d.ok && d.config && Object.keys(d.config).length) {
@@ -187,6 +196,8 @@ async function sincronizarConfigDesdeBackend() {
     }
   } catch {
     // Sin conexión: la caché local permanece activa
+  } finally {
+    clearTimeout(cTimo);
   }
 }
 

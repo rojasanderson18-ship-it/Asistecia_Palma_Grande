@@ -895,8 +895,12 @@ async function _ejecutarSetup() {
   // Paso 1 + 2: obtener config del servidor
   _setupStepEstado('sIco1', 'run');
   let cfgData;
+  const sCtrl = new AbortController();
+  const sTimo = setTimeout(() => sCtrl.abort(), 12000);
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, {
+      cache: 'no-store', signal: sCtrl.signal,
+    });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     if (!d || !d.ok || !d.config) throw new Error(d?.error || 'Respuesta inválida del servidor');
@@ -906,6 +910,8 @@ async function _ejecutarSetup() {
     _setupStepEstado('sIco1', 'err');
     fallar('No se pudo conectar al servidor: ' + e.message);
     return;
+  } finally {
+    clearTimeout(sTimo);
   }
 
   _setupStepEstado('sIco2', 'run');

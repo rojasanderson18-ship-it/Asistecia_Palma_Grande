@@ -9,6 +9,7 @@ pairs=(
   "www/sw.js:sw.js"
   "www/css/styles.css:css/styles.css"
   "www/js/admin.js:js/admin.js"
+  "www/js/config.js:js/config.js"
   "www/js/attendance.js:js/attendance.js"
   "www/js/audio.js:js/audio.js"
   "www/js/auth.js:js/auth.js"
