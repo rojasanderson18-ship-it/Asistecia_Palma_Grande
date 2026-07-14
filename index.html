@@ -304,6 +304,12 @@
           </div>
           <div class="dash-card-lbl">Dispositivos</div>
         </div>
+        <div class="dash-card" id="menuResetDia">
+          <div class="dash-card-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+          </div>
+          <div class="dash-card-lbl">Resetear día</div>
+        </div>
       </div>
     </div>
 
@@ -682,6 +688,23 @@
     <!-- Vista previa -->
     <div id="importPreview" style="display:none;"></div>
     <button class="btn-ok" id="btnConfirmarImport" style="display:none;">Importar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA RESETEAR DÍA
+══════════════════════════════════════════ -->
+<div class="pantalla" id="pantallaResetDia">
+  <div class="page-scroll">
+    <div class="page-hdr">
+      <button class="btn-back" id="btnVolverDesdeResetDia"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span class="page-tit">Resetear día</span>
+    </div>
+    <div style="font-size:12px;color:var(--t2);padding:0 16px 16px;line-height:1.6;">
+      Borra el registro del día de una persona del caché local. Úsalo para corregir registros de prueba o errores. No afecta el Sheet directamente.
+    </div>
+    <div id="resetDiaLista" style="display:flex;flex-direction:column;gap:8px;padding:0 16px 24px;"></div>
+    <div id="resetDiaVacio" style="display:none;text-align:center;padding:40px 16px;color:var(--t2);font-size:13px;">No hay registros en caché para hoy.</div>
   </div>
 </div>
 

@@ -372,6 +372,79 @@ document.getElementById('btnCancelarConfig').addEventListener('click', () => mos
 /* ── Menú personal (unificado) ── */
 document.getElementById('menuPersonal').onclick = abrirPersonal;
 
+/* ── Resetear día ── */
+document.getElementById('menuResetDia').onclick = abrirResetDia;
+document.getElementById('btnVolverDesdeResetDia').onclick = () => mostrarPantalla('pantallaMenu');
+
+function abrirResetDia() {
+  mostrarPantalla('pantallaResetDia');
+  _renderResetDia();
+}
+
+function _renderResetDia() {
+  const lista  = document.getElementById('resetDiaLista');
+  const vacio  = document.getElementById('resetDiaVacio');
+  const hoy    = (typeof fechaLocalISO === 'function') ? fechaLocalISO() : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const cache  = JSON.parse(localStorage.getItem('marcas_hoy_cache') || '{}');
+  const cola   = JSON.parse(localStorage.getItem('cola') || '[]');
+
+  // Personas con registros hoy en caché
+  const personas = Object.entries(cache)
+    .filter(([k]) => k !== '_fecha' && cache._fecha === hoy)
+    .map(([doc, marcas]) => {
+      const persona = (typeof getPorDoc === 'function') ? getPorDoc(doc) : null;
+      const nombre  = persona ? persona.nombre : doc;
+      const pendCola = cola.filter(i => String(i.documento) === String(doc)).length;
+      return { doc, nombre, marcas: Array.isArray(marcas) ? marcas : [], pendCola };
+    });
+
+  lista.innerHTML = '';
+  if (!personas.length) {
+    vacio.style.display = 'block';
+    lista.style.display = 'none';
+    return;
+  }
+  vacio.style.display = 'none';
+  lista.style.display = 'flex';
+
+  personas.forEach(({ doc, nombre, marcas, pendCola }) => {
+    const item = document.createElement('div');
+    item.style.cssText = 'background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;';
+    const tags = marcas.map(m =>
+      `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${m==='Entrada'?'rgba(46,173,110,.12)':'rgba(239,68,68,.10)'};color:${m==='Entrada'?'var(--dg)':'var(--re)'}">${m}</span>`
+    ).join('');
+    const colaTag = pendCola ? `<span style="font-size:10px;color:#F59E0B;font-weight:700;">· ${pendCola} en cola</span>` : '';
+    item.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${xh(nombre)}</div>
+        <div style="display:flex;gap:5px;align-items:center;margin-top:5px;flex-wrap:wrap;">${tags}${colaTag}</div>
+      </div>
+      <button data-doc="${xh(doc)}" class="btn-reset-dia-item" style="background:var(--rl);border:1px solid #FFCDD2;color:var(--re);border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer;flex-shrink:0;">Limpiar</button>`;
+    lista.appendChild(item);
+  });
+
+  lista.querySelectorAll('.btn-reset-dia-item').forEach(btn => {
+    btn.onclick = async () => {
+      const doc = btn.dataset.doc;
+      const persona = (typeof getPorDoc === 'function') ? getPorDoc(doc) : null;
+      const nombre  = persona ? persona.nombre : doc;
+      const ok = await showConfirm(`¿Borrar el registro de hoy de ${nombre}?\nEsto eliminará su entrada/salida del caché local.`, 'Borrar', true);
+      if (!ok) return;
+      // Limpiar caché del día
+      const c = JSON.parse(localStorage.getItem('marcas_hoy_cache') || '{}');
+      delete c[doc];
+      localStorage.setItem('marcas_hoy_cache', JSON.stringify(c));
+      // Limpiar cola offline de este documento (registros de hoy)
+      const q = JSON.parse(localStorage.getItem('cola') || '[]');
+      const qFiltrada = q.filter(i => String(i.documento) !== String(doc));
+      localStorage.setItem('cola', JSON.stringify(qFiltrada));
+      if (typeof updColaBadge === 'function') updColaBadge();
+      showToast(`Registro de ${nombre} limpiado`);
+      _renderResetDia();
+    };
+  });
+}
+
 /* ── Reporte de deuda ── */
 document.getElementById('btnVolverDesdeReporte').onclick = () => mostrarPantalla('pantallaMenu');
 document.getElementById('btnRepCargar').onclick = cargarReporte;
