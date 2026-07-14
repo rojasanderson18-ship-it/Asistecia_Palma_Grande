@@ -62,9 +62,12 @@ function enviar(p) {
 function enviarConResp(p) {
   const payload = _enriquecerPayload(p);
   if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) return Promise.resolve(null);
-  return fetch(CONFIG.GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload)})
+  const ctrl = new AbortController();
+  const timo = setTimeout(() => ctrl.abort(), 15000);
+  return fetch(CONFIG.GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload), signal: ctrl.signal})
     .then(r => r.json())
-    .catch(e => ({ok: false, networkError: true, error: e.message}));
+    .catch(e => ({ok: false, networkError: true, error: e.message}))
+    .finally(() => clearTimeout(timo));
 }
 
 let _reintentando = false;
@@ -97,19 +100,24 @@ async function reintentarCola() {
     delete payload._meta;
 
     let r = null;
+    const ctrl = new AbortController();
+    const timo = setTimeout(() => ctrl.abort(), 12000);
     try {
       const resp = await fetch(CONFIG.GS_URL, {
-        method: 'POST', headers: {'Content-Type':'text/plain'}, body: JSON.stringify(payload)
+        method: 'POST', headers: {'Content-Type':'text/plain'}, body: JSON.stringify(payload),
+        signal: ctrl.signal,
       });
       r = await resp.json();
     } catch {
-      // Error de red transitorio — conservar para reintentar
+      // Error de red o timeout transitorio — conservar para reintentar
+      clearTimeout(timo);
       pendientes.push({
         ...item,
         _meta: { ...meta, intentos: meta.intentos + 1, ultimoIntento: new Date().toISOString(), ultimoError: 'Error de red', estado: 'pendiente' }
       });
       continue;
     }
+    clearTimeout(timo);
 
     if (r && r.ok) {
       // Éxito — descartar de la cola

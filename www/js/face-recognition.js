@@ -453,17 +453,26 @@ async function _enviarFotosPendientes() {
     const { foto } = p[nombre];
     const pe = getPC().find(x => x.nombre === nombre);
     if (!pe || !foto) { delete p[nombre]; continue; }
+    const fCtrl = new AbortController();
+    const fTimo = setTimeout(() => fCtrl.abort(), 15000);
     try {
-      const r = await enviarConResp({
-        accion: 'guardarFotoPersonal',
-        token: getAdminToken(),
-        documento: pe.documento,
-        foto,
-        nombre: pe.nombre,
-        cargo: pe.cargo,
+      const r = await fetch(CONFIG.GS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          accion: 'guardarFotoPersonal',
+          token: getAdminToken(),
+          documento: pe.documento,
+          foto,
+          nombre: pe.nombre,
+          cargo: pe.cargo,
+        }),
+        signal: fCtrl.signal,
       });
-      if (r && r.ok) delete p[nombre];
+      const d = await r.json();
+      if (d && d.ok) delete p[nombre];
     } catch { /* reintentar próxima vez */ }
+    finally { clearTimeout(fTimo); }
   }
   localStorage.setItem('fotos_pendientes', JSON.stringify(p));
 }

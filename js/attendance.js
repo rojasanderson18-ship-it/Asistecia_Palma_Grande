@@ -204,12 +204,15 @@ async function getTipo(doc) {
 
   const deviceTok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
   if (CONFIG.GS_URL && deviceTok) {
+    const ctrl = new AbortController();
+    const timo = setTimeout(() => ctrl.abort(), 7000);
     try {
       const deviceDid = (typeof getDeviceId === 'function') ? getDeviceId() : null;
       const r = await fetch(CONFIG.GS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ accion: 'marcasHoy', deviceToken: deviceTok, deviceId: deviceDid, documento: doc }),
+        signal: ctrl.signal,
       });
       const d = await r.json();
       const m = (d && d.marcas) ? d.marcas : [];
@@ -217,7 +220,8 @@ async function getTipo(doc) {
       if (m.includes('Salida')) return { tipo: 'Salida', completo: true,  marcas: m };
       if (m.includes('Entrada')) return { tipo: 'Salida', completo: false, marcas: m };
       return { tipo: 'Entrada', completo: false, marcas: m };
-    } catch { /* backend no disponible */ }
+    } catch { /* backend no disponible o timeout — continuar con caché */ }
+    finally { clearTimeout(timo); }
   }
 
   return { tipo: null, completo: false, marcas: [], sinEstado: true };
