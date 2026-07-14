@@ -1,6 +1,6 @@
 /* ── MÓDULO: App — inicialización ── */
 
-/* ── Reloj kiosco ── */
+/* ── Reloj kiosco — sincronizado al borde del minuto ── */
 function _actualizarReloj() {
   const now = new Date();
   const te = document.getElementById('kioscoTime');
@@ -8,8 +8,14 @@ function _actualizarReloj() {
   if (te) te.textContent = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
   if (de) de.textContent = now.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
-_actualizarReloj();
-setInterval(_actualizarReloj, 30000);
+(function _arrancarReloj() {
+  _actualizarReloj();
+  const msHastaSiguienteMinuto = (60 - new Date().getSeconds()) * 1000 - new Date().getMilliseconds();
+  setTimeout(function() {
+    _actualizarReloj();
+    setInterval(_actualizarReloj, 60000);
+  }, msHastaSiguienteMinuto);
+})();
 
 /* ── Estado del sistema ── */
 function _actualizarSysStatus() {

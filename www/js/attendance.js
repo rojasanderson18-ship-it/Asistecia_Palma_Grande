@@ -235,7 +235,9 @@ function calcularPuntualidad(tipo, hora) {
   const horario = getHorarioDelDia(hora.getDay());
   if (!horario || !horario.activo) return { estado: 'ok', msg: '', minutos: 0 };
 
-  const h = hora.getHours() + hora.getMinutes() / 60;
+  const enBogota = hora.toLocaleTimeString('en-CA', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false });
+  const [hh, mm] = enBogota.split(':').map(Number);
+  const h = hh + mm / 60;
 
   if (tipo === 'Entrada') {
     const entradaDec = _horaStrADecimal(horario.entrada);
@@ -565,12 +567,19 @@ async function procesarDoc(docVal, requestId) {
   }
 
   if (res.sinEstado) {
-    if (docSubEl) { docSubEl.textContent = 'Sin conexión — active el internet para verificar marcaciones'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
-    if (docChkEl) docChkEl.classList.remove('show');
-    return;
+    // Sin estado del servidor: si el dispositivo no está configurado, no puede marcar
+    const puedeOffline = !!(CONFIG.GS_URL && (typeof getDeviceToken === 'function') && getDeviceToken());
+    if (!puedeOffline) {
+      if (docSubEl) { docSubEl.textContent = 'Dispositivo no configurado'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+      if (docChkEl) docChkEl.classList.remove('show');
+      return;
+    }
+    // Dispositivo autorizado pero sin red: asumir Entrada y continuar en modo offline
+    res.tipo = 'Entrada';
+    if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo + ' · Sin red'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+  } else {
+    if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo; docSubEl.className = 'doc-info'; docSubEl.style.display = 'block'; }
   }
-
-  if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo; docSubEl.className = 'doc-info'; docSubEl.style.display = 'block'; }
 
   WORKER.nombre = persona.nombre;
   WORKER.tipo   = res.tipo;
