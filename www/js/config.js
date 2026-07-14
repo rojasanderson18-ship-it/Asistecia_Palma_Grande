@@ -49,7 +49,7 @@ const CONFIG = {
     { dia: 6, nombre: 'Sábado',     activo: true,  entrada: '06:30', salida: '12:00', tolEntrada: 10, tolSalida: 5 },
   ],
 
-  UMBRAL_FACIAL: 0.52,
+  UMBRAL_FACIAL: 0.56,
 };
 
 /* ── Helpers de sanitización ── */
