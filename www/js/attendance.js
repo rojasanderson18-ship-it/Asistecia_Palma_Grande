@@ -312,87 +312,70 @@ function _encolarOfflineConMeta(payload) {
   localStorage.setItem('cola', JSON.stringify(c));
 }
 
-/* ── Callback de reconocimiento facial ── */
+/* ── Callback de reconocimiento facial ──
+   Recibe 2 coincidencias consecutivas ya validadas por face-recognition.js.
+   No hay setTimeout fijo ni segunda detección independiente.
+── */
 let _lastFaceMatch = null;
-setFaceMatchCallback(function onFaceMatch(nombre, dist) {
+setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
   if (_autoMarkPending) return;
   if (WORKER.state !== 'SCANNING') return;
 
-  // Verificar duplicado (5 min)
+  // Ventana anti-duplicado (5 min)
   const now = Date.now();
-  if (_lastMarked[nombre] && now - _lastMarked[nombre] < DUPLICATE_WINDOW_MS) {
-    return; // silencioso — sigue escaneando, ya marcó hace poco
-  }
+  if (_lastMarked[nombre] && now - _lastMarked[nombre] < DUPLICATE_WINDOW_MS) return;
 
-  // Verificar que el nombre detectado coincida con el doc ingresado (si hay uno)
+  // Filtrar si hay doc ingresado y no coincide
   if (WORKER.nombre && WORKER.nombre !== nombre) return;
 
   _autoMarkPending = true;
-  _lastFaceMatch = {nombre, dist};
+  _lastFaceMatch = { nombre, dist };
   setWorkerState('VALIDATING');
 
-  setTimeout(async () => {
-    // Si ya no estamos en VALIDATING, alguien canceló
-    if (WORKER.state !== 'VALIDATING') { _autoMarkPending = false; return; }
+  const tMatch = Date.now();
 
-    const confPct = Math.max(0, Math.round((1 - dist) * 100));
-    _lastMarked[nombre] = Date.now();
+  if (WORKER.state !== 'VALIDATING') { _autoMarkPending = false; return; }
 
-    // Si el worker fue iniciado con un doc específico, usar ese tipo
-    let tipo = WORKER.tipo;
-    if (!tipo) {
-      const p = getPC().find(x => x.nombre === nombre);
-      if (p) {
-        const res = await getTipo(p.documento);
-        if (res.completo) {
-          _autoMarkPending = false;
-          setWorkerState('IDLE');
-          showRes('warn', 'Jornada completa', `<b>${xh(nombre)}</b> ya registró Entrada y Salida hoy.`, []);
-          return;
-        }
-        tipo = res.tipo;
-        WORKER.tipo = tipo;
-        WORKER.doc = p.documento;
-        WORKER.nombre = nombre;
+  const confPct = Math.max(0, Math.round((1 - dist) * 100));
+  _lastMarked[nombre] = Date.now();
+
+  let tipo = WORKER.tipo;
+  if (!tipo) {
+    const p = getPC().find(x => x.nombre === nombre);
+    if (p) {
+      const res = await getTipo(p.documento);
+      if (res.completo) {
+        _autoMarkPending = false;
+        setWorkerState('IDLE');
+        showRes('warn', 'Jornada completa', `<b>${xh(nombre)}</b> ya registró Entrada y Salida hoy.`, []);
+        return;
       }
+      tipo = res.tipo;
+      WORKER.tipo = tipo;
+      WORKER.doc = p.documento;
+      WORKER.nombre = nombre;
     }
+  }
 
-    if (!tipo) { _autoMarkPending = false; setWorkerState('IDLE'); return; }
+  if (!tipo) { _autoMarkPending = false; setWorkerState('IDLE'); return; }
 
-    // Validar que el descriptor coincida también con alta resolución
-    modoActual = 'procesando';
-    try {
-      const video = document.getElementById('video');
-      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({inputSize:320, scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
-      modoActual = null;
-      if (!det) {
-        _autoMarkPending = false; setWorkerState('SCANNING');
-        return;
-      }
-      const rostros = getRostros();
-      const ref = rostros[nombre];
-      if (!ref) {
-        _autoMarkPending = false; setWorkerState('IDLE');
-        // No tiene rostro enrolado — ofrecer autorización supervisor
-        abrirModalSupervisor(
-          `<b>${xh(nombre)}</b> no tiene rostro enrolado. Un supervisor puede autorizar la marcación con su PIN.`,
-          () => ejecutarMarcacion(nombre, tipo, null, true)
-        );
-        return;
-      }
-      const finalDist = faceapi.euclideanDistance(det.descriptor, new Float32Array(ref));
-      if (finalDist > CONFIG.UMBRAL_FACIAL) {
-        _autoMarkPending = false; setWorkerState('SCANNING');
-        return;
-      }
-      const finalPct = Math.max(0, Math.round((1 - finalDist) * 100));
-      await ejecutarMarcacion(nombre, tipo, finalPct, false);
-    } catch {
-      modoActual = null;
-      _autoMarkPending = false;
-      setWorkerState('SCANNING');
-    }
-  }, 1200);
+  // Verificar que el trabajador tenga rostro enrolado
+  const rostros = getRostros();
+  if (!rostros[nombre]) {
+    _autoMarkPending = false; setWorkerState('IDLE');
+    abrirModalSupervisor(
+      `<b>${xh(nombre)}</b> no tiene rostro enrolado. Un supervisor puede autorizar la marcación con su PIN.`,
+      () => ejecutarMarcacion(nombre, tipo, null, true)
+    );
+    return;
+  }
+
+  // Registrar métrica de velocidad
+  if (typeof registrarMetrica === 'function') {
+    registrarMetrica({ evento: 'reconocimiento', nombre: nombre.slice(0, 3) + '***', dist: dist.toFixed(3), msHastaMatch: Date.now() - tMatch, confPct });
+  }
+
+  await ejecutarMarcacion(nombre, tipo, confPct, false);
 });
 
 /* ── Entrada por documento ── */

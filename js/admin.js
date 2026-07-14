@@ -298,7 +298,10 @@ function abrirConfig() {
 }
 
 document.getElementById('cfgUmbral').addEventListener('input', function() {
-  document.getElementById('cfgUmbralVal').textContent = parseFloat(this.value).toFixed(2);
+  const v = parseFloat(this.value);
+  document.getElementById('cfgUmbralVal').textContent = v.toFixed(2);
+  const adv = document.getElementById('umbralAdvertencia');
+  if (adv) adv.style.display = v > 0.55 ? '' : 'none';
 });
 document.getElementById('btnUsarUbicacion').addEventListener('click', () => {
   if (!navigator.geolocation) { alert('GPS no disponible'); return; }

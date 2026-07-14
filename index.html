@@ -403,12 +403,13 @@
     </div>
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Reconocimiento facial</div>
-      <div class="fl" style="margin-top:0;">Umbral de confianza (0.30 = muy estricto · 0.60 = permisivo)</div>
+      <div class="fl" style="margin-top:0;">Umbral de confianza — 0.45 estricto · <b>0.48 recomendado</b> · 0.50 tolerante</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
         <input type="range" id="cfgUmbral" min="0.30" max="0.60" step="0.01" style="flex:1;accent-color:var(--dg);">
-        <span id="cfgUmbralVal" style="font-size:14px;font-weight:800;color:var(--dg);min-width:36px;text-align:right;">0.45</span>
+        <span id="cfgUmbralVal" style="font-size:14px;font-weight:800;color:var(--dg);min-width:36px;text-align:right;">0.48</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-top:2px;"><span>Muy estricto</span><span>Permisivo</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-top:2px;"><span>Muy estricto (0.30)</span><span>Permisivo (0.60)</span></div>
+      <div id="umbralAdvertencia" style="display:none;font-size:11.5px;color:#F59E0B;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:8px 10px;margin-top:8px;">⚠️ Umbral superior a 0.55 — aumenta el riesgo de falsos positivos. Solo usar en piloto controlado.</div>
     </div>
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Seguridad</div>
