@@ -997,6 +997,65 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 #repEstado { text-align: center; font-size: 13px; color: var(--k-muted); padding: 28px 0; }
 
 /* ══════════════════════════════════════════════════
+   MODAL GENÉRICO (alert / confirm)
+══════════════════════════════════════════════════ */
+.mgen-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.mgen-box {
+  position: relative;
+  z-index: 1;
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+.mgen-msg {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--tx);
+  margin-bottom: 20px;
+  white-space: pre-line;
+}
+.mgen-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.mgen-cancel {
+  background: transparent;
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2);
+  cursor: pointer;
+}
+.mgen-cancel:active { opacity: 0.7; }
+.mgen-ok {
+  background: var(--dg);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+.mgen-ok.danger {
+  background: var(--re);
+}
+.mgen-ok:active { opacity: 0.85; }
+
+/* ══════════════════════════════════════════════════
    MODAL SUPERVISOR
 ══════════════════════════════════════════════════ */
 #modalSupervisor {
