@@ -156,6 +156,8 @@ async function cargarPersonalDesdeBackend() {
   const deviceTok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
   if (!adminTok && !deviceTok) return;
   _personalCargando = true;
+  const ctrl = new AbortController();
+  const timo = setTimeout(() => ctrl.abort(), 12000);
   try {
     let d;
     if (adminTok) {
@@ -163,6 +165,7 @@ async function cargarPersonalDesdeBackend() {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ accion: 'listarPersonal', token: adminTok }),
+        signal: ctrl.signal,
       });
       d = await r.json();
     } else {
@@ -171,6 +174,7 @@ async function cargarPersonalDesdeBackend() {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ accion: 'sincronizarPersonalKiosco', deviceToken: deviceTok, deviceId: deviceDid }),
+        signal: ctrl.signal,
       });
       d = await r.json();
     }
@@ -178,8 +182,9 @@ async function cargarPersonalDesdeBackend() {
       savePersonalCache(d.personal);
     }
   } catch {
-    // Sin conexión: usa caché existente silenciosamente
+    // Sin conexión o timeout: usa caché existente silenciosamente
   } finally {
+    clearTimeout(timo);
     _personalCargando = false;
   }
 }
@@ -189,8 +194,10 @@ async function cargarPersonalDesdeBackend() {
 // gsUrl no se sincroniza desde backend (necesario para conectar al backend).
 async function sincronizarConfigDesdeBackend() {
   if (!CONFIG.GS_URL) return;
+  const ctrl = new AbortController();
+  const timo = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store', signal: ctrl.signal });
     if (!r.ok) return;
     const d = await r.json();
     if (d && d.ok && d.config && Object.keys(d.config).length) {
@@ -202,7 +209,9 @@ async function sincronizarConfigDesdeBackend() {
       aplicarEmpresaUI();
     }
   } catch {
-    // Sin conexión: la caché local permanece activa
+    // Sin conexión o timeout: la caché local permanece activa
+  } finally {
+    clearTimeout(timo);
   }
 }
 

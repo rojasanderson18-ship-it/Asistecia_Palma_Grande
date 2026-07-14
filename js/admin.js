@@ -394,7 +394,7 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   aplicarEmpresaUI();
   mostrarPantalla('pantallaMenu');
   showToast('✓ Configuración guardada');
-  setTimeout(() => { chkGps(); cargarPersonalDesdeBackend(); }, 500);
+  setTimeout(() => { sincronizarConfigDesdeBackend(); cargarPersonalDesdeBackend(); }, 500);
 });
 document.getElementById('btnVolverDesdeConfig').addEventListener('click', () => mostrarPantalla('pantallaMenu'));
 document.getElementById('btnCancelarConfig').addEventListener('click', () => mostrarPantalla('pantallaMenu'));

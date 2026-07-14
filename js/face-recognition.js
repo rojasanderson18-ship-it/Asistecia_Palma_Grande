@@ -158,9 +158,11 @@ function _getDescriptoresNombre(nombre) {
   return [new Float32Array(raw)];  // v1: envuelto en array para compatibilidad
 }
 
-// Umbral efectivo según versión del descriptor — nunca supera UMBRAL_MAX
+// Umbral efectivo: usa el umbral configurado como techo, sin superar UMBRAL_MAX
 function _umbralParaNombre(nombre) {
-  return Math.min(_esV1(nombre) ? UMBRAL_V1 : UMBRAL_V2, UMBRAL_MAX);
+  const configUmbral = (typeof CONFIG !== 'undefined' && CONFIG.UMBRAL_FACIAL) ? CONFIG.UMBRAL_FACIAL : UMBRAL_MAX;
+  const techo = Math.min(configUmbral, UMBRAL_MAX);
+  return Math.min(_esV1(nombre) ? UMBRAL_V1 : UMBRAL_V2, techo);
 }
 
 // Promedio de las 2 mejores distancias (más robusto que solo la mínima)
