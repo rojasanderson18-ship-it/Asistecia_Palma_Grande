@@ -44,6 +44,7 @@ function _renderWorkerState() {
       if (scanBlock) scanBlock.style.display = 'none';
       if (camWrap) camWrap.classList.remove('scanning', 'face-ok');
       _autoMarkPending = false;
+      if (typeof detenerCamara === 'function') detenerCamara();
       break;
 
     case 'SCANNING':
@@ -57,7 +58,7 @@ function _renderWorkerState() {
       _scanHintHandle = setTimeout(() => {
         if (WORKER.state === 'SCANNING') {
           if (typeof _setCamEstado === 'function') {
-            _setCamEstado('Acérquese · mire de frente · mejore iluminación');
+            _setCamEstado('Acérquese un poco · mire directamente a la cámara · mejore la iluminación.');
           }
         }
       }, 8000);
@@ -74,8 +75,8 @@ function _renderWorkerState() {
             );
           } else {
             showRes('err', 'No se reconoció el rostro',
-              'El sistema no pudo identificar tu rostro.',
-              ['Acércate más', 'Mira de frente', 'Mejora la iluminación', 'Solicita autorización al supervisor']);
+              'El sistema no pudo identificar su rostro.',
+              ['Acérquese un poco', 'Mire directamente a la cámara', 'Mejore la iluminación', 'Solicite autorización al supervisor']);
           }
         }
       }, SCAN_TIMEOUT_MS);
@@ -84,6 +85,10 @@ function _renderWorkerState() {
     case 'VALIDATING':
       if (valOverlay) valOverlay.style.display = 'flex';
       if (camWrap) camWrap.classList.add('face-ok');
+      break;
+
+    case 'CONFIRMED':
+      if (typeof detenerCamara === 'function') detenerCamara();
       break;
   }
 }

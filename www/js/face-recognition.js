@@ -1,29 +1,36 @@
-/* ── MÓDULO: Reconocimiento facial v2.0 ── */
+/* ── MÓDULO: Reconocimiento facial v2.1 ── */
 const MODEL_URL = 'models';
 let modOk = false, modErr = null, modCargando = false;
 let stream = null;
-let modoActual = null;       // null | 'enrolar' | 'procesando'
+let modoActual = null;        // null | 'enrolar' | 'procesando'
 let nombreEnrolando = null;
 let loopActivo = false;
 let _faceMatchCallback = null;
-let _inferenciaPendiente = false;  // evita inferencias simultáneas
-let _intervaloDyn = 280;           // ms entre detecciones, ajustado dinámicamente
+let _inferenciaPendiente = false;
+let _intervaloDyn = 280;
+let _cameraSessionId = 0;    // incrementa en cada iniciarCamara() para invalidar getUserMedia tardío
 
-// ── Instrucciones de enrolamiento por paso ──
+// ── Instrucciones de enrolamiento (texto formal) ──
 const PASOS_ENROL = [
-  { txt: 'Mira directo a la cámara',          ico: '👁️' },
-  { txt: 'Gira levemente a la izquierda',      ico: '↖️' },
-  { txt: 'Gira levemente a la derecha',        ico: '↗️' },
-  { txt: 'Levanta ligeramente el rostro',      ico: '⬆️' },
-  { txt: 'Posición frontal — última captura',  ico: '✅' },
+  { txt: 'Mire directamente a la cámara.',    ico: '👁️' },
+  { txt: 'Gire ligeramente a la izquierda.',  ico: '↖️' },
+  { txt: 'Gire ligeramente a la derecha.',    ico: '↗️' },
+  { txt: 'Levante ligeramente el rostro.',    ico: '⬆️' },
+  { txt: 'Posición frontal — última captura.', ico: '✅' },
 ];
-const CAPTURAS_ENROLAR = 5;
-const MIN_DELAY_CAPTURAS = 700; // ms entre capturas de enrolamiento
+const CAPTURAS_ENROLAR   = 5;
+const MIN_DELAY_CAPTURAS = 700;   // ms mínimo entre capturas consecutivas
+const MAX_INTENTOS_PASO  = 15;    // intentos máximos por captura
+const MAX_MS_PASO        = 12000; // tiempo máximo por captura (ms)
+
+// Umbrales por versión de descriptor (techo absoluto: UMBRAL_MAX)
+const UMBRAL_V2  = 0.49;   // v2 multi-pose — precisión alta
+const UMBRAL_V1  = 0.54;   // v1 captura única — temporal, requiere reenrolamiento
+const UMBRAL_MAX = 0.55;   // ningún umbral puede superar este valor
 
 let errE = 0;
-let _metricas = [];  // métricas de sesión (requisito 12)
+let _metricas = [];
 
-// ── Callback facial ──
 function setFaceMatchCallback(fn) { _faceMatchCallback = fn; }
 
 /* ══════════════════════════════════════════
@@ -40,7 +47,7 @@ async function loadModels() {
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
     modOk = true;
-    _setCamEstado('Mirá la cámara…');
+    _setCamEstado('Mire directamente a la cámara.');
   } catch (e) {
     modErr = e.message || 'Error modelos';
     _setCamEstado('Error cargando modelos');
@@ -53,32 +60,44 @@ async function loadModels() {
 ══════════════════════════════════════════ */
 async function iniciarCamara() {
   if (stream) return;
+  const sessionId = ++_cameraSessionId;
+  loopActivo = true;  // señal para que loopDeteccion() comience cuando el video esté listo
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    const s = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: 'user' },
         width:  { ideal: 720 },
         height: { ideal: 720 },
       }
     });
+
+    // Si la sesión fue cancelada mientras esperábamos getUserMedia, descartar inmediatamente
+    if (sessionId !== _cameraSessionId) {
+      s.getTracks().forEach(t => t.stop());
+      return;
+    }
+
+    stream = s;
     const video = document.getElementById('video');
     if (video) {
       video.srcObject = stream;
       video.addEventListener('loadeddata', () => {
+        if (sessionId !== _cameraSessionId) return;
         const ph = document.getElementById('camPlaceholder');
         if (ph) ph.style.display = 'none';
-        _setCamEstado('Mirá la cámara…');
-        if (!loopActivo) loopDeteccion();
+        _setCamEstado('Mire directamente a la cámara.');
+        if (loopActivo && sessionId === _cameraSessionId) loopDeteccion();
       }, { once: true });
     }
-  } catch (e) {
-    _setCamEstado('Sin acceso a cámara');
+  } catch {
+    if (sessionId === _cameraSessionId) _setCamEstado('Sin acceso a cámara');
   }
 }
 
 function detenerCamara() {
-  loopActivo = false;          // señal para terminar el loop en la próxima iteración
-  _inferenciaPendiente = false; // liberar mutex por si acaso
+  _cameraSessionId++;           // invalida getUserMedia o loadeddata en vuelo
+  loopActivo = false;
+  _inferenciaPendiente = false;
   _consecutivo = { nombre: null, t0: null, count: 0 };
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   const video = document.getElementById('video');
@@ -119,12 +138,16 @@ function capFoto() {
 
 /* ══════════════════════════════════════════
    DESCRIPTORES — multi-descriptor v2
-   Guardamos hasta 5 descriptores por persona.
-   Formato v2: array de arrays (Float32Array serializado).
-   Formato v1 (legado): array plano de un solo descriptor.
+   v2: array de arrays (5 poses).
+   v1 (legado): array plano de un solo descriptor.
 ══════════════════════════════════════════ */
 function _esFormatoV2(raw) {
   return Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0]);
+}
+
+function _esV1(nombre) {
+  const m = getRostrosMeta();
+  return !m[nombre] || m[nombre].v !== 2;
 }
 
 function _getDescriptoresNombre(nombre) {
@@ -132,20 +155,12 @@ function _getDescriptoresNombre(nombre) {
   const raw = r[nombre];
   if (!raw) return [];
   if (_esFormatoV2(raw)) return raw.map(d => new Float32Array(d));
-  // v1: descriptor plano → envuelto en array para compatibilidad
-  return [new Float32Array(raw)];
+  return [new Float32Array(raw)];  // v1: envuelto en array para compatibilidad
 }
 
-// Distancia mínima contra todos los descriptores del trabajador
-function _distanciaMinima(descriptor, nombre) {
-  const lista = _getDescriptoresNombre(nombre);
-  if (!lista.length) return Infinity;
-  let min = Infinity;
-  for (const ref of lista) {
-    const d = faceapi.euclideanDistance(descriptor, ref);
-    if (d < min) min = d;
-  }
-  return min;
+// Umbral efectivo según versión del descriptor — nunca supera UMBRAL_MAX
+function _umbralParaNombre(nombre) {
+  return Math.min(_esV1(nombre) ? UMBRAL_V1 : UMBRAL_V2, UMBRAL_MAX);
 }
 
 // Promedio de las 2 mejores distancias (más robusto que solo la mínima)
@@ -158,7 +173,6 @@ function _distanciaMedia2Mejores(descriptor, nombre) {
 }
 
 function saveRostroV2(nombre, descriptores) {
-  // Guardar como array de arrays (v2)
   const r = getRostros();
   r[nombre] = descriptores.map(d => Array.from(d));
   localStorage.setItem('rostros_enrolados', JSON.stringify(r));
@@ -168,7 +182,7 @@ function saveRostroV2(nombre, descriptores) {
 }
 
 /* ══════════════════════════════════════════
-   CALIDAD DE CAPTURA
+   CALIDAD DE CAPTURA (solo enrolamiento)
 ══════════════════════════════════════════ */
 function _evaluarCalidad(det, video) {
   const w = video.videoWidth || 480, h = video.videoHeight || 480;
@@ -176,17 +190,12 @@ function _evaluarCalidad(det, video) {
   const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
   const issues = [];
 
-  // Tamaño mínimo del rostro (10% del ancho del frame)
-  if (box.width < w * 0.10) { issues.push('Acércate más a la cámara'); }
-
-  // Rostro centrado (dentro del 60% central)
+  if (box.width < w * 0.10) issues.push('Acérquese un poco.');
   const margenX = w * 0.20, margenY = h * 0.20;
   if (cx < margenX || cx > w - margenX || cy < margenY || cy > h - margenY) {
-    issues.push('Centra el rostro');
+    issues.push('Centre el rostro.');
   }
-
-  // Score de detección (confianza)
-  if (det.detection.score < 0.52) { issues.push('Mejora la iluminación'); }
+  if (det.detection.score < 0.52) issues.push('Mejore la iluminación.');
 
   return issues;
 }
@@ -206,14 +215,19 @@ function mostrarBannerEnrolar(nombre) {
   const nb = document.getElementById('bannerEnrolarNombre');
   if (nb) nb.textContent = nombre;
 }
+
 function ocultarBannerEnrolar() {
   const b = document.getElementById('bannerEnrolar');
   if (b) b.style.display = 'none';
 }
+
 function cancelarEnrolar() {
-  modoActual = null; nombreEnrolando = null;
+  modoActual = null;
+  nombreEnrolando = null;
   ocultarBannerEnrolar();
-  mostrarPantalla('pantallaMarcacion');
+  setProgreso(0, CAPTURAS_ENROLAR);
+  detenerCamara();
+  mostrarPantalla('pantallaAdmin');
 }
 
 function pintarGrilla(id, cb) {
@@ -231,8 +245,13 @@ function pintarGrilla(id, cb) {
       const enrolado = !!r[nombre];
       const capturas = meta ? meta.capturas || 1 : 0;
       const v2 = meta && meta.v === 2;
-      e.textContent = enrolado ? (v2 ? `✓ ${capturas} capturas` : '✓ Enrolado (v1)') : 'Sin enrolar';
-      e.style.color = enrolado ? 'var(--dg)' : 'var(--re)';
+      if (enrolado) {
+        e.textContent = v2 ? `✓ ${capturas} capturas` : '⚠ Requiere reenrolamiento';
+        e.style.color  = v2 ? 'var(--dg)' : 'var(--or)';
+      } else {
+        e.textContent = 'Sin enrolar';
+        e.style.color  = 'var(--re)';
+      }
       d.append(e);
     }
     d.onclick = () => cb(nombre, d, c);
@@ -240,97 +259,183 @@ function pintarGrilla(id, cb) {
   });
 }
 
+/* Intenta capturar un único paso del enrolamiento.
+   Retorna { descriptor, foto } en éxito o { descriptor: null, motivo } si falla. */
+async function _capturarPasoEnrol(paso) {
+  const instruccion = PASOS_ENROL[paso];
+  _setCamEstado(`${instruccion.ico} ${instruccion.txt}`);
+
+  const tInicio = Date.now();
+  let intentos  = 0;
+
+  while (modoActual === 'enrolar') {
+    if (intentos > 0) await new Promise(r => setTimeout(r, 350));
+    intentos++;
+
+    if (intentos > MAX_INTENTOS_PASO || Date.now() - tInicio > MAX_MS_PASO) {
+      return { descriptor: null, foto: null, motivo: 'tiempo_agotado' };
+    }
+
+    let det;
+    try {
+      const video = document.getElementById('video');
+      det = await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+      errE = 0;
+    } catch (e) {
+      errE++;
+      if (errE >= 8) return { descriptor: null, foto: null, motivo: 'error_modelo' };
+      continue;
+    }
+
+    if (!det) { _setCamEstado(`${instruccion.ico} No se detectó rostro — acérquese.`); continue; }
+
+    const video2 = document.getElementById('video');
+    const issues = _evaluarCalidad(det, video2);
+    if (issues.length > 0) { _setCamEstado(`${instruccion.ico} ${issues[0]}`); continue; }
+
+    // Captura válida — foto solo en la última pose frontal
+    const foto = (paso === CAPTURAS_ENROLAR - 1) ? capFoto() : null;
+    return { descriptor: det.descriptor, foto };
+  }
+
+  return { descriptor: null, foto: null, motivo: 'cancelado' };
+}
+
 async function procesarEnrolar() {
   if (modoActual !== 'enrolar') return;
   if (!modOk) {
     if (modErr) { modErr = null; loadModels(); }
-    setTimeout(procesarEnrolar, 800); return;
+    setTimeout(procesarEnrolar, 800);
+    return;
   }
   document.getElementById('bloqueCamera').style.display = '';
   mostrarBannerEnrolar(nombreEnrolando);
 
   const descriptores = [];
+  let fotoCapturada  = null;
   setProgreso(0, CAPTURAS_ENROLAR);
   errE = 0;
 
-  for (let paso = 0; paso < CAPTURAS_ENROLAR; paso++) {
-    if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); return; }
+  let paso = 0;
+  while (paso < CAPTURAS_ENROLAR) {
+    if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
 
-    const instruccion = PASOS_ENROL[paso];
-    _setCamEstado(`${instruccion.ico} ${instruccion.txt}`);
-
-    // Esperar al menos MIN_DELAY_CAPTURAS ms desde la captura anterior
-    await new Promise(r => setTimeout(r, paso === 0 ? 300 : MIN_DELAY_CAPTURAS));
-
-    let capturada = false;
-    let intentosPaso = 0;
-    while (!capturada) {
-      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); return; }
-      if (intentosPaso > 0) await new Promise(r => setTimeout(r, 300));
-      intentosPaso++;
-
-      let det;
-      try {
-        const video = document.getElementById('video');
-        det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
-          .withFaceLandmarks().withFaceDescriptor();
-        errE = 0;
-      } catch (e) {
-        errE++;
-        if (errE >= 8) {
-          modoActual = null; ocultarBannerEnrolar();
-          showRes('err', 'Error analizando rostro', xh(e.message || String(e)), []);
-          return;
-        }
-        continue;
-      }
-
-      if (!det) { _setCamEstado(`${instruccion.ico} No se detectó rostro — acércate`); continue; }
-
-      const video2 = document.getElementById('video');
-      const issues = _evaluarCalidad(det, video2);
-      if (issues.length > 0) {
-        _setCamEstado(`${instruccion.ico} ${issues[0]}`);
-        continue;
-      }
-
-      descriptores.push(det.descriptor);
-      capturada = true;
-      setProgreso(descriptores.length, CAPTURAS_ENROLAR);
+    if (paso > 0) {
+      await new Promise(r => setTimeout(r, MIN_DELAY_CAPTURAS));
+      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
     }
+
+    const resultado = await _capturarPasoEnrol(paso);
+
+    if (!resultado.descriptor) {
+      if (resultado.motivo === 'cancelado') { ocultarBannerEnrolar(); detenerCamara(); return; }
+
+      // Informar motivo y dar 3s para que el usuario decida (cancelar o esperar reintento)
+      const motivo = resultado.motivo === 'error_modelo'
+        ? 'Error analizando el rostro.'
+        : 'No se pudo capturar este ángulo.';
+      _setCamEstado(`⚠ ${motivo} Reintentando…`);
+      await new Promise(r => setTimeout(r, 3000));
+      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+      // Reintentar el mismo paso
+      continue;
+    }
+
+    descriptores.push(resultado.descriptor);
+    if (resultado.foto) fotoCapturada = resultado.foto;
+    setProgreso(descriptores.length, CAPTURAS_ENROLAR);
+    paso++;
   }
 
-  if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); return; }
-  _setCamEstado('Guardando…');
+  if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+
+  _setCamEstado('Guardando biometría…');
   saveRostroV2(nombreEnrolando, descriptores);
-  modoActual = null;
-  ocultarBannerEnrolar();
 
-  const pe = getPC().find(p => p.nombre === nombreEnrolando);
-  const foto = capFoto();
+  const nombreGuardado = nombreEnrolando;
+  modoActual      = null;
+  nombreEnrolando = null;
+  ocultarBannerEnrolar();
+  detenerCamara();
+
+  const pe   = getPC().find(p => p.nombre === nombreGuardado);
+  const foto = fotoCapturada || '';
+
   if (!pe || !foto) {
-    showRes('err', 'Rostro guardado, foto no', `<b>${xh(nombreEnrolando)}</b> puede marcar pero no se guardó la foto.`, []);
-    setTimeout(() => mostrarPantalla('pantallaMarcacion'), 4000); return;
+    _guardarFotoPendiente(nombreGuardado, foto);
+    showRes('ok', 'Biometría lista · foto pendiente',
+      `<b>${xh(nombreGuardado)}</b> puede marcar asistencia. La foto se enviará al recuperar conexión.`, []);
+    setTimeout(() => mostrarPantalla('pantallaAdmin'), 4000);
+    return;
   }
-  const r = await enviarConResp({ accion: 'guardarFotoPersonal', token: getAdminToken(), documento: pe.documento, foto, nombre: pe.nombre, cargo: pe.cargo });
+
+  const r = await enviarConResp({
+    accion: 'guardarFotoPersonal',
+    token: getAdminToken(),
+    documento: pe.documento,
+    foto,
+    nombre: pe.nombre,
+    cargo: pe.cargo,
+  });
+
   if (!r || !r.ok) {
-    showRes('err', 'Rostro guardado, foto no', `<b>${xh(nombreEnrolando)}</b> puede marcar pero hubo un error en Drive.`, []);
-    setTimeout(() => mostrarPantalla('pantallaMarcacion'), 4000); return;
+    _guardarFotoPendiente(nombreGuardado, foto);
+    showRes('ok', 'Biometría lista · foto pendiente',
+      `<b>${xh(nombreGuardado)}</b> puede marcar asistencia. La foto se enviará automáticamente.`, []);
+  } else {
+    showRes('ok', 'Empleado enrolado',
+      `<b>${xh(nombreGuardado)}</b> ya puede marcar asistencia.`, []);
   }
-  showRes('ok', 'Empleado enrolado', `<b>${xh(nombreEnrolando)}</b> ya puede marcar asistencia`, []);
-  setTimeout(() => mostrarPantalla('pantallaMarcacion'), 3000);
+
+  setTimeout(() => mostrarPantalla('pantallaAdmin'), 3000);
 }
+
+/* ── Foto pendiente: persiste localmente y reintenta en reconexión ── */
+function _guardarFotoPendiente(nombre, foto) {
+  try {
+    const p = JSON.parse(localStorage.getItem('fotos_pendientes') || '{}');
+    p[nombre] = { foto, ts: new Date().toISOString() };
+    localStorage.setItem('fotos_pendientes', JSON.stringify(p));
+  } catch { /* storage lleno — ignorar */ }
+}
+
+async function _enviarFotosPendientes() {
+  if (!navigator.onLine) return;
+  let p;
+  try { p = JSON.parse(localStorage.getItem('fotos_pendientes') || '{}'); } catch { return; }
+  const nombres = Object.keys(p);
+  if (!nombres.length) return;
+  for (const nombre of nombres) {
+    const { foto } = p[nombre];
+    const pe = getPC().find(x => x.nombre === nombre);
+    if (!pe || !foto) { delete p[nombre]; continue; }
+    try {
+      const r = await enviarConResp({
+        accion: 'guardarFotoPersonal',
+        token: getAdminToken(),
+        documento: pe.documento,
+        foto,
+        nombre: pe.nombre,
+        cargo: pe.cargo,
+      });
+      if (r && r.ok) delete p[nombre];
+    } catch { /* reintentar próxima vez */ }
+  }
+  localStorage.setItem('fotos_pendientes', JSON.stringify(p));
+}
+window.addEventListener('online', _enviarFotosPendientes);
 
 /* ══════════════════════════════════════════
    LOOP DE DETECCIÓN CONTINUA
-   — inputSize 256
-   — sin inferencias simultáneas
-   — intervalo dinámico según rendimiento
-   — instrucciones en tiempo real
-   — ventana de 2 coincidencias consecutivas (800 ms)
+   — Solo activo durante WORKER.state === 'SCANNING'
+   — Si WORKER.nombre existe, compara solo contra ese trabajador
+   — Umbrales por versión de descriptor
 ══════════════════════════════════════════ */
 let _consecutivo = { nombre: null, t0: null, count: 0 };
-const VENTANA_CONSEC_MS = 1800;  // 1.8s — permite teléfonos lentos (≥2 hits en ventana)
+const VENTANA_CONSEC_MS = 1800;
 const HITS_REQUERIDOS   = 2;
 
 async function loopDeteccion() {
@@ -339,12 +444,19 @@ async function loopDeteccion() {
 
   while (loopActivo) {
     await new Promise(r => setTimeout(r, _intervaloDyn));
-    if (!loopActivo) break;          // re-check después del sleep
+    if (!loopActivo) break;
+
+    // Pausar si no estamos en SCANNING (VALIDATING, CONFIRMED, IDLE)
+    const workerState = (typeof WORKER !== 'undefined') ? WORKER.state : null;
+    if (workerState && workerState !== 'SCANNING') {
+      _inferenciaPendiente = false;
+      _consecutivo = { nombre: null, t0: null, count: 0 };
+      continue;
+    }
+
     if (!modOk || !stream) continue;
     if (modoActual === 'procesando' || modoActual === 'enrolar') continue;
     if (_inferenciaPendiente) continue;
-
-    // Esperar readyState suficiente
     if (!video || video.readyState < 2) { _setCamEstado('Iniciando cámara…'); continue; }
 
     _inferenciaPendiente = true;
@@ -356,13 +468,12 @@ async function loopDeteccion() {
       ).withFaceLandmarks().withFaceDescriptor();
 
       const duracion = Date.now() - t0;
-      // Ajuste dinámico: mantener ~60% de carga
       _intervaloDyn = Math.max(180, Math.min(600, Math.round(duracion * 0.65)));
 
       const camWrap = document.getElementById('camWrap');
 
       if (!det) {
-        _setCamEstado('Mirá la cámara…');
+        _setCamEstado('Mire directamente a la cámara.');
         if (camWrap) camWrap.classList.remove('scanning', 'face-ok');
         setConf(0, false);
         _consecutivo = { nombre: null, t0: null, count: 0 };
@@ -372,32 +483,41 @@ async function loopDeteccion() {
 
       if (camWrap) camWrap.classList.add('scanning');
 
-      const rostros = getRostros();
-      const nombres = Object.keys(rostros);
-      if (!nombres.length) {
-        _setCamEstado('Sin empleados enrolados');
-        setConf(null, false);
-        _inferenciaPendiente = false;
-        continue;
+      const rostros     = getRostros();
+      const workerNombre = (typeof WORKER !== 'undefined') ? WORKER.nombre : null;
+      let mejorNombre   = null, mejorDist = Infinity;
+
+      if (workerNombre && rostros[workerNombre]) {
+        // Documento ingresado: comparar solo contra ese trabajador
+        mejorDist   = _distanciaMedia2Mejores(det.descriptor, workerNombre);
+        mejorNombre = workerNombre;
+      } else {
+        // Sin documento: búsqueda global
+        const nombres = Object.keys(rostros);
+        if (!nombres.length) {
+          _setCamEstado('Sin empleados enrolados');
+          setConf(null, false);
+          _inferenciaPendiente = false;
+          continue;
+        }
+        for (const n of nombres) {
+          const dist = _distanciaMedia2Mejores(det.descriptor, n);
+          if (dist < mejorDist) { mejorDist = dist; mejorNombre = n; }
+        }
       }
 
-      // Buscar mejor coincidencia (promedio 2 mejores descriptores)
-      let mejorNombre = null, mejorDist = Infinity;
-      for (const n of nombres) {
-        const dist = _distanciaMedia2Mejores(det.descriptor, n);
-        if (dist < mejorDist) { mejorDist = dist; mejorNombre = n; }
-      }
+      const pct    = Math.max(0, Math.round((1 - mejorDist) * 100));
+      const umbral = mejorNombre ? _umbralParaNombre(mejorNombre) : UMBRAL_V2;
 
-      const pct = Math.max(0, Math.round((1 - mejorDist) * 100));
-      const umbral = typeof CONFIG !== 'undefined' ? CONFIG.UMBRAL_FACIAL : 0.48;
+      registrarMetrica({ evento: 'dist', nombre: mejorNombre, dist: mejorDist.toFixed(4), umbral });
 
       if (mejorDist <= umbral) {
-        // Reconocimiento válido — las verificaciones de calidad son solo para enrolamiento
         if (camWrap) camWrap.classList.add('face-ok');
         setConf(pct, true);
-        _setCamEstado('Rostro reconocido…');
 
-        // Acumular coincidencias consecutivas
+        const v1 = mejorNombre && _esV1(mejorNombre);
+        _setCamEstado(v1 ? 'Reconocido · Requiere reenrolamiento' : 'Rostro reconocido…');
+
         const ahora = Date.now();
         if (_consecutivo.nombre === mejorNombre && ahora - _consecutivo.t0 <= VENTANA_CONSEC_MS) {
           _consecutivo.count++;
@@ -413,9 +533,12 @@ async function loopDeteccion() {
         if (camWrap) camWrap.classList.remove('face-ok');
         setConf(pct, false);
         _consecutivo = { nombre: null, t0: null, count: 0 };
-        // Usar calidad solo para orientar al usuario, nunca para bloquear
         const issues = _evaluarCalidad(det, video);
-        _setCamEstado(issues.length > 0 ? issues[0] : 'Analizando…');
+        if (issues.length > 0) {
+          _setCamEstado(issues[0]);
+        } else {
+          _setCamEstado('Analizando…');
+        }
       }
     } catch { /* ignorar errores de frame */ }
 
@@ -424,18 +547,12 @@ async function loopDeteccion() {
 }
 
 /* ══════════════════════════════════════════
-   MÉTRICAS (req. 12) — solo localStorage
+   MÉTRICAS — localStorage, últimas 50
 ══════════════════════════════════════════ */
 function registrarMetrica(evento) {
   try {
-    const ua = navigator.userAgent;
-    const entrada = {
-      ts: new Date().toISOString(),
-      ua: ua.slice(0, 120),
-      ...evento,
-    };
+    const entrada = { ts: new Date().toISOString(), ua: navigator.userAgent.slice(0, 120), ...evento };
     _metricas.push(entrada);
-    // Mantener solo las últimas 50 métricas
     if (_metricas.length > 50) _metricas.shift();
     localStorage.setItem('fr_metricas', JSON.stringify(_metricas));
   } catch { /* no bloquear */ }
