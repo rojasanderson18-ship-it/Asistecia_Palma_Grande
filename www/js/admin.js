@@ -78,7 +78,7 @@ document.getElementById('menuAgregar').onclick = () => {
 document.getElementById('menuReporte').onclick = () => {
   const hoy = new Date();
   const repFecha = document.getElementById('repFecha');
-  if (repFecha) repFecha.value = hoy.toISOString().slice(0, 10);
+  if (repFecha) repFecha.value = fechaLocalISO();
   mostrarPantalla('pantallaReporte');
   cargarReporte();
 };
@@ -428,7 +428,7 @@ async function cargarReporte() {
   if (btnCar) btnCar.classList.remove('loading');
   if (!datos.length) {
     const cola = JSON.parse(localStorage.getItem('cola') || '[]');
-    const marcasFecha = cola.filter(m => m.fechaHora && m.fechaHora.startsWith(fechaVal));
+    const marcasFecha = cola.filter(m => m.fechaLocal ? m.fechaLocal === fechaVal : (m.fechaHora && m.fechaHora.startsWith(fechaVal)));
     const porNombre = {};
     marcasFecha.forEach(m => {
       if (!porNombre[m.nombre]) porNombre[m.nombre] = {nombre:m.nombre, marcas:[], minutosDeuda:0, puntualidad:[]};
@@ -448,7 +448,7 @@ async function cargarReporte() {
     p.forEach(x => { if (x.estado === 'tarde') totalTarde++; if (x.estado === 'temprano') totalTemprano++; });
     totalMin += e.minutosDeuda || 0;
     if (marcas.length > 0) totalPresentes++;
-    if (marcas.includes('ENTRADA') && marcas.includes('SALIDA')) totalCompletas++;
+    if (marcas.includes('Entrada') && marcas.includes('Salida')) totalCompletas++;
     if (e.excepcion || (e.minutosDeuda || 0) > 60) totalExcepciones++;
   });
   const _setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -699,13 +699,13 @@ function abrirFormPersonal(modo) {
     const p = getPC().find(t => t.nombre === _persNombreActual);
     if (p) {
       if (docInput) { docInput.value = p.documento || ''; docInput.readOnly = true; docInput.style.opacity = '.5'; }
-      if (nomInput) nomInput.value = p.nombre || '';
+      if (nomInput) { nomInput.value = p.nombre || ''; nomInput.readOnly = true; nomInput.style.opacity = '.5'; }
       if (carSelect) carSelect.value = p.cargo || '';
       if (activoToggle) activoToggle.checked = p.activo !== false;
     }
   } else {
     if (docInput) { docInput.value = ''; docInput.readOnly = false; docInput.style.opacity = ''; }
-    if (nomInput) nomInput.value = '';
+    if (nomInput) { nomInput.value = ''; nomInput.readOnly = false; nomInput.style.opacity = ''; }
     if (carSelect) carSelect.value = '';
     if (activoToggle) activoToggle.checked = true;
   }
