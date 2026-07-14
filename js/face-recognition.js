@@ -77,12 +77,14 @@ async function iniciarCamara() {
 }
 
 function detenerCamara() {
+  loopActivo = false;          // señal para terminar el loop en la próxima iteración
+  _inferenciaPendiente = false; // liberar mutex por si acaso
+  _consecutivo = { nombre: null, t0: null, count: 0 };
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   const video = document.getElementById('video');
   if (video) video.srcObject = null;
   const ph = document.getElementById('camPlaceholder');
   if (ph) ph.style.display = 'flex';
-  loopActivo = false;
 }
 
 /* ══════════════════════════════════════════
@@ -321,22 +323,23 @@ async function procesarEnrolar() {
 
 /* ══════════════════════════════════════════
    LOOP DE DETECCIÓN CONTINUA
-   — inputSize 224
+   — inputSize 256
    — sin inferencias simultáneas
    — intervalo dinámico según rendimiento
    — instrucciones en tiempo real
    — ventana de 2 coincidencias consecutivas (800 ms)
 ══════════════════════════════════════════ */
 let _consecutivo = { nombre: null, t0: null, count: 0 };
-const VENTANA_CONSEC_MS = 800;
+const VENTANA_CONSEC_MS = 1800;  // 1.8s — permite teléfonos lentos (≥2 hits en ventana)
 const HITS_REQUERIDOS   = 2;
 
 async function loopDeteccion() {
   loopActivo = true;
   const video = document.getElementById('video');
 
-  while (true) {
+  while (loopActivo) {
     await new Promise(r => setTimeout(r, _intervaloDyn));
+    if (!loopActivo) break;          // re-check después del sleep
     if (!modOk || !stream) continue;
     if (modoActual === 'procesando' || modoActual === 'enrolar') continue;
     if (_inferenciaPendiente) continue;
@@ -349,7 +352,7 @@ async function loopDeteccion() {
     try {
       const det = await faceapi.detectSingleFace(
         video,
-        new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 })
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.45 })
       ).withFaceLandmarks().withFaceDescriptor();
 
       const duracion = Date.now() - t0;
