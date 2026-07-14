@@ -227,7 +227,7 @@ function cancelarEnrolar() {
   ocultarBannerEnrolar();
   setProgreso(0, CAPTURAS_ENROLAR);
   detenerCamara();
-  mostrarPantalla('pantallaAdmin');
+  mostrarPantalla('pantallaMenu');
 }
 
 function pintarGrilla(id, cb) {
@@ -335,7 +335,7 @@ async function procesarEnrolar() {
       showRes('err', 'Cámara no disponible',
         'No se pudo iniciar la cámara. Verifique que el navegador tenga permiso de cámara y que ninguna otra aplicación la esté usando.',
         ['Revise los permisos del navegador', 'Cierre otras apps que usen la cámara', 'Recargue la página e intente de nuevo']);
-      setTimeout(() => mostrarPantalla('pantallaAdmin'), 5000);
+      setTimeout(() => mostrarPantalla('pantallaMenu'), 5000);
       return;
     }
   }
@@ -394,7 +394,7 @@ async function procesarEnrolar() {
     _guardarFotoPendiente(nombreGuardado, foto);
     showRes('ok', 'Biometría lista · foto pendiente',
       `<b>${xh(nombreGuardado)}</b> puede marcar asistencia. La foto se enviará al recuperar conexión.`, []);
-    setTimeout(() => mostrarPantalla('pantallaAdmin'), 4000);
+    setTimeout(() => mostrarPantalla('pantallaMenu'), 4000);
     return;
   }
 
@@ -416,7 +416,7 @@ async function procesarEnrolar() {
       `<b>${xh(nombreGuardado)}</b> ya puede marcar asistencia.`, []);
   }
 
-  setTimeout(() => mostrarPantalla('pantallaAdmin'), 3000);
+  setTimeout(() => mostrarPantalla('pantallaMenu'), 3000);
 }
 
 /* ── Foto pendiente: persiste localmente y reintenta en reconexión ── */

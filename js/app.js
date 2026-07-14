@@ -10,7 +10,8 @@ function _actualizarReloj() {
 }
 (function _arrancarReloj() {
   _actualizarReloj();
-  const msHastaSiguienteMinuto = (60 - new Date().getSeconds()) * 1000 - new Date().getMilliseconds();
+  const _ahora = new Date();
+  const msHastaSiguienteMinuto = (60 - _ahora.getSeconds()) * 1000 - _ahora.getMilliseconds();
   setTimeout(function() {
     _actualizarReloj();
     setInterval(_actualizarReloj, 60000);
