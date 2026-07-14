@@ -74,6 +74,9 @@ if (!isAppConfigured()) {
   setTimeout(cargarPersonalDesdeBackend, 1500);
 }
 
+/* ── Botón admin en header ── */
+document.getElementById('btnHdrAdmin').addEventListener('click', () => abrirPinScreen('menu'));
+
 /* ── 5-TAP en logo → Admin ── */
 let _tapCount = 0, _tapTimer = null;
 document.getElementById('hdrLogo').addEventListener('click', () => {
