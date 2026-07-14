@@ -142,8 +142,22 @@ function showConfirm(msg, okText, danger) {
     _mgenResolve = resolve;
     document.getElementById('mgenMsg').textContent = msg;
     document.getElementById('mgenCancel').style.display = '';
+    document.getElementById('mgenCancel').textContent = 'Cancelar';
     document.getElementById('mgenOk').textContent = okText || 'Confirmar';
     document.getElementById('mgenOk').className = 'mgen-ok' + (danger ? ' danger' : '');
+    document.getElementById('modalGen').style.display = 'flex';
+  });
+}
+
+// Diálogo de dos opciones sin cancelar: okText = opción A (true), cancelText = opción B (false)
+function showChoice(msg, okText, cancelText) {
+  return new Promise(resolve => {
+    _mgenResolve = resolve;
+    document.getElementById('mgenMsg').textContent = msg;
+    document.getElementById('mgenCancel').style.display = '';
+    document.getElementById('mgenCancel').textContent = cancelText || 'No';
+    document.getElementById('mgenOk').textContent = okText || 'Sí';
+    document.getElementById('mgenOk').className = 'mgen-ok';
     document.getElementById('modalGen').style.display = 'flex';
   });
 }

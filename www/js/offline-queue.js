@@ -41,23 +41,6 @@ function _enriquecerPayload(p) {
   return base;
 }
 
-function enviar(p) {
-  // enviar() es solo para compatibilidad de bajo nivel; no muestra resultado.
-  // Las marcaciones de kiosco deben usar ejecutarMarcacion() que hace await enviarConResp().
-  const payload = _enriquecerPayload(p);
-  if (!CONFIG.GS_URL || CONFIG.GS_URL.includes('PEGAR')) {
-    const c = JSON.parse(localStorage.getItem('cola') || '[]');
-    c.push({ ...payload, _meta: { intentos: 0, ultimoIntento: null, ultimoError: null, estado: 'pendiente' } });
-    localStorage.setItem('cola', JSON.stringify(c));
-    return;
-  }
-  fetch(CONFIG.GS_URL, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload)})
-    .catch(() => {
-      const c = JSON.parse(localStorage.getItem('cola') || '[]');
-      c.push({ ...payload, _meta: { intentos: 0, ultimoIntento: null, ultimoError: null, estado: 'pendiente' } });
-      localStorage.setItem('cola', JSON.stringify(c));
-    });
-}
 
 async function enviarConResp(p) {
   const payload = _enriquecerPayload(p);

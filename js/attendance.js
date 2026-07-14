@@ -440,10 +440,25 @@ async function procesarDoc(docVal) {
     return;
   }
 
-  // Sin estado conocido y sin conexión: no avanzar, informar al operario
+  // Sin estado conocido y sin conexión: el supervisor elige el tipo y autoriza con PIN
   if (res.sinEstado) {
-    if (docSubEl) { docSubEl.textContent = 'Sin conexión — activa el internet para verificar marcaciones'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+    if (docSubEl) { docSubEl.textContent = 'Sin conexión — se requiere supervisor para continuar'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
     if (docChkEl) docChkEl.classList.remove('show');
+    showChoice(
+      `Sin conexión — no se puede verificar el historial de ${persona.nombre}.\n¿Es una Entrada o una Salida?`,
+      'Entrada', 'Salida'
+    ).then(esEntrada => {
+      const tipoElegido = esEntrada ? 'Entrada' : 'Salida';
+      abrirModalSupervisor(
+        `Sin conexión. Supervisor autoriza <b>${tipoElegido}</b> de <b>${xh(persona.nombre)}</b>.`,
+        () => {
+          WORKER.nombre = persona.nombre;
+          WORKER.doc = docNum;
+          WORKER.tipo = tipoElegido;
+          setWorkerState('SCANNING', { nombre: persona.nombre, tipo: tipoElegido, doc: docNum });
+        }
+      );
+    });
     return;
   }
 
