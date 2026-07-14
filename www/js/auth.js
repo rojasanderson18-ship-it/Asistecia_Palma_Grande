@@ -23,6 +23,9 @@ function _programarExpiracionAdmin() {
     _adminSessionTimer = setTimeout(() => {
       _adminToken = null;
       _adminSessionTimer = null;
+      sessionStorage.removeItem('_adm_tok');
+      sessionStorage.removeItem('_adm_exp');
+      sessionStorage.removeItem('_adm_screen');
       if (typeof showToast === 'function') showToast('Sesión admin expirada — ingresa el PIN nuevamente');
       if (typeof mostrarPantalla === 'function') mostrarPantalla('pantallaMarcacion');
     }, _ADMIN_SESSION_MS - _ADMIN_AVISO_MS);
@@ -76,6 +79,8 @@ async function login(pin) {
     const d = await _postGs({ accion: 'login', hash, deviceId });
     if (d.ok && d.token) {
       _adminToken = d.token;
+      sessionStorage.setItem('_adm_tok', d.token);
+      sessionStorage.setItem('_adm_exp', String(Date.now() + _ADMIN_SESSION_MS));
       _programarExpiracionAdmin();
       return { ok: true, token: d.token, expiresIn: d.expiresIn };
     }
@@ -116,7 +121,36 @@ function logout() {
   _adminToken = null;
   _supervisorToken = null;
   if (_adminSessionTimer) { clearTimeout(_adminSessionTimer); _adminSessionTimer = null; }
+  sessionStorage.removeItem('_adm_tok');
+  sessionStorage.removeItem('_adm_exp');
+  sessionStorage.removeItem('_adm_screen');
 }
+
+/* ── Restaurar sesión admin tras refresh (token aún válido en sessionStorage) ── */
+function _restaurarSesionAdmin() {
+  const tok = sessionStorage.getItem('_adm_tok');
+  const exp = parseInt(sessionStorage.getItem('_adm_exp') || '0', 10);
+  if (tok && exp > Date.now()) {
+    _adminToken = tok;
+    // Reprogramar expiración por el tiempo restante
+    const restante = exp - Date.now();
+    _adminSessionTimer = setTimeout(() => {
+      _adminToken = null;
+      _adminSessionTimer = null;
+      sessionStorage.removeItem('_adm_tok');
+      sessionStorage.removeItem('_adm_exp');
+      sessionStorage.removeItem('_adm_screen');
+      if (typeof showToast === 'function') showToast('Sesión admin expirada — ingresa el PIN nuevamente');
+      if (typeof mostrarPantalla === 'function') mostrarPantalla('pantallaMarcacion');
+    }, restante);
+    return true;
+  }
+  sessionStorage.removeItem('_adm_tok');
+  sessionStorage.removeItem('_adm_exp');
+  sessionStorage.removeItem('_adm_screen');
+  return false;
+}
+window._restaurarSesionAdmin = _restaurarSesionAdmin;
 
 function clearSupervisorToken() {
   _supervisorToken = null;

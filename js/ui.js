@@ -1,10 +1,22 @@
 /* ── MÓDULO: UI / Pantallas ── */
 
+const _PANTALLAS_ADMIN = new Set([
+  'pantallaMenu','pantallaConfig','pantallaReporte','pantallaEnrolar',
+  'pantallaRostros','pantallaPersonal','pantallaAgregar','pantallaResetDia',
+  'pantallaFichaPersonal','pantallaFormPersonal','pantallaImportarPersonal',
+]);
+
 function mostrarPantalla(id) {
   document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('show'));
   const target = document.getElementById(id);
   if (target) target.classList.add('show');
   if (id === 'pantallaMenu') actualizarMenuAdmin();
+  // Persistir pantalla admin para restaurar tras refresh
+  if (_PANTALLAS_ADMIN.has(id)) {
+    sessionStorage.setItem('_adm_screen', id);
+  } else {
+    sessionStorage.removeItem('_adm_screen');
+  }
 }
 
 /* Reloj */

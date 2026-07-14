@@ -88,6 +88,11 @@ if (!isAppConfigured()) {
 } else {
   setTimeout(sincronizarConfigDesdeBackend, 800);
   setTimeout(cargarPersonalDesdeBackend, 1500);
+  // Restaurar sesión y pantalla admin si el refresh fue durante una sesión activa
+  const _pantallaGuardada = sessionStorage.getItem('_adm_screen');
+  if (_pantallaGuardada && typeof _restaurarSesionAdmin === 'function' && _restaurarSesionAdmin()) {
+    setTimeout(() => mostrarPantalla(_pantallaGuardada), 100);
+  }
 }
 
 /* ── Logo: solo eliminar title para no exponer hint ── */
