@@ -38,11 +38,16 @@ const CONFIG = {
     radioMetros: 200,
   },
 
-  HORARIO: {
-    entrada: 6.0,
-    salida: 15.0,
-    salidaSabado: 12.0,
-  },
+  // horarios por día (0=Dom…6=Sáb). Cargado desde backend.
+  HORARIOS: [
+    { dia: 0, nombre: 'Domingo',    activo: false, entrada: '',      salida: '',      tolEntrada: 10, tolSalida: 5 },
+    { dia: 1, nombre: 'Lunes',      activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
+    { dia: 2, nombre: 'Martes',     activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
+    { dia: 3, nombre: 'Miércoles',  activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
+    { dia: 4, nombre: 'Jueves',     activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
+    { dia: 5, nombre: 'Viernes',    activo: true,  entrada: '06:30', salida: '15:00', tolEntrada: 10, tolSalida: 5 },
+    { dia: 6, nombre: 'Sábado',     activo: true,  entrada: '06:30', salida: '12:00', tolEntrada: 10, tolSalida: 5 },
+  ],
 
   UMBRAL_FACIAL: 0.45,
 };
@@ -72,6 +77,14 @@ function getPC() {
 function getCargo(n) { const p = getPC().find(p => p.nombre === n); return p ? p.cargo : ''; }
 function getPorDoc(d) { const s = String(d).trim(); return getPC().find(p => String(p.documento) === s); }
 
+/* ── Horario del día ── */
+function getHorarioDelDia(dia) {
+  const diaN = (dia != null) ? dia : new Date().getDay();
+  const cfg = getCfgGuardada();
+  const lista = (cfg && cfg.horarios && Array.isArray(cfg.horarios)) ? cfg.horarios : CONFIG.HORARIOS;
+  return lista.find(function(h) { return h.dia === diaN; }) || { activo: false };
+}
+
 /* ── Rostros biométricos ── */
 function getRostros() { try { return JSON.parse(localStorage.getItem('rostros_enrolados') || '{}'); } catch { return {}; } }
 function getRostrosMeta() { try { return JSON.parse(localStorage.getItem('rostros_meta') || '{}'); } catch { return {}; } }
@@ -96,9 +109,12 @@ function aplicarConfig(cfg) {
   if (cfg.lat != null)  CONFIG.FINCA.lat = parseFloat(cfg.lat);
   if (cfg.lng != null)  CONFIG.FINCA.lng = parseFloat(cfg.lng);
   if (cfg.radio)        CONFIG.FINCA.radioMetros = parseInt(cfg.radio);
-  if (cfg.entrada != null)  CONFIG.HORARIO.entrada = cfg.entrada;
-  if (cfg.salida != null)   CONFIG.HORARIO.salida = cfg.salida;
-  if (cfg.salidaSab != null) CONFIG.HORARIO.salidaSabado = cfg.salidaSab;
+  if (cfg.horarios && Array.isArray(cfg.horarios)) {
+    cfg.horarios.forEach(function(h) {
+      const idx = CONFIG.HORARIOS.findIndex(function(d) { return d.dia === h.dia; });
+      if (idx >= 0) CONFIG.HORARIOS[idx] = Object.assign({}, CONFIG.HORARIOS[idx], h);
+    });
+  }
   if (cfg.umbral != null)   CONFIG.UMBRAL_FACIAL = parseFloat(cfg.umbral);
   // cfg.pin permanece solo en localStorage, nunca en CONFIG
 }

@@ -213,6 +213,52 @@ function _actualizarUltimaConexion(deviceToken) {
 }
 
 /* ══════════════════════════════════════════════════════
+   HELPERS: horarios por día de semana
+══════════════════════════════════════════════════════ */
+
+// Convierte "HH:MM" a decimal (6.5 = 6:30)
+function _horaStrADecimal(horaStr) {
+  const p = String(horaStr || '00:00').split(':').map(Number);
+  return p[0] + (p[1] || 0) / 60;
+}
+
+// Convierte decimal a "HH:MM"
+function _decimalAHoraStr(decimal) {
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+// Devuelve el objeto horario para un día de semana (0=Dom…6=Sáb) desde la config
+// Retrocompatible con estructura antigua entrada/salida/salidaSab
+function _getHorarioPorDia(diaSemana, cfg) {
+  if (cfg.horarios && Array.isArray(cfg.horarios)) {
+    const h = cfg.horarios.find(function(h) { return h.dia === diaSemana; });
+    if (h) return h;
+  }
+  // Retrocompat: estructura antigua
+  const esActivo = diaSemana >= 1 && diaSemana <= 6;
+  if (!esActivo) return { dia: diaSemana, activo: false };
+  const esSabado = diaSemana === 6;
+  return {
+    dia:        diaSemana,
+    activo:     true,
+    entrada:    _decimalAHoraStr(parseFloat(cfg.entrada || 6.0)),
+    salida:     _decimalAHoraStr(esSabado ? parseFloat(cfg.salidaSab || 12.0) : parseFloat(cfg.salida || 15.0)),
+    tolEntrada: 15,
+    tolSalida:  0
+  };
+}
+
+// Extrae el día de semana de una fecha "dd/MM/yyyy"
+function _diaSemanaDeStr(fechaStr) {
+  try {
+    const p = String(fechaStr).split('/');
+    return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])).getDay();
+  } catch (e) { return new Date().getDay(); }
+}
+
+/* ══════════════════════════════════════════════════════
    HELPERS: sanitización y hojas
 ══════════════════════════════════════════════════════ */
 
@@ -490,7 +536,7 @@ function doPost(e) {
       const sv = _validarSesion(datos.token, ['admin']);
       if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
       const cfg = datos.config || {};
-      const permitidos = ['empresa','fincaNombre','fincaId','lat','lng','radio','entrada','salida','salidaSab','umbral'];
+      const permitidos = ['empresa','fincaNombre','fincaId','lat','lng','radio','entrada','salida','salidaSab','umbral','horarios'];
       const seguro = {};
       permitidos.forEach(function(k) { if (cfg[k] != null) seguro[k] = cfg[k]; });
       PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));
@@ -974,7 +1020,11 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
     catch (e) { return {}; }
   })();
-  const HORA_TOLERANCIA_ENTRADA = (cfg.entrada || 6.0) + 0.25;
+  const diaSemana = _diaSemanaDeStr(fecha);
+  const horarioDelDia = _getHorarioPorDia(diaSemana, cfg);
+  const HORA_TOLERANCIA_ENTRADA = horarioDelDia.activo
+    ? (_horaStrADecimal(horarioDelDia.entrada || '06:00') + (horarioDelDia.tolEntrada || 15) / 60)
+    : 999;
   const porPersona = {};
 
   for (let i = 1; i < datos.length; i++) {
@@ -1038,11 +1088,8 @@ function calcularResumenDiario() {
     try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
     catch (e) { return {}; }
   })();
-  const HORARIO = {
-    entrada:      cfg.entrada      || 6.0,
-    salida:       cfg.salida       || 14.75,
-    salidaSabado: cfg.salidaSab    || 11.75
-  };
+  const diaSemanaHoy = new Date().getDay();
+  const horarioHoy = _getHorarioPorDia(diaSemanaHoy, cfg);
   const marcasHoy = {};
 
   for (let i = 1; i < datos.length; i++) {
@@ -1065,11 +1112,16 @@ function calcularResumenDiario() {
     }
     const entrada    = horaADecimal(m['Entrada']);
     const salida     = horaADecimal(m['Salida']);
-    const esSabado   = new Date().getDay() === 6;
-    const horaCierre = esSabado ? HORARIO.salidaSabado : HORARIO.salida;
     const horasTrab  = salida - entrada;
-    const deficitMin = Math.max(0, (HORARIO.entrada - entrada) * 60) + Math.max(0, (horaCierre - salida) * 60);
-    const extraMin   = Math.max(0, (salida - horaCierre) * 60);
+    let deficitMin = 0, extraMin = 0;
+    if (horarioHoy.activo) {
+      const hEntrada  = _horaStrADecimal(horarioHoy.entrada || '06:00');
+      const hSalida   = _horaStrADecimal(horarioHoy.salida  || '15:00');
+      const tolEnt    = (horarioHoy.tolEntrada || 0) / 60;
+      const tolSal    = (horarioHoy.tolSalida  || 0) / 60;
+      deficitMin = Math.max(0, (hEntrada - tolEnt - entrada) * 60) + Math.max(0, (hSalida - tolSal - salida) * 60);
+      extraMin   = Math.max(0, (salida - hSalida) * 60);
+    }
     filasNuevas.push([hoy, m.nombre, doc, m.cargo || '', m.finca, m['Entrada'], m['Salida'],
                       horasTrab.toFixed(2), deficitMin.toFixed(0), extraMin.toFixed(0)]);
   });
@@ -1109,7 +1161,7 @@ function setSupervisorPin(pin) {
 
 /** Configura los parámetros de la empresa. */
 function setConfig(config) {
-  const permitidos = ['empresa','fincaNombre','fincaId','lat','lng','radio','entrada','salida','salidaSab','umbral'];
+  const permitidos = ['empresa','fincaNombre','fincaId','lat','lng','radio','entrada','salida','salidaSab','umbral','horarios'];
   const seguro = {};
   permitidos.forEach(function(k) { if (config[k] != null) seguro[k] = config[k]; });
   PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));

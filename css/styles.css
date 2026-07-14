@@ -2132,3 +2132,50 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 .ssi-ico.err { background: rgba(220,38,38,0.15); color: #FF6B6B; }
 .ssi-ico.run { background: rgba(255,193,7,0.15); color: #FFC107; }
 .ssi-ico.pending { background: rgba(255,255,255,0.06); color: #4A6458; }
+
+/* ── Tabla horario semanal ── */
+.hor-table-wrap {
+  border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden;
+}
+.hor-table-head {
+  display: grid; grid-template-columns: 44px 44px 1fr 1fr 48px 48px;
+  gap: 4px; padding: 6px 8px;
+  background: var(--bg); font-size: 10px; font-weight: 700;
+  color: var(--t2); text-transform: uppercase; letter-spacing: .4px;
+}
+.hor-row {
+  display: grid; grid-template-columns: 44px 44px 1fr 1fr 48px 48px;
+  gap: 4px; align-items: center; padding: 6px 8px;
+  border-top: 1px solid var(--bd); transition: background .15s;
+}
+.hor-row-off { opacity: .45; }
+.hor-dia { font-size: 12px; font-weight: 700; color: var(--tx); }
+.hor-toggle { position: relative; display: inline-block; width: 32px; height: 18px; }
+.hor-toggle input { opacity: 0; width: 0; height: 0; }
+.hor-track {
+  position: absolute; inset: 0; background: var(--bd);
+  border-radius: 9px; cursor: pointer; transition: background .2s;
+}
+.hor-track::before {
+  content: ''; position: absolute; left: 2px; top: 2px;
+  width: 14px; height: 14px; background: #fff;
+  border-radius: 50%; transition: transform .2s;
+}
+.hor-toggle input:checked + .hor-track { background: var(--dg); }
+.hor-toggle input:checked + .hor-track::before { transform: translateX(14px); }
+.hor-time {
+  width: 100%; box-sizing: border-box; background: var(--wh);
+  border: 1px solid var(--bd); border-radius: 6px;
+  color: var(--tx); font-size: 12px; padding: 4px 5px;
+  font-family: inherit; outline: none;
+}
+.hor-time:focus { border-color: var(--dg); }
+.hor-time:disabled { opacity: .35; cursor: not-allowed; }
+.hor-tol {
+  width: 100%; box-sizing: border-box; background: var(--wh);
+  border: 1px solid var(--bd); border-radius: 6px;
+  color: var(--tx); font-size: 12px; padding: 4px 4px;
+  font-family: inherit; outline: none; text-align: center;
+}
+.hor-tol:focus { border-color: var(--dg); }
+.hor-tol:disabled { opacity: .35; cursor: not-allowed; }

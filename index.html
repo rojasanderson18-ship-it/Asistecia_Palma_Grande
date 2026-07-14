@@ -392,12 +392,14 @@
     </div>
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:4px;">Horario laboral</div>
-      <div style="font-size:11.5px;color:var(--t2);margin-bottom:14px;line-height:1.5;">Usado como respaldo cuando no hay conexión.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div><div class="fl">Entrada</div><div class="time-pick" id="cfgEntrada"></div></div>
-        <div><div class="fl">Salida L-V</div><div class="time-pick" id="cfgSalida"></div></div>
-        <div><div class="fl">Salida sábado</div><div class="time-pick" id="cfgSalidaSab"></div></div>
+      <div style="font-size:11.5px;color:var(--t2);margin-bottom:14px;line-height:1.5;">Configura la jornada para cada día. El kiosco detecta automáticamente el día de la semana.</div>
+      <div class="hor-table-wrap">
+        <div class="hor-table-head">
+          <span>Día</span><span>Activo</span><span>Entrada</span><span>Salida</span><span>Tol.E</span><span>Tol.S</span>
+        </div>
+        <div id="horTablaBody"></div>
       </div>
+      <div style="font-size:10.5px;color:var(--t2);margin-top:8px;">Tol.E / Tol.S = minutos de tolerancia en entrada y salida.</div>
     </div>
     <div class="form-c">
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--dg);margin-bottom:12px;">Reconocimiento facial</div>

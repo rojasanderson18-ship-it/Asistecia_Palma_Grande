@@ -227,10 +227,50 @@ function getTimePick(id) {
   return parseInt(selH.value) + parseInt(selM.value) / 60;
 }
 
-function abrirConfig() {
-  ['cfgEntrada', 'cfgSalida', 'cfgSalidaSab'].forEach(id => {
-    if (!document.getElementById(id).querySelector('select')) buildTimePick(id);
+/* ── Tabla de horarios (7 días) ── */
+function _renderHorTabla(horarios) {
+  const body = document.getElementById('horTablaBody');
+  if (!body) return;
+  body.innerHTML = '';
+  horarios.forEach(function(h) {
+    const row = document.createElement('div');
+    row.className = 'hor-row' + (h.activo ? '' : ' hor-row-off');
+    row.dataset.dia = h.dia;
+    row.innerHTML = `
+      <span class="hor-dia">${h.nombre.slice(0,3)}</span>
+      <span><label class="hor-toggle"><input type="checkbox" class="hor-activo" ${h.activo ? 'checked' : ''}><span class="hor-track"></span></label></span>
+      <span><input type="time" class="hor-time hor-entrada" value="${h.entrada || ''}" ${!h.activo ? 'disabled' : ''}></span>
+      <span><input type="time" class="hor-time hor-salida" value="${h.salida || ''}" ${!h.activo ? 'disabled' : ''}></span>
+      <span><input type="number" class="hor-tol" value="${h.tolEntrada ?? 10}" min="0" max="60" ${!h.activo ? 'disabled' : ''}></span>
+      <span><input type="number" class="hor-tol" value="${h.tolSalida ?? 5}" min="0" max="60" ${!h.activo ? 'disabled' : ''}></span>
+    `;
+    row.querySelector('.hor-activo').addEventListener('change', function() {
+      const on = this.checked;
+      row.classList.toggle('hor-row-off', !on);
+      row.querySelectorAll('input:not(.hor-activo)').forEach(function(i) { i.disabled = !on; });
+    });
+    body.appendChild(row);
   });
+}
+
+function _leerHorTabla() {
+  const rows = document.querySelectorAll('#horTablaBody .hor-row');
+  return Array.from(rows).map(function(row) {
+    const inputs = row.querySelectorAll('input');
+    const activo = inputs[0].checked;
+    return {
+      dia:        parseInt(row.dataset.dia),
+      nombre:     CONFIG.HORARIOS.find(function(h) { return h.dia === parseInt(row.dataset.dia); })?.nombre || '',
+      activo:     activo,
+      entrada:    activo ? inputs[1].value : '',
+      salida:     activo ? inputs[2].value : '',
+      tolEntrada: activo ? parseInt(inputs[3].value) || 0 : 0,
+      tolSalida:  activo ? parseInt(inputs[4].value) || 0 : 0,
+    };
+  });
+}
+
+function abrirConfig() {
   const cfg = getCfgGuardada() || {};
   const gsUrlEl = document.getElementById('cfgGsUrl');
   if (gsUrlEl) gsUrlEl.value = cfg.gsUrl || '';
@@ -240,9 +280,9 @@ function abrirConfig() {
   document.getElementById('cfgLat').value = cfg.lat != null ? cfg.lat : '';
   document.getElementById('cfgLng').value = cfg.lng != null ? cfg.lng : '';
   document.getElementById('cfgRadio').value = cfg.radio != null ? cfg.radio : CONFIG.FINCA.radioMetros;
-  setTimePick('cfgEntrada', cfg.entrada != null ? cfg.entrada : CONFIG.HORARIO.entrada);
-  setTimePick('cfgSalida', cfg.salida != null ? cfg.salida : CONFIG.HORARIO.salida);
-  setTimePick('cfgSalidaSab', cfg.salidaSab != null ? cfg.salidaSab : CONFIG.HORARIO.salidaSabado);
+  // Tabla de horarios
+  const horarios = (cfg.horarios && Array.isArray(cfg.horarios)) ? cfg.horarios : CONFIG.HORARIOS;
+  _renderHorTabla(horarios);
   const u = cfg.umbral != null ? cfg.umbral : CONFIG.UMBRAL_FACIAL;
   document.getElementById('cfgUmbral').value = u;
   document.getElementById('cfgUmbralVal').textContent = parseFloat(u).toFixed(2);
@@ -304,9 +344,7 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   const lng         = parseFloat(document.getElementById('cfgLng').value);
   const radio       = parseInt(document.getElementById('cfgRadio').value);
   const umbral      = parseFloat(document.getElementById('cfgUmbral').value);
-  const entrada     = getTimePick('cfgEntrada');
-  const salida      = getTimePick('cfgSalida');
-  const salidaSab   = getTimePick('cfgSalidaSab');
+  const horarios    = _leerHorTabla();
 
   if (!fincaNombre) { alert('Escribe el nombre de la finca'); return; }
   if (isNaN(lat) || isNaN(lng)) { alert('Las coordenadas no son válidas'); return; }
@@ -327,14 +365,15 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
     ...prev,
     gsUrl: gsUrlVal.trim() || prev.gsUrl || '',
     empresa: empresaVal.trim() || prev.empresa || '',
-    fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral,
+    fincaNombre, lat, lng, radio, umbral, horarios,
   };
   delete cfg.pin; delete cfg.pinHash; delete cfg.pinSha; delete cfg._salt; delete cfg.nombreFinca;
+  delete cfg.entrada; delete cfg.salida; delete cfg.salidaSab;
 
   // 2. Si hay URL de servidor: guardar PRIMERO en backend; solo guardar local si el backend acepta
   if (CONFIG.GS_URL || cfg.gsUrl) {
     if (cfg.gsUrl && !CONFIG.GS_URL) CONFIG.GS_URL = cfg.gsUrl;
-    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, entrada, salida, salidaSab, umbral };
+    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, umbral, horarios };
     const rb = await guardarConfigBackend(cfgBackend);
     if (!rb.ok) {
       btn.disabled = false;
