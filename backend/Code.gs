@@ -1073,39 +1073,41 @@ function doPost(e) {
         const horarioDia  = _getHorarioPorDia(diaSemana, appCfg);
         const puntualidad = _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia);
 
-        // ── Insertar fila con 30 columnas ──
-        hoja.appendRow([
-          marcacionId,                                                          // MarcacionID
-          hoyStr,                                                               // Fecha
-          horaStr,                                                              // HoraServidor
-          sanitizarCelda(documento),                                            // Documento
-          sanitizarCelda(nombre),                                               // Nombre
-          sanitizarCelda(cargo),                                                // Cargo
-          sanitizarCelda(finca),                                                // Finca
-          tipo,                                                                 // Tipo
-          sanitizarCelda(String(datos.fechaLocal || '')),                       // FechaLocal
-          sanitizarCelda(String(datos.fechaHora  || '')),                       // FechaHoraCliente
-          puntualidad.estado,                                                   // EstadoPuntualidad
-          puntualidad.minutosDiferencia,                                        // MinutosDiferencia
-          puntualidad.mensajePuntualidad,                                       // MensajePuntualidad
-          gpsValido ? lat : '',                                                 // Latitud
-          gpsValido ? lng : '',                                                 // Longitud
-          datos.precisionGPS != null ? parseFloat(datos.precisionGPS).toFixed(1) : '', // PrecisionGPS
-          estadoGPS,                                                            // EstadoGPS
-          distanciaMetros != null ? distanciaMetros : '',                       // DistanciaGeocerca
-          dentroGeocerca ? 'SI' : (gpsAusente ? 'GPS_AUSENTE' : 'NO'),        // DentroGeocerca
-          datos.distanciaFacial != null ? parseFloat(datos.distanciaFacial).toFixed(3) : '', // DistanciaFacial
-          datos.sinBiometria ? 'SI' : 'NO',                                    // SinBiometria
-          sanitizarCelda(String(datos.supervisorId || '')),                     // SupervisorID
-          sanitizarCelda(String(datos.tipoExcepcion || '')),                    // TipoExcepcion
-          sanitizarCelda(String(datos.motivoSupervisor || '')),                 // MotivoSupervisor
-          sanitizarCelda(String(datos.fechaHoraAutorizacion || '')),            // FechaHoraAutorizacion
-          sanitizarCelda(dv.deviceId),                                          // DeviceID
-          sanitizarCelda(String(datos.appVersion || '')),                       // AppVersion
-          datos.sinConexion ? 'OFFLINE' : 'ONLINE',                            // SinConexion
-          new Date().toISOString(),                                             // FechaSincronizacion
-          resultadoFacial                                                       // ResultadoFacial
-        ]);
+        // ── Insertar fila usando colMap: correcto sin importar el orden físico de columnas ──
+        // (una hoja migrada puede tener las columnas en otro orden que una hoja nueva)
+        const fila = new Array(hoja.getLastColumn()).fill('');
+        function _set(col, val) { if (colMap[col] != null) fila[colMap[col]] = val; }
+        _set('MarcacionID',          marcacionId);
+        _set('Fecha',                hoyStr);
+        _set('HoraServidor',         horaStr);
+        _set('Documento',            sanitizarCelda(documento));
+        _set('Nombre',               sanitizarCelda(nombre));
+        _set('Cargo',                sanitizarCelda(cargo));
+        _set('Finca',                sanitizarCelda(finca));
+        _set('Tipo',                 tipo);
+        _set('FechaLocal',           sanitizarCelda(String(datos.fechaLocal || '')));
+        _set('FechaHoraCliente',     sanitizarCelda(String(datos.fechaHora  || '')));
+        _set('EstadoPuntualidad',    puntualidad.estado);
+        _set('MinutosDiferencia',    puntualidad.minutosDiferencia);
+        _set('MensajePuntualidad',   puntualidad.mensajePuntualidad);
+        _set('Latitud',              gpsValido ? lat : '');
+        _set('Longitud',             gpsValido ? lng : '');
+        _set('PrecisionGPS',         datos.precisionGPS != null ? parseFloat(datos.precisionGPS).toFixed(1) : '');
+        _set('EstadoGPS',            estadoGPS);
+        _set('DistanciaGeocerca',    distanciaMetros != null ? distanciaMetros : '');
+        _set('DentroGeocerca',       dentroGeocerca ? 'SI' : (gpsAusente ? 'GPS_AUSENTE' : 'NO'));
+        _set('DistanciaFacial',      datos.distanciaFacial != null ? parseFloat(datos.distanciaFacial).toFixed(3) : '');
+        _set('SinBiometria',         datos.sinBiometria ? 'SI' : 'NO');
+        _set('SupervisorID',         sanitizarCelda(String(datos.supervisorId || '')));
+        _set('TipoExcepcion',        sanitizarCelda(String(datos.tipoExcepcion || '')));
+        _set('MotivoSupervisor',     sanitizarCelda(String(datos.motivoSupervisor || '')));
+        _set('FechaHoraAutorizacion',sanitizarCelda(String(datos.fechaHoraAutorizacion || '')));
+        _set('DeviceID',             sanitizarCelda(dv.deviceId));
+        _set('AppVersion',           sanitizarCelda(String(datos.appVersion || '')));
+        _set('SinConexion',          datos.sinConexion ? 'OFFLINE' : 'ONLINE');
+        _set('FechaSincronizacion',  new Date().toISOString());
+        _set('ResultadoFacial',      resultadoFacial);
+        hoja.appendRow(fila);
         SpreadsheetApp.flush();
 
         _actualizarUltimaConexion(datos.deviceToken);
@@ -1420,17 +1422,60 @@ function migrarFotosAPrivadas() {
  * Ejecutar manualmente desde el editor de Apps Script.
  */
 function ejecutarMigracionEsquema() {
-  const hoja = obtenerOhCrearHoja();
-  const colMap = _getColMarcaciones(hoja);
-  const faltaban = COLUMNAS_MARCACIONES_V4.filter(function(c) { return colMap[c] == null; });
+  // Abrir directamente — sin pasar por obtenerOhCrearHoja() — para leer el estado real
+  // antes de que la migración automática se ejecute.
+  const ss   = SpreadsheetApp.openById(SHEET_ID);
+  const hoja = ss.getSheetByName(HOJA_MARCACIONES);
+
   Logger.log('=== Migración Esquema Marcaciones ===');
-  Logger.log('Columnas presentes antes: ' + hoja.getLastColumn());
-  Logger.log('Columnas faltantes: ' + JSON.stringify(faltaban));
+
+  if (!hoja) {
+    Logger.log('La hoja Marcaciones no existe todavía. Se creará al llamar obtenerOhCrearHoja().');
+    obtenerOhCrearHoja();
+    Logger.log('Hoja creada con esquema v4 completo (' + COLUMNAS_MARCACIONES_V4.length + ' columnas).');
+    return { faltaban: COLUMNAS_MARCACIONES_V4, colMapFinal: _getColMarcaciones(ss.getSheetByName(HOJA_MARCACIONES)) };
+  }
+
+  // Capturar estado ANTES de la migración
+  const colAntes   = hoja.getLastColumn();
+  const filasAntes = hoja.getLastRow() - 1;
+  const colMapAntes = _getColMarcaciones(hoja);
+  const faltaban   = COLUMNAS_MARCACIONES_V4.filter(function(c) { return colMapAntes[c] == null; });
+  const cabAntes   = hoja.getRange(1, 1, 1, colAntes).getValues()[0];
+
+  Logger.log('Columnas antes:         ' + colAntes);
+  Logger.log('Cabeceras antes:        ' + JSON.stringify(cabAntes));
+  Logger.log('Filas de datos antes:   ' + filasAntes);
+  Logger.log('Columnas faltantes:     ' + JSON.stringify(faltaban));
+
+  // Ejecutar migración
   const colMapFinal = migrarEsquemaMarcaciones(hoja);
-  Logger.log('Columnas presentes después: ' + hoja.getLastColumn());
-  Logger.log('colMap final: ' + JSON.stringify(colMapFinal));
-  Logger.log('Filas de datos (sin cabecera): ' + (hoja.getLastRow() - 1));
-  return { faltaban: faltaban, colMapFinal: colMapFinal };
+  const colDespues  = hoja.getLastColumn();
+  const filasDesp   = hoja.getLastRow() - 1;
+  const cabDespues  = hoja.getRange(1, 1, 1, colDespues).getValues()[0];
+
+  Logger.log('Columnas después:       ' + colDespues);
+  Logger.log('Cabeceras después:      ' + JSON.stringify(cabDespues));
+  Logger.log('Filas de datos después: ' + filasDesp + ' (deben ser iguales a ' + filasAntes + ')');
+  Logger.log('Columnas agregadas:     ' + (colDespues - colAntes));
+  Logger.log('colMap final:           ' + JSON.stringify(colMapFinal));
+
+  // Verificar que cada columna canónica tiene su posición
+  const problemas = [];
+  COLUMNAS_MARCACIONES_V4.forEach(function(c) {
+    if (colMapFinal[c] == null) problemas.push('FALTANTE: ' + c);
+  });
+  if (problemas.length === 0) Logger.log('PASS: todas las columnas canónicas están presentes.');
+  else problemas.forEach(function(p) { Logger.log('FAIL: ' + p); });
+
+  // Verificar que los datos históricos no cambiaron (comparar fila 2 si existe)
+  if (filasAntes > 0) {
+    const filaHistorica = hoja.getRange(2, 1, 1, colAntes).getValues()[0];
+    Logger.log('Fila histórica (primeras ' + colAntes + ' celdas): ' + JSON.stringify(filaHistorica));
+    Logger.log('Verificar manualmente que estos valores coinciden con los originales.');
+  }
+
+  return { faltaban: faltaban, colMapFinal: colMapFinal, colAntes: colAntes, colDespues: colDespues };
 }
 
 /**
@@ -1529,4 +1574,157 @@ function testZonaHoraria() {
   const p2 = _calcularPuntualidadServidor('Entrada', medianoche, horarioNoche);
   Logger.log('Hora medianoche Bogotá: ' + Utilities.formatDate(medianoche, 'America/Bogota', 'HH:mm'));
   Logger.log('Puntualidad medianoche: ' + JSON.stringify(p2));
+}
+
+/**
+ * Prueba de migración con hoja antigua de 18 columnas.
+ * Crea una hoja temporal MARCACIONES_TEST_18COL, inserta cabeceras antiguas
+ * y dos filas históricas, ejecuta migrarEsquemaMarcaciones() y luego inserta
+ * una nueva fila usando la lógica colMap para verificar que cada valor queda
+ * bajo la cabecera correcta.
+ *
+ * Al terminar, la hoja TEST permanece para inspección visual.
+ * Ejecutar manualmente desde el editor de Apps Script.
+ */
+function testMigracionEsquemaAntiguo() {
+  Logger.log('=== TEST MIGRACIÓN ESQUEMA ANTIGUO (18 columnas) ===');
+  const ss        = SpreadsheetApp.openById(SHEET_ID);
+  const NOMBRE_TEST = 'MARCACIONES_TEST_18COL';
+
+  // Limpiar hoja de prueba si ya existe
+  const hojaVieja = ss.getSheetByName(NOMBRE_TEST);
+  if (hojaVieja) ss.deleteSheet(hojaVieja);
+  const hoja = ss.insertSheet(NOMBRE_TEST);
+
+  // ── 1. Cabecera antigua de 18 columnas ──
+  const cabeceraAntigua = [
+    'Fecha','Hora','Nombre','Documento','Cargo','Finca','Tipo',
+    'Lat','Lng','DentroGeocerca','DistanciaFacial','Timestamp',
+    'DeviceId','PrecisionGPS','AppVersion','ModoOffline','ResultadoFacial','EstadoGPS'
+  ];
+  hoja.appendRow(cabeceraAntigua);
+  hoja.setFrozenRows(1);
+
+  // ── 2. Dos filas históricas ──
+  const h1 = ['01/01/2025','06:05:00','Juan Pérez','12345678','Jornalero','La Palma','Entrada',
+               4.71, -74.07,'SI',0.25, new Date('2025-01-01T11:05:00Z'),
+               'dev-abc','10','3.5','ONLINE','FACIAL','PRECISO'];
+  const h2 = ['01/01/2025','14:58:00','Juan Pérez','12345678','Jornalero','La Palma','Salida',
+               4.71, -74.07,'SI', 0.27, new Date('2025-01-01T19:58:00Z'),
+               'dev-abc','10','3.5','ONLINE','FACIAL','PRECISO'];
+  hoja.appendRow(h1);
+  hoja.appendRow(h2);
+  SpreadsheetApp.flush();
+  Logger.log('Filas históricas insertadas: 2 | Columnas antes: ' + hoja.getLastColumn());
+
+  // ── 3. Capturar valores históricos ANTES de migrar ──
+  const snapshot = hoja.getRange(2, 1, 2, hoja.getLastColumn()).getValues();
+
+  // ── 4. Migrar esquema ──
+  const colMap = migrarEsquemaMarcaciones(hoja);
+  Logger.log('Columnas después de migración: ' + hoja.getLastColumn());
+
+  // ── 5. Verificar que los alias quedaron mapeados correctamente ──
+  const aliasEsperados = {
+    'HoraServidor': 0,   // alias de 'Hora' → índice 1 en antiguo = col B
+    'Latitud':      7,   // alias de 'Lat'
+    'Longitud':     8,   // alias de 'Lng'
+    'FechaSincronizacion': 11, // alias de 'Timestamp'
+    'DeviceID':     12,        // alias de 'DeviceId'
+    'SinConexion':  15,        // alias de 'ModoOffline'
+  };
+  Logger.log('--- Verificación de alias ---');
+  var pasosAlias = 0, fallosAlias = 0;
+  Object.keys(aliasEsperados).forEach(function(canon) {
+    const idxEsperado = aliasEsperados[canon];
+    const idxObtenido = colMap[canon];
+    const ok = idxObtenido === idxEsperado;
+    Logger.log((ok ? 'PASS' : 'FAIL') + ' | ' + canon + ': esperado=' + idxEsperado + ' obtenido=' + idxObtenido);
+    if (ok) pasosAlias++; else fallosAlias++;
+  });
+
+  // ── 6. Insertar nueva fila usando la lógica colMap ──
+  const filaTest = new Array(hoja.getLastColumn()).fill('');
+  function _t(col, val) { if (colMap[col] != null) filaTest[colMap[col]] = val; }
+  const testMarcacionId = 'TEST-MIGR-001';
+  _t('MarcacionID',          testMarcacionId);
+  _t('Fecha',                '14/07/2026');
+  _t('HoraServidor',         '07:30:00');
+  _t('Documento',            '99999999');
+  _t('Nombre',               'Empleado Prueba');
+  _t('Cargo',                'Técnico');
+  _t('Finca',                'Palma Grande');
+  _t('Tipo',                 'Entrada');
+  _t('FechaLocal',           '2026-07-14');
+  _t('FechaHoraCliente',     '2026-07-14T12:30:00Z');
+  _t('EstadoPuntualidad',    'puntual');
+  _t('MinutosDiferencia',    0);
+  _t('MensajePuntualidad',   'Entrada a tiempo');
+  _t('Latitud',              4.71);
+  _t('Longitud',             -74.07);
+  _t('PrecisionGPS',         '8.0');
+  _t('EstadoGPS',            'PRECISO');
+  _t('DistanciaGeocerca',    15);
+  _t('DentroGeocerca',       'SI');
+  _t('DistanciaFacial',      '0.280');
+  _t('SinBiometria',         'NO');
+  _t('SupervisorID',         '');
+  _t('TipoExcepcion',        '');
+  _t('MotivoSupervisor',     '');
+  _t('FechaHoraAutorizacion','');
+  _t('DeviceID',             'dev-test');
+  _t('AppVersion',           '4.0');
+  _t('SinConexion',          'ONLINE');
+  _t('FechaSincronizacion',  new Date().toISOString());
+  _t('ResultadoFacial',      'FACIAL');
+  hoja.appendRow(filaTest);
+  SpreadsheetApp.flush();
+
+  // ── 7. Leer la fila recién insertada y verificar por nombre de cabecera ──
+  Logger.log('--- Verificación de la nueva fila por nombre de cabecera ---');
+  const filaLeida = hoja.getRange(hoja.getLastRow(), 1, 1, hoja.getLastColumn()).getValues()[0];
+  const comprobaciones = {
+    'MarcacionID': testMarcacionId,
+    'Fecha':       '14/07/2026',
+    'HoraServidor':'07:30:00',
+    'Nombre':      'Empleado Prueba',
+    'Documento':   '99999999',
+    'Latitud':     4.71,
+    'Longitud':    -74.07,
+    'SinBiometria':'NO',
+    'ResultadoFacial':'FACIAL',
+    'EstadoGPS':   'PRECISO',
+    'DentroGeocerca':'SI',
+  };
+  var pasos = 0, fallos = 0;
+  Object.keys(comprobaciones).forEach(function(col) {
+    const idx = colMap[col];
+    if (idx == null) { Logger.log('FAIL | ' + col + ': columna no encontrada en colMap'); fallos++; return; }
+    const esperado = comprobaciones[col];
+    const obtenido = filaLeida[idx];
+    const ok       = String(obtenido) === String(esperado);
+    Logger.log((ok ? 'PASS' : 'FAIL') + ' | ' + col + ': esperado=[' + esperado + '] obtenido=[' + obtenido + ']');
+    if (ok) pasos++; else fallos++;
+  });
+
+  // ── 8. Verificar que los registros históricos no cambiaron ──
+  Logger.log('--- Verificación de integridad histórica ---');
+  const snapshotPost = hoja.getRange(2, 1, 2, 18).getValues(); // solo las 18 cols originales
+  var intactos = true;
+  for (var r = 0; r < 2; r++) {
+    for (var c = 0; c < 18; c++) {
+      if (String(snapshotPost[r][c]) !== String(snapshot[r][c])) {
+        Logger.log('FAIL | Fila ' + (r+2) + ' col ' + (c+1) + ': antes=[' + snapshot[r][c] + '] después=[' + snapshotPost[r][c] + ']');
+        intactos = false;
+      }
+    }
+  }
+  if (intactos) Logger.log('PASS | Los dos registros históricos no fueron modificados.');
+
+  Logger.log('--- Resumen ---');
+  Logger.log('Alias: ' + pasosAlias + ' PASS / ' + fallosAlias + ' FAIL');
+  Logger.log('Columnas nueva fila: ' + pasos + ' PASS / ' + fallos + ' FAIL');
+  Logger.log('Integridad histórica: ' + (intactos ? 'PASS' : 'FAIL'));
+  Logger.log('Hoja de prueba guardada como "' + NOMBRE_TEST + '" para inspección visual.');
+  return { pasosAlias: pasosAlias, fallosAlias: fallosAlias, pasos: pasos, fallos: fallos, intactos: intactos };
 }
