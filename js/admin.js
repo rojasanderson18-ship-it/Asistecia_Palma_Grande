@@ -397,14 +397,20 @@ async function cargarReporte() {
   if (!datos.length) {
     const cola = JSON.parse(localStorage.getItem('cola') || '[]');
     const marcasFecha = cola.filter(m => m.fechaLocal ? m.fechaLocal === fechaVal : (m.fechaHora && m.fechaHora.startsWith(fechaVal)));
-    const porNombre = {};
+    // Los ítems de cola se agrupan por documento (nombre no existe en el payload)
+    const porDoc = {};
     marcasFecha.forEach(m => {
-      if (!porNombre[m.nombre]) porNombre[m.nombre] = {nombre:m.nombre, marcas:[], minutosDeuda:0, puntualidad:[]};
-      porNombre[m.nombre].marcas.push(m.tipo);
-      if (m.minutosDeuda) porNombre[m.nombre].minutosDeuda += m.minutosDeuda;
-      if (m.puntualidad && m.puntualidad !== 'ok') porNombre[m.nombre].puntualidad.push({tipo:m.tipo, estado:m.puntualidad, minutos:m.minutosDeuda||0});
+      const doc = String(m.documento || '');
+      if (!doc) return;
+      if (!porDoc[doc]) {
+        const persona = getPorDoc(doc);
+        porDoc[doc] = { nombre: persona ? persona.nombre : doc, cargo: persona ? persona.cargo : '', marcas: [], minutosDeuda: 0, puntualidad: [] };
+      }
+      if (m.tipo && !porDoc[doc].marcas.includes(m.tipo)) porDoc[doc].marcas.push(m.tipo);
+      if (m.minutosDeuda) porDoc[doc].minutosDeuda += m.minutosDeuda;
+      if (m.puntualidad && m.puntualidad !== 'ok') porDoc[doc].puntualidad.push({ tipo: m.tipo, estado: m.puntualidad, minutos: m.minutosDeuda || 0 });
     });
-    datos = Object.values(porNombre);
+    datos = Object.values(porDoc);
     if (!datos.length) { estEl.textContent = 'No hay datos offline para esta fecha.'; return; }
   }
   estEl.style.display = 'none'; resEl.style.display = 'block';

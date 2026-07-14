@@ -440,7 +440,20 @@ function _guardarFotoPendiente(nombre, foto) {
     const p = JSON.parse(localStorage.getItem('fotos_pendientes') || '{}');
     p[nombre] = { foto, ts: new Date().toISOString() };
     localStorage.setItem('fotos_pendientes', JSON.stringify(p));
-  } catch { /* storage lleno — ignorar */ }
+  } catch (e) {
+    if (e && e.name === 'QuotaExceededError') {
+      // Storage lleno: eliminar la foto más antigua y reintentar una vez
+      try {
+        const p = JSON.parse(localStorage.getItem('fotos_pendientes') || '{}');
+        const entradas = Object.entries(p).sort((a, b) => a[1].ts.localeCompare(b[1].ts));
+        if (entradas.length) {
+          delete p[entradas[0][0]];
+          p[nombre] = { foto, ts: new Date().toISOString() };
+          localStorage.setItem('fotos_pendientes', JSON.stringify(p));
+        }
+      } catch { /* ignorar si sigue sin espacio */ }
+    }
+  }
 }
 
 async function _enviarFotosPendientes() {

@@ -10,6 +10,24 @@
 
 let _adminToken = null;
 let _supervisorToken = null;
+let _adminSessionTimer = null;
+const _ADMIN_SESSION_MS = 15 * 60 * 1000;   // 15 min — igual que el backend
+const _ADMIN_AVISO_MS  = 13 * 60 * 1000;    // aviso a los 13 min
+
+function _programarExpiracionAdmin() {
+  if (_adminSessionTimer) clearTimeout(_adminSessionTimer);
+  // Aviso a los 13 min
+  _adminSessionTimer = setTimeout(() => {
+    if (typeof showToast === 'function') showToast('⚠ Sesión admin expira en 2 minutos — guarda los cambios');
+    // Auto-cierre a los 15 min
+    _adminSessionTimer = setTimeout(() => {
+      _adminToken = null;
+      _adminSessionTimer = null;
+      if (typeof showToast === 'function') showToast('Sesión admin expirada — ingresa el PIN nuevamente');
+      if (typeof mostrarPantalla === 'function') mostrarPantalla('pantallaMarcacion');
+    }, _ADMIN_SESSION_MS - _ADMIN_AVISO_MS);
+  }, _ADMIN_AVISO_MS);
+}
 
 function _getDeviceId() {
   let id = localStorage.getItem('device_id');
@@ -58,6 +76,7 @@ async function login(pin) {
     const d = await _postGs({ accion: 'login', hash, deviceId });
     if (d.ok && d.token) {
       _adminToken = d.token;
+      _programarExpiracionAdmin();
       return { ok: true, token: d.token, expiresIn: d.expiresIn };
     }
     return { ok: false, error: d.error || 'PIN incorrecto' };
@@ -96,6 +115,7 @@ function getDeviceId() { return _getDeviceId(); }
 function logout() {
   _adminToken = null;
   _supervisorToken = null;
+  if (_adminSessionTimer) { clearTimeout(_adminSessionTimer); _adminSessionTimer = null; }
 }
 
 function clearSupervisorToken() {

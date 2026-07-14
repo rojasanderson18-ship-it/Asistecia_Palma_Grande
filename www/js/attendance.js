@@ -467,6 +467,10 @@ setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
 
   // Ventana anti-duplicado (5 min) — solo si la marcación anterior fue confirmada
   const now = Date.now();
+  // Podar entradas vencidas para evitar crecimiento indefinido
+  for (const k of Object.keys(_lastMarked)) {
+    if (now - _lastMarked[k] >= DUPLICATE_WINDOW_MS) delete _lastMarked[k];
+  }
   if (_lastMarked[nombre] && now - _lastMarked[nombre] < DUPLICATE_WINDOW_MS) return;
 
   // Filtrar si hay doc ingresado y no coincide con el reconocido
