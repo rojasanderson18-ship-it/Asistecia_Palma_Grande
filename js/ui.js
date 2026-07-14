@@ -114,6 +114,54 @@ function showRes(tipo, tit, det, causas) {
   if (tipo !== 'ok') setTimeout(goBack, 8000);
 }
 
+/* ── MODAL GENÉRICO (reemplaza alert/confirm nativos) ── */
+let _mgenResolve = null;
+
+document.getElementById('mgenOk').addEventListener('click', () => {
+  document.getElementById('modalGen').style.display = 'none';
+  if (_mgenResolve) { _mgenResolve(true); _mgenResolve = null; }
+});
+document.getElementById('mgenCancel').addEventListener('click', () => {
+  document.getElementById('modalGen').style.display = 'none';
+  if (_mgenResolve) { _mgenResolve(false); _mgenResolve = null; }
+});
+
+function showAlert(msg) {
+  return new Promise(resolve => {
+    _mgenResolve = () => resolve();
+    document.getElementById('mgenMsg').textContent = msg;
+    document.getElementById('mgenCancel').style.display = 'none';
+    document.getElementById('mgenOk').textContent = 'Aceptar';
+    document.getElementById('mgenOk').className = 'mgen-ok';
+    document.getElementById('modalGen').style.display = 'flex';
+  });
+}
+
+function showConfirm(msg, okText, danger) {
+  return new Promise(resolve => {
+    _mgenResolve = resolve;
+    document.getElementById('mgenMsg').textContent = msg;
+    document.getElementById('mgenCancel').style.display = '';
+    document.getElementById('mgenCancel').textContent = 'Cancelar';
+    document.getElementById('mgenOk').textContent = okText || 'Confirmar';
+    document.getElementById('mgenOk').className = 'mgen-ok' + (danger ? ' danger' : '');
+    document.getElementById('modalGen').style.display = 'flex';
+  });
+}
+
+// Diálogo de dos opciones sin cancelar: okText = opción A (true), cancelText = opción B (false)
+function showChoice(msg, okText, cancelText) {
+  return new Promise(resolve => {
+    _mgenResolve = resolve;
+    document.getElementById('mgenMsg').textContent = msg;
+    document.getElementById('mgenCancel').style.display = '';
+    document.getElementById('mgenCancel').textContent = cancelText || 'No';
+    document.getElementById('mgenOk').textContent = okText || 'Sí';
+    document.getElementById('mgenOk').className = 'mgen-ok';
+    document.getElementById('modalGen').style.display = 'flex';
+  });
+}
+
 /* ── TOAST ── */
 const _toastEl = document.createElement('div');
 _toastEl.className = 'toast';

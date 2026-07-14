@@ -184,6 +184,25 @@ body {
 /* alias legacy usada por aplicarEmpresaUI() */
 .hdr-sub { display: none; }
 
+/* ── Botón admin en header ── */
+.hdr-adm-btn {
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--g400);
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hdr-adm-btn:hover  { background: rgba(255,255,255,0.13); color: #fff; }
+.hdr-adm-btn:active { background: rgba(255,255,255,0.18); transform: scale(0.95); }
+
 /* ── GEO STRIP ── */
 .geo-strip {
   padding: 8px 20px;

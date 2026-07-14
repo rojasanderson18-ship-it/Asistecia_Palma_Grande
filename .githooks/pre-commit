@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Verify www/ mirrors match root copies before every commit
+set -euo pipefail
+
+REPO="$(git rev-parse --show-toplevel)"
+
+pairs=(
+  "www/index.html:index.html"
+  "www/sw.js:sw.js"
+  "www/css/styles.css:css/styles.css"
+  "www/js/admin.js:js/admin.js"
+  "www/js/config.js:js/config.js"
+  "www/js/attendance.js:js/attendance.js"
+  "www/js/audio.js:js/audio.js"
+  "www/js/auth.js:js/auth.js"
+  "www/js/face-recognition.js:js/face-recognition.js"
+  "www/js/offline-queue.js:js/offline-queue.js"
+  "www/js/ui.js:js/ui.js"
+)
+
+out_of_sync=()
+for pair in "${pairs[@]}"; do
+  src="${REPO}/${pair%%:*}"
+  dst="${REPO}/${pair##*:}"
+  [ ! -f "$src" ] && continue
+  [ ! -f "$dst" ] && out_of_sync+=("$dst (missing)") && continue
+  if ! diff -q "$src" "$dst" &>/dev/null; then
+    out_of_sync+=("${pair%%:*} ≠ ${pair##*:}")
+  fi
+done
+
+if [ "${#out_of_sync[@]}" -gt 0 ]; then
+  echo ""
+  echo "pre-commit: mirrors out of sync — run ./sync.sh first:"
+  for f in "${out_of_sync[@]}"; do
+    echo "  • $f"
+  done
+  echo ""
+  exit 1
+fi

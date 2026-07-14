@@ -122,12 +122,12 @@ document.getElementById('btnGuardarPersonal').onclick = async () => {
   const doc = document.getElementById('nuevoDocumento').value.trim();
   const nom = document.getElementById('nuevoNombre').value.trim();
   const car = document.getElementById('nuevoCargo').value;
-  if (!doc) { alert('Escribe el documento'); return; }
-  if (!/^\d+$/.test(doc)) { alert('Solo números'); return; }
-  if (!nom) { alert('Escribe el nombre'); return; }
-  if (!car) { alert('Selecciona cargo'); return; }
-  if (getPC().some(p => p.nombre.toLowerCase() === nom.toLowerCase())) { alert('Ya existe ese nombre'); return; }
-  if (getPorDoc(doc)) { alert('Ya existe ese documento'); return; }
+  if (!doc) { await showAlert('Escribe el documento'); return; }
+  if (!/^\d+$/.test(doc)) { await showAlert('Solo números — sin letras ni espacios'); return; }
+  if (!nom) { await showAlert('Escribe el nombre'); return; }
+  if (!car) { await showAlert('Selecciona un cargo'); return; }
+  if (getPC().some(p => p.nombre.toLowerCase() === nom.toLowerCase())) { await showAlert('Ya existe un trabajador con ese nombre'); return; }
+  if (getPorDoc(doc)) { await showAlert('Ya existe un trabajador con ese documento'); return; }
   const btn = document.getElementById('btnGuardarPersonal'); btn.disabled = true;
   const r = await enviarConResp({accion:'registrarPersonal', token:getAdminToken(), documento:doc, nombre:nom, cargo:car, fechaHora:new Date().toISOString()});
   btn.disabled = false;
@@ -173,20 +173,20 @@ function abrirGestionRostros() {
     `;
     lista.appendChild(div);
   });
-  lista.onclick = e => {
+  lista.onclick = async e => {
     const btn = e.target.closest('button[data-nombre]'); if (!btn) return;
     const nombre = decodeURIComponent(btn.dataset.nombre);
-    if (!confirm(`¿Borrar el rostro de ${nombre}? Deberá enrolarse nuevamente.`)) return;
+    if (!await showConfirm(`¿Borrar el rostro de ${nombre}?\nDeberá enrolarse nuevamente.`, 'Borrar', true)) return;
     deleteRostro(nombre); showToast('Rostro eliminado'); abrirGestionRostros();
   };
   mostrarPantalla('pantallaRostros');
 }
 document.getElementById('menuRostros').onclick = abrirGestionRostros;
 document.getElementById('btnVolverDesdeRostros').onclick = () => mostrarPantalla('pantallaMenu');
-document.getElementById('btnBorrarTodosRostros').onclick = () => {
+document.getElementById('btnBorrarTodosRostros').onclick = async () => {
   const n = Object.keys(getRostros()).length;
   if (!n) { showToast('No hay rostros enrolados'); return; }
-  if (!confirm(`¿Borrar los ${n} rostros enrolados? Todos deberán enrolarse nuevamente.`)) return;
+  if (!await showConfirm(`¿Borrar los ${n} rostros enrolados?\nTodos deberán enrolarse nuevamente.`, 'Borrar todo', true)) return;
   localStorage.removeItem('rostros_enrolados');
   localStorage.removeItem('rostros_meta');
   showToast('Todos los rostros eliminados');
@@ -271,15 +271,18 @@ document.getElementById('cfgUmbral').addEventListener('input', function() {
   const adv = document.getElementById('umbralAdvertencia');
   if (adv) adv.style.display = v > 0.55 ? '' : 'none';
 });
-document.getElementById('btnUsarUbicacion').addEventListener('click', () => {
-  if (!navigator.geolocation) { alert('GPS no disponible'); return; }
+document.getElementById('btnUsarUbicacion').addEventListener('click', async () => {
+  if (!navigator.geolocation) { await showAlert('GPS no disponible en este dispositivo'); return; }
   const btn = document.getElementById('btnUsarUbicacion');
   btn.textContent = 'Obteniendo ubicación…'; btn.disabled = true;
   navigator.geolocation.getCurrentPosition(pos => {
     document.getElementById('cfgLat').value = pos.coords.latitude.toFixed(6);
     document.getElementById('cfgLng').value = pos.coords.longitude.toFixed(6);
     btn.textContent = '✓ Ubicación capturada'; btn.disabled = false;
-  }, () => { btn.textContent = 'Usar mi ubicación actual'; btn.disabled = false; alert('No se pudo obtener la ubicación'); }, {enableHighAccuracy:true, timeout:8000});
+  }, async () => {
+    btn.textContent = 'Usar mi ubicación actual'; btn.disabled = false;
+    await showAlert('No se pudo obtener la ubicación.\nVerifique los permisos de GPS.');
+  }, { enableHighAccuracy: true, timeout: 8000 });
 });
 /* ── Autorizar dispositivo ── */
 document.getElementById('btnAutorizarDispositivo').addEventListener('click', async () => {
@@ -303,9 +306,9 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   const pinConf   = document.getElementById('cfgPinConf').value;
 
   if (pinNuevo) {
-    if (!/^\d{4,8}$/.test(pinNuevo)) { alert('El PIN nuevo debe tener entre 4 y 8 dígitos'); return; }
-    if (pinNuevo !== pinConf) { alert('Los PINs nuevos no coinciden'); return; }
-    if (!pinActual) { alert('Ingresa el PIN actual para cambiar el PIN'); return; }
+    if (!/^\d{4,8}$/.test(pinNuevo)) { await showAlert('El PIN nuevo debe tener entre 4 y 8 dígitos'); return; }
+    if (pinNuevo !== pinConf) { await showAlert('Los PINs nuevos no coinciden'); return; }
+    if (!pinActual) { await showAlert('Ingresa el PIN actual para cambiar el PIN'); return; }
   }
 
   const gsUrlVal    = (document.getElementById('cfgGsUrl') || {}).value || '';
@@ -317,9 +320,9 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   const umbral      = parseFloat(document.getElementById('cfgUmbral').value);
   const horarios    = _leerHorTabla();
 
-  if (!fincaNombre) { alert('Escribe el nombre de la finca'); return; }
-  if (isNaN(lat) || isNaN(lng)) { alert('Las coordenadas no son válidas'); return; }
-  if (isNaN(radio) || radio < 50) { alert('El radio mínimo es 50 metros'); return; }
+  if (!fincaNombre) { await showAlert('Escribe el nombre de la finca'); return; }
+  if (isNaN(lat) || isNaN(lng)) { await showAlert('Las coordenadas no son válidas'); return; }
+  if (isNaN(radio) || radio < 50) { await showAlert('El radio mínimo es 50 metros'); return; }
 
   const btn = document.getElementById('btnGuardarConfig');
   btn.disabled = true;
@@ -327,7 +330,7 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   // 1. Cambiar PIN en backend si se solicitó
   if (pinNuevo && pinActual) {
     const r = await cambiarPin(pinActual, pinNuevo);
-    if (!r.ok) { btn.disabled = false; alert('No se pudo cambiar el PIN: ' + r.error); return; }
+    if (!r.ok) { btn.disabled = false; await showAlert('No se pudo cambiar el PIN:\n' + r.error); return; }
     showToast('✓ PIN actualizado en el servidor');
   }
 
@@ -348,8 +351,7 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
     const rb = await guardarConfigBackend(cfgBackend);
     if (!rb.ok) {
       btn.disabled = false;
-      showToast('Cambio no aplicado: no fue posible validar con el servidor');
-      alert('Cambio no aplicado: no fue posible validar con el servidor\n' + (rb.error || ''));
+      await showAlert('Cambio no aplicado: no fue posible validar con el servidor.\n' + (rb.error || ''));
       return;
     }
   }
@@ -632,20 +634,20 @@ function abrirFichaPersonal(nombre) {
   const enrolBtn = fichaEl.querySelector('#fichaBtnEnrolar') || fichaEl.querySelector('#fichaBtnReenrolar');
   if (enrolBtn) enrolBtn.onclick = () => _iniciarEnrolDesdePersonal(nombre);
   const borrarRostroBtn = fichaEl.querySelector('#fichaBtnBorrarRostro');
-  if (borrarRostroBtn) borrarRostroBtn.onclick = () => {
-    if (!confirm(`¿Eliminar la biometría de ${nombre}? Deberá enrolarse nuevamente.`)) return;
+  if (borrarRostroBtn) borrarRostroBtn.onclick = async () => {
+    if (!await showConfirm(`¿Eliminar la biometría de ${nombre}?\nDeberá enrolarse nuevamente.`, 'Eliminar', true)) return;
     deleteRostro(nombre); showToast('Biometría eliminada'); abrirFichaPersonal(nombre);
   };
-  fichaEl.querySelector('#fichaBtnToggleActivo').onclick = () => {
+  fichaEl.querySelector('#fichaBtnToggleActivo').onclick = async () => {
     const nuevoEstado = !activo;
-    if (!confirm(`¿${nuevoEstado ? 'Reactivar' : 'Inactivar'} a ${nombre}?`)) return;
+    if (!await showConfirm(`¿${nuevoEstado ? 'Reactivar' : 'Inactivar'} a ${nombre}?`, nuevoEstado ? 'Reactivar' : 'Inactivar')) return;
     const ex = getPE(); const idx = ex.findIndex(t => t.nombre === nombre);
     if (idx >= 0) { ex[idx].activo = nuevoEstado; savePE(ex); }
     showToast(nuevoEstado ? '✓ Trabajador reactivado' : '✓ Trabajador inactivado');
     abrirFichaPersonal(nombre);
   };
   fichaEl.querySelector('#fichaBtnEliminar').onclick = async () => {
-    if (!confirm(`¿Eliminar permanentemente a ${nombre}? Esta acción no se puede deshacer.`)) return;
+    if (!await showConfirm(`¿Eliminar permanentemente a ${nombre}?\nEsta acción no se puede deshacer.`, 'Eliminar', true)) return;
     const delBtn = fichaEl.querySelector('#fichaBtnEliminar'); delBtn.disabled = true;
     const r = await enviarConResp({accion:'eliminarPersonal', token:getAdminToken(), nombre});
     delBtn.disabled = false;
@@ -792,9 +794,9 @@ document.getElementById('btnGuardarFormPersonal').addEventListener('click', asyn
   const activo = document.getElementById('fpActivo').checked;
   const dupErr = document.getElementById('fpDupErr');
   if (dupErr) dupErr.style.display = 'none';
-  if (!doc || !/^\d+$/.test(doc)) { alert('Escribe un número de documento válido (solo dígitos)'); return; }
-  if (!nom) { alert('Escribe el nombre completo'); return; }
-  if (!car) { alert('Selecciona un cargo'); return; }
+  if (!doc || !/^\d+$/.test(doc)) { await showAlert('Escribe un número de documento válido (solo dígitos)'); return; }
+  if (!nom) { await showAlert('Escribe el nombre completo'); return; }
+  if (!car) { await showAlert('Selecciona un cargo'); return; }
   if (_persFormModo === 'crear') {
     if (getPC().some(p => p.nombre.toLowerCase() === nom.toLowerCase())) {
       if (dupErr) { dupErr.textContent = 'Ya existe un trabajador con ese nombre'; dupErr.style.display = 'block'; } return;
@@ -909,8 +911,12 @@ async function _ejecutarSetup() {
   // Paso 1 + 2: obtener config del servidor
   _setupStepEstado('sIco1', 'run');
   let cfgData;
+  const sCtrl = new AbortController();
+  const sTimo = setTimeout(() => sCtrl.abort(), 12000);
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, { cache: 'no-store' });
+    const r = await fetch(`${CONFIG.GS_URL}?accion=obtenerConfig&_=${Date.now()}`, {
+      cache: 'no-store', signal: sCtrl.signal,
+    });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     if (!d || !d.ok || !d.config) throw new Error(d?.error || 'Respuesta inválida del servidor');
@@ -920,6 +926,8 @@ async function _ejecutarSetup() {
     _setupStepEstado('sIco1', 'err');
     fallar('No se pudo conectar al servidor: ' + e.message);
     return;
+  } finally {
+    clearTimeout(sTimo);
   }
 
   _setupStepEstado('sIco2', 'run');

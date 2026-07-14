@@ -94,6 +94,9 @@ if (!isAppConfigured()) {
 const _logoEl = document.getElementById('hdrLogo');
 if (_logoEl) _logoEl.removeAttribute('title');
 
+/* ── Botón admin en header ── */
+document.getElementById('btnHdrAdmin').addEventListener('click', () => abrirPinScreen('menu'));
+
 /* ══════════════════════════════════════════
    TECLADO — debounce + requestId anticarrera
 ══════════════════════════════════════════ */
