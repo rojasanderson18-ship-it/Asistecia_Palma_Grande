@@ -128,7 +128,9 @@ async function reintentarCola() {
 
     if (_esErrorPermanente(errorMsg)) {
       // Error permanente — mover a rechazados, no reintentar
-      rechazados.push({ ...item, _meta: { ...meta, estado: 'rechazado', ultimoError: errorMsg, ultimoIntento: new Date().toISOString(), respuestaServidor: r } });
+      const rechazadoItem = { ...item, _meta: { ...meta, estado: 'rechazado', ultimoError: errorMsg, ultimoIntento: new Date().toISOString(), respuestaServidor: r } };
+      rechazados.push(rechazadoItem);
+      _reconciliarMarcasRechazadas(rechazadoItem);
       continue;
     }
 
@@ -143,6 +145,42 @@ async function reintentarCola() {
   localStorage.setItem('cola_rechazados', JSON.stringify(rechazados.slice(-50))); // conservar últimos 50
   _reintentando = false;
   updColaBadge();
+}
+
+/* Cuando el servidor rechaza una marcación offline:
+   - eliminar ese tipo del cache del día
+   - mostrar alerta para que el administrador lo vea */
+function _reconciliarMarcasRechazadas(item) {
+  if (!item.documento || !item.tipo) return;
+  const hoy = (typeof fechaLocalISO === 'function')
+    ? fechaLocalISO()
+    : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+
+  // Solo afecta el estado del día actual
+  const fechaItem = item.fechaLocal || (item.fechaHora ? item.fechaHora.slice(0, 10) : null);
+  if (fechaItem !== hoy) return;
+
+  try {
+    const cache = JSON.parse(localStorage.getItem('marcas_hoy_cache') || '{}');
+    if (cache._fecha !== hoy) return;
+    const doc = String(item.documento);
+    if (cache[doc]) {
+      cache[doc] = cache[doc].filter(t => t !== item.tipo);
+      if (cache[doc].length === 0) delete cache[doc];
+      localStorage.setItem('marcas_hoy_cache', JSON.stringify(cache));
+    }
+  } catch { /* ignorar */ }
+
+  const errorMsg = item._meta && item._meta.ultimoError ? item._meta.ultimoError : 'Error del servidor';
+  if (typeof showToast === 'function') {
+    showToast(`⚠ Marcación rechazada: ${item.tipo} · doc ${String(item.documento).slice(-4)} — ${errorMsg}`);
+  }
+  localStorage.setItem('alerta_marcacion_rechazada', JSON.stringify({
+    documento: item.documento,
+    tipo: item.tipo,
+    error: errorMsg,
+    fecha: new Date().toISOString(),
+  }));
 }
 
 function _mostrarAlertaDispositivoRevocado(error) {

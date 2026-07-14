@@ -36,7 +36,7 @@ function showConf(d) {
     : `<div class="conf-ico-wave">👋</div>`;
 
   let alerts = '';
-  if (d.offline) alerts += `<div class="conf-alert fuera">📶 Sin conexión — pendiente de sincronización</div>`;
+  if (d.offline) alerts += `<div class="conf-alert fuera">📶 Marcación guardada en el dispositivo · Pendiente de sincronización</div>`;
   if (!d.gpsOk) alerts += `<div class="conf-alert fuera">⚠ Fuera del predio — revisar con Gerencia</div>`;
   if (d.punt && d.punt.estado === 'tarde') alerts += `<div class="conf-alert tarde">⏰ Entrada tarde — debe ${d.punt.minutos} min</div>`;
   if (d.punt && d.punt.estado === 'temprano') alerts += `<div class="conf-alert temprano">⏰ Salida anticipada — debe ${d.punt.minutos} min</div>`;

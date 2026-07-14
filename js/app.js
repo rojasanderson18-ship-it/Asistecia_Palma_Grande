@@ -186,11 +186,12 @@ document.getElementById('btnWkCancel').onclick = () => {
 /* ── Autorización supervisor desde scan ── */
 document.getElementById('btnWkSupAuth').onclick = () => {
   const nombre = WORKER.nombre;
-  const tipo = WORKER.tipo;
+  const tipo   = WORKER.tipo;
+  const excep  = WORKER.tipoExcepcion || 'FALLO_RECONOCIMIENTO';
   if (!nombre || !tipo) return;
   abrirModalSupervisor(
     `<b>${xh(nombre)}</b> — Autorizar marcación de ${tipo} con PIN de supervisor.`,
-    () => { ejecutarMarcacion(nombre, tipo, null, true); }
+    () => { ejecutarMarcacion(nombre, tipo, null, true, excep); }
   );
 };
 
