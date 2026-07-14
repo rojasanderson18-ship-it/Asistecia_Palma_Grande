@@ -235,19 +235,20 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px 16px 16px;
+  padding: 10px 16px 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* ── RELOJ KIOSCO ── */
 .kiosco-clock {
   text-align: center;
-  padding: 16px 0 10px;
+  padding: 10px 0 6px;
+  flex-shrink: 0;
 }
 .kiosco-time {
-  font-size: 72px;
+  font-size: clamp(48px, 14vw, 72px);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--k-text);
@@ -255,9 +256,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .kiosco-date {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--k-muted);
-  margin-top: 8px;
+  margin-top: 4px;
   font-weight: 500;
   text-transform: capitalize;
 }
@@ -293,8 +294,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 20px;
-  min-height: 72px;
+  padding: 12px 20px;
+  min-height: 56px;
   border-bottom: 1px solid var(--k-border);
   background: rgba(255,255,255,0.03);
 }
@@ -337,15 +338,16 @@ body {
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  padding: 14px 14px 16px;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  flex-shrink: 0;
 }
 .key {
-  aspect-ratio: 1.3 / 1;
+  aspect-ratio: 1.6 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: clamp(18px, 5vw, 24px);
   font-weight: 600;
   color: var(--k-text);
   background: rgba(255,255,255,0.06);
