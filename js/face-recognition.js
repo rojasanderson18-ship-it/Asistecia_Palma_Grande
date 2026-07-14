@@ -314,6 +314,10 @@ async function procesarEnrolar() {
     setTimeout(procesarEnrolar, 800);
     return;
   }
+  const _wkDoc  = document.getElementById('wkDocBlock');
+  const _wkScan = document.getElementById('wkScanBlock');
+  if (_wkDoc)  _wkDoc.style.display  = 'none';
+  if (_wkScan) _wkScan.style.display = '';
   document.getElementById('bloqueCamera').style.display = '';
   mostrarBannerEnrolar(nombreEnrolando);
 
