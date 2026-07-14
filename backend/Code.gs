@@ -463,6 +463,13 @@ function _buscarEmpleado(documento) {
   return { ok: false, error: 'Empleado no registrado' };
 }
 
+// Convierte "YYYY-MM-DD" (formato de <input type="date">) a "dd/MM/yyyy". Devuelve null si no aplica.
+function _isoADdMmYyyy(valor) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor || ''));
+  if (!m) return null;
+  return m[3] + '/' + m[2] + '/' + m[1];
+}
+
 function normalizarFecha(valor) {
   if (Object.prototype.toString.call(valor) === '[object Date]')
     return Utilities.formatDate(valor, 'America/Bogota', 'dd/MM/yyyy');
@@ -1163,7 +1170,9 @@ function doGet(e) {
 
 function calcularResumenDashboard(fechaParam, fincaFiltro) {
   const hoy   = Utilities.formatDate(new Date(), 'America/Bogota', 'dd/MM/yyyy');
-  const fecha = fechaParam || hoy;
+  // El selector de fecha del frontend (<input type="date">) envía formato ISO (YYYY-MM-DD);
+  // la hoja y el resto del backend usan dd/MM/yyyy — convertir antes de comparar.
+  const fecha = _isoADdMmYyyy(fechaParam) || fechaParam || hoy;
   const hoja  = obtenerOhCrearHoja();
   const datos = hoja.getDataRange().getValues();
   const cfg   = (function() {
@@ -1206,11 +1215,34 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     return partes[0] + partes[1] / 60 + (partes[2] || 0) / 3600;
   };
 
+  const HORA_TOLERANCIA_SALIDA = horarioDelDia.activo
+    ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - (horarioDelDia.tolSalida || 5) / 60)
+    : -999;
+
   Object.keys(porPersona).forEach(function(documento) {
     const p = porPersona[documento];
     porFinca[p.finca] = (porFinca[p.finca] || 0) + 1;
+    const marcas = [];
+    const puntualidad = [];
+    let minutosDeuda = 0;
     if (p.Entrada) {
-      if (horaADecimal(p.Entrada) > HORA_TOLERANCIA_ENTRADA) tardanzas++;
+      marcas.push('Entrada');
+      const hEntrada = horaADecimal(p.Entrada);
+      if (hEntrada > HORA_TOLERANCIA_ENTRADA) {
+        tardanzas++;
+        const minutos = Math.round((hEntrada - HORA_TOLERANCIA_ENTRADA) * 60);
+        minutosDeuda += minutos;
+        puntualidad.push({ tipo: 'Entrada', estado: 'tarde', minutos: minutos });
+      }
+    }
+    if (p.Salida) {
+      marcas.push('Salida');
+      const hSalida = horaADecimal(p.Salida);
+      if (hSalida < HORA_TOLERANCIA_SALIDA) {
+        const minutos = Math.round((HORA_TOLERANCIA_SALIDA - hSalida) * 60);
+        minutosDeuda += minutos;
+        puntualidad.push({ tipo: 'Salida', estado: 'temprano', minutos: minutos });
+      }
     }
     let horasLaboradas = '';
     if (p.Entrada && p.Salida) {
@@ -1220,7 +1252,8 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
       horasLaboradas = Math.floor(hd) + 'h ' + Math.round((hd - Math.floor(hd)) * 60) + 'm';
     }
     filas.push({ documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
-                 entrada: p.Entrada || '', salida: p.Salida || '', horasLaboradas: horasLaboradas });
+                 entrada: p.Entrada || '', salida: p.Salida || '', horasLaboradas: horasLaboradas,
+                 marcas: marcas, minutosDeuda: minutosDeuda, puntualidad: puntualidad });
   });
 
   return _respuestaJson({
