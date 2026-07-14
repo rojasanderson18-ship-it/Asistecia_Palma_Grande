@@ -379,8 +379,6 @@ async function loopDeteccion() {
         continue;
       }
 
-      // Instrucciones en tiempo real según calidad
-      const issues = _evaluarCalidad(det, video);
       if (camWrap) camWrap.classList.add('scanning');
 
       const rostros = getRostros();
@@ -402,7 +400,8 @@ async function loopDeteccion() {
       const pct = Math.max(0, Math.round((1 - mejorDist) * 100));
       const umbral = typeof CONFIG !== 'undefined' ? CONFIG.UMBRAL_FACIAL : 0.48;
 
-      if (mejorDist <= umbral && issues.length === 0) {
+      if (mejorDist <= umbral) {
+        // Reconocimiento válido — las verificaciones de calidad son solo para enrolamiento
         if (camWrap) camWrap.classList.add('face-ok');
         setConf(pct, true);
         _setCamEstado('Rostro reconocido…');
@@ -423,11 +422,9 @@ async function loopDeteccion() {
         if (camWrap) camWrap.classList.remove('face-ok');
         setConf(pct, false);
         _consecutivo = { nombre: null, t0: null, count: 0 };
-        if (issues.length > 0) {
-          _setCamEstado(issues[0]);
-        } else {
-          _setCamEstado('Analizando…');
-        }
+        // Usar calidad solo para orientar al usuario, nunca para bloquear
+        const issues = _evaluarCalidad(det, video);
+        _setCamEstado(issues.length > 0 ? issues[0] : 'Analizando…');
       }
     } catch { /* ignorar errores de frame */ }
 
