@@ -2,9 +2,16 @@
    Sin dependencias externas. Funciona offline.
    Expone window.playSound(tipo) para uso desde cualquier módulo.
 */
+let _audioCtx = null;
+function _getCtx() {
+  if (!_audioCtx || _audioCtx.state === 'closed') {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return _audioCtx;
+}
 window.playSound = function(tipo) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _getCtx();
     if (tipo === 'success') {
       // Tres tonos ascendentes — Do, Mi, Do (octava alta)
       [[523.25, 0, .18], [659.25, .13, .18], [1046.5, .26, .48]].forEach(([f, t, d]) => {
