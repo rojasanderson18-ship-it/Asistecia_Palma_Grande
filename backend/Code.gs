@@ -272,12 +272,27 @@ function obtenerOhCrearHoja() {
   let hoja   = ss.getSheetByName(HOJA_MARCACIONES);
   if (!hoja) {
     hoja = ss.insertSheet(HOJA_MARCACIONES);
-    hoja.appendRow(['Fecha','Hora','Nombre','Documento','Cargo','Finca','Tipo',
-                    'Lat','Lng','DentroGeocerca','DistanciaFacial','Timestamp',
-                    'DeviceId','PrecisionGPS','AppVersion','ModoOffline','ResultadoFacial','EstadoGPS']);
+    hoja.appendRow([
+      'MarcacionID','Fecha','HoraServidor','Documento','Nombre','Cargo','Finca','Tipo',
+      'FechaLocal','FechaHoraCliente',
+      'EstadoPuntualidad','MinutosDiferencia','MensajePuntualidad',
+      'Latitud','Longitud','PrecisionGPS','EstadoGPS','DistanciaGeocerca','DentroGeocerca',
+      'DistanciaFacial','SinBiometria',
+      'SupervisorID','TipoExcepcion','MotivoSupervisor','FechaHoraAutorizacion',
+      'DeviceID','AppVersion','SinConexion','FechaSincronizacion','ResultadoFacial'
+    ]);
     hoja.setFrozenRows(1);
   }
   return hoja;
+}
+
+/* Devuelve un mapa nombre→índice (0-based) leyendo la fila de cabeceras.
+   Compatible con el esquema antiguo y el nuevo. */
+function _getColMarcaciones(hoja) {
+  const headers = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
+  const m = {};
+  headers.forEach(function(h, i) { m[String(h).trim()] = i; });
+  return m;
 }
 
 function obtenerOhCrearHojaPersonal() {
@@ -422,13 +437,50 @@ function _obtenerMarcasDelDia(documento, fechaStr) {
   const doc  = String(documento || '').trim();
   const hoja = obtenerOhCrearHoja();
   const datos = hoja.getDataRange().getValues();
+  const colMap = _getColMarcaciones(hoja);
+  const iDoc  = colMap['Documento']  != null ? colMap['Documento']  : 3;
+  const iFech = colMap['Fecha']      != null ? colMap['Fecha']      : 1;
+  const iTipo = colMap['Tipo']       != null ? colMap['Tipo']       : 7;
   const marcas = [];
   for (let i = 1; i < datos.length; i++) {
-    const [fecha, , , docFila, , , tipo] = datos[i];
-    if (normalizarFecha(fecha) === fechaStr && String(docFila).trim() === doc)
-      marcas.push(String(tipo).trim());
+    const fila = datos[i];
+    if (normalizarFecha(fila[iFech]) === fechaStr && String(fila[iDoc]).trim() === doc)
+      marcas.push(String(fila[iTipo]).trim());
   }
   return marcas;
+}
+
+// Busca una fila por MarcacionID. Devuelve { encontrado, fila, rowIndex } o { encontrado: false }
+function _buscarPorMarcacionId(hoja, marcacionId, colMap) {
+  if (!marcacionId) return { encontrado: false };
+  const datos = hoja.getDataRange().getValues();
+  const iMid = colMap['MarcacionID'] != null ? colMap['MarcacionID'] : 0;
+  for (let i = 1; i < datos.length; i++) {
+    if (String(datos[i][iMid]).trim() === String(marcacionId).trim()) {
+      return { encontrado: true, fila: datos[i], rowIndex: i + 1 };
+    }
+  }
+  return { encontrado: false };
+}
+
+// Calcula puntualidad oficial en el servidor (America/Bogota)
+// Devuelve { estado, mensajePuntualidad, minutosDiferencia }
+function _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia) {
+  if (!horarioDia || !horarioDia.activo) {
+    return { estado: 'sin_horario', mensajePuntualidad: 'Sin horario configurado', minutosDiferencia: 0 };
+  }
+  const horaDecimal = ahoraServidor.getHours() + ahoraServidor.getMinutes() / 60;
+  if (tipo === 'Entrada') {
+    const limiteEntrada = _horaStrADecimal(horarioDia.entrada || '06:00') + (horarioDia.tolEntrada || 0) / 60;
+    const diffMin = Math.round((horaDecimal - limiteEntrada) * 60);
+    if (diffMin > 0) return { estado: 'tarde', mensajePuntualidad: 'Entrada tarde ' + diffMin + ' min', minutosDiferencia: diffMin };
+    return { estado: 'puntual', mensajePuntualidad: 'Entrada a tiempo', minutosDiferencia: 0 };
+  } else {
+    const limiteSalida = _horaStrADecimal(horarioDia.salida || '15:00') - (horarioDia.tolSalida || 0) / 60;
+    const diffMin = Math.round((limiteSalida - horaDecimal) * 60);
+    if (diffMin > 0) return { estado: 'temprano', mensajePuntualidad: 'Salida anticipada ' + diffMin + ' min', minutosDiferencia: diffMin };
+    return { estado: 'puntual', mensajePuntualidad: 'Salida a tiempo', minutosDiferencia: 0 };
+  }
 }
 
 // Valida la secuencia de marcaciones. Devuelve {ok, error?}
@@ -795,7 +847,6 @@ function doPost(e) {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
 
-      // deviceId siempre obligatorio — no se acepta omitirlo
       if (!datos.deviceId) return _respuestaJson({ ok: false, error: 'deviceId requerido.' });
       if (String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
         return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
@@ -805,179 +856,228 @@ function doPost(e) {
         return _respuestaJson({ ok: false, error: 'Tipo inválido. Solo se acepta Entrada o Salida.' });
 
       const documento = String(datos.documento || '').trim();
+      if (!documento) return _respuestaJson({ ok: false, error: 'documento requerido' });
       const empleado  = _buscarEmpleado(documento);
       if (!empleado.ok) return _respuestaJson({ ok: false, error: empleado.error });
 
-      // Fecha y hora del SERVIDOR (nunca del cliente)
-      const ahoraServidor = new Date();
-      const hoyStr  = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'dd/MM/yyyy');
-      const horaStr = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'HH:mm:ss');
+      const marcacionId = String(datos.marcacionId || '').trim();
 
-      const marcasDelDia = _obtenerMarcasDelDia(documento, hoyStr);
-      const seqVal = _validarSecuencia(marcasDelDia, tipo);
-      if (!seqVal.ok) return _respuestaJson({ ok: false, error: seqVal.error });
-
-      // Configuración del servidor (umbral facial, geocerca, finca)
-      const appCfg = (function() {
-        try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
-        catch (e) { return {}; }
-      })();
-
-      // GPS: distinguir ausente/inválido, fuera de geocerca, sin configuración (tarea 2)
-      const lat = parseFloat(datos.lat);
-      const lng = parseFloat(datos.lng);
-      const gpsValido = !isNaN(lat) && !isNaN(lng);
-      const geocercaConfigurada = !isNaN(parseFloat(appCfg.lat)) && !isNaN(parseFloat(appCfg.lng));
-      let dentroGeocerca = false, distanciaMetros = null;
-      let sinConfigGeo = !geocercaConfigurada;
-      let gpsAusente = false;
-
-      if (gpsValido && geocercaConfigurada) {
-        const geo = _calcularGeocerca(lat, lng);
-        dentroGeocerca  = geo.dentroGeocerca;
-        distanciaMetros = geo.distancia;
-        sinConfigGeo    = !!geo.sinConfig;
-      } else if (!gpsValido && geocercaConfigurada) {
-        // GPS ausente con geocerca configurada: tratar igual que fuera del predio
-        gpsAusente   = true;
-        sinConfigGeo = false;
+      // ── LockService: serializar solicitudes simultáneas ──
+      const lock = LockService.getScriptLock();
+      try { lock.waitLock(10000); } catch (e) {
+        return _respuestaJson({ ok: false, error: 'El servidor está procesando otra solicitud. Intente nuevamente.' });
       }
 
-      // Precisión GPS: obligatoria cuando hay coordenadas y geocerca configurada
-      // Estado para auditoría: PRECISO (≤50 m) | MEDIO (51–100 m) | BAJO (>100 m) | AUSENTE | SIN_PRECISION
-      let estadoGPS = gpsValido ? 'SIN_PRECISION' : 'AUSENTE';
-      if (gpsValido) {
-        const precRaw = datos.precisionGPS;
-        if (precRaw == null || precRaw === '') {
-          if (geocercaConfigurada) {
-            const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
-            if (!svPrec.ok) {
-              return _respuestaJson({
-                ok: false,
-                error: 'Precisión GPS no informada. Con geocerca configurada se requiere autorización de supervisor cuando no se conoce la exactitud de la ubicación.'
-              });
+      try {
+        const hoja   = obtenerOhCrearHoja();
+        const colMap = _getColMarcaciones(hoja);
+
+        // ── IDEMPOTENCIA: si ya existe este marcacionId, devolver la fila original ──
+        if (marcacionId) {
+          const existente = _buscarPorMarcacionId(hoja, marcacionId, colMap);
+          if (existente.encontrado) {
+            const f = existente.fila;
+            const iHora   = colMap['HoraServidor']      != null ? colMap['HoraServidor']      : 2;
+            const iNombre = colMap['Nombre']             != null ? colMap['Nombre']             : 4;
+            const iCargo  = colMap['Cargo']              != null ? colMap['Cargo']              : 5;
+            const iFinca  = colMap['Finca']              != null ? colMap['Finca']              : 6;
+            const iDentro = colMap['DentroGeocerca']     != null ? colMap['DentroGeocerca']     : 18;
+            const iDist   = colMap['DistanciaGeocerca']  != null ? colMap['DistanciaGeocerca']  : 17;
+            const iEst    = colMap['EstadoPuntualidad']  != null ? colMap['EstadoPuntualidad']  : 10;
+            const iMsg    = colMap['MensajePuntualidad'] != null ? colMap['MensajePuntualidad'] : 12;
+            const iMin    = colMap['MinutosDiferencia']  != null ? colMap['MinutosDiferencia']  : 11;
+            return _respuestaJson({
+              ok: true, idempotente: true,
+              nombre: String(f[iNombre] || ''), cargo: String(f[iCargo] || ''), finca: String(f[iFinca] || ''),
+              dentroGeocerca: String(f[iDentro]) === 'SI',
+              distanciaMetros: f[iDist] !== '' ? Number(f[iDist]) : null,
+              horaServidor: String(f[iHora] || ''),
+              estadoPuntualidad:  String(f[iEst]  || ''),
+              mensajePuntualidad: String(f[iMsg]  || ''),
+              minutosDiferencia:  Number(f[iMin]  || 0),
+            });
+          }
+        }
+
+        // Fecha y hora del SERVIDOR (nunca del cliente)
+        const ahoraServidor = new Date();
+        const hoyStr  = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'dd/MM/yyyy');
+        const horaStr = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'HH:mm:ss');
+
+        const marcasDelDia = _obtenerMarcasDelDia(documento, hoyStr);
+        const seqVal = _validarSecuencia(marcasDelDia, tipo);
+        if (!seqVal.ok) return _respuestaJson({ ok: false, error: seqVal.error });
+
+        // Configuración del servidor
+        const appCfg = (function() {
+          try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_CONFIG') || '{}'); }
+          catch (e) { return {}; }
+        })();
+
+        // GPS
+        const lat = parseFloat(datos.lat);
+        const lng = parseFloat(datos.lng);
+        const gpsValido = !isNaN(lat) && !isNaN(lng);
+        const geocercaConfigurada = !isNaN(parseFloat(appCfg.lat)) && !isNaN(parseFloat(appCfg.lng));
+        let dentroGeocerca = false, distanciaMetros = null;
+        let sinConfigGeo = !geocercaConfigurada;
+        let gpsAusente = false;
+
+        if (gpsValido && geocercaConfigurada) {
+          const geo = _calcularGeocerca(lat, lng);
+          dentroGeocerca  = geo.dentroGeocerca;
+          distanciaMetros = geo.distancia;
+          sinConfigGeo    = !!geo.sinConfig;
+        } else if (!gpsValido && geocercaConfigurada) {
+          gpsAusente   = true;
+          sinConfigGeo = false;
+        }
+
+        let estadoGPS = gpsValido ? 'SIN_PRECISION' : 'AUSENTE';
+        if (gpsValido) {
+          const precRaw = datos.precisionGPS;
+          if (precRaw == null || precRaw === '') {
+            if (geocercaConfigurada) {
+              const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
+              if (!svPrec.ok) {
+                return _respuestaJson({
+                  ok: false,
+                  error: 'Precisión GPS no informada. Con geocerca configurada se requiere autorización de supervisor cuando no se conoce la exactitud de la ubicación.'
+                });
+              }
             }
-          }
-          // sin geocerca: aceptar con estado SIN_PRECISION
-        } else {
-          const prec = parseFloat(precRaw);
-          if (isNaN(prec) || prec < 0 || prec > 50000) {
-            return _respuestaJson({ ok: false, error: 'Valor de precisión GPS inválido.' });
-          }
-          if (prec <= 50) {
-            estadoGPS = 'PRECISO';
-          } else if (prec <= 100) {
-            estadoGPS = 'MEDIO';
           } else {
-            estadoGPS = 'BAJO';
-            const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
-            if (!svPrec.ok) {
-              return _respuestaJson({
-                ok: false,
-                error: 'Precisión GPS insuficiente (' + Math.round(prec) + ' m de incertidumbre). Mejora la señal GPS o solicita autorización de supervisor.'
-              });
+            const prec = parseFloat(precRaw);
+            if (isNaN(prec) || prec < 0 || prec > 50000)
+              return _respuestaJson({ ok: false, error: 'Valor de precisión GPS inválido.' });
+            if (prec <= 50)       estadoGPS = 'PRECISO';
+            else if (prec <= 100) estadoGPS = 'MEDIO';
+            else {
+              estadoGPS = 'BAJO';
+              const svPrec = _validarSesion(datos.supervisorToken, ['supervisor']);
+              if (!svPrec.ok) {
+                return _respuestaJson({
+                  ok: false,
+                  error: 'Precisión GPS insuficiente (' + Math.round(prec) + ' m de incertidumbre). Mejora la señal GPS o solicita autorización de supervisor.'
+                });
+              }
             }
           }
         }
+
+        const esFueraGeo = !dentroGeocerca && !sinConfigGeo;
+        if (esFueraGeo) {
+          const svGeo = _validarSesion(datos.supervisorToken, ['supervisor']);
+          if (!svGeo.ok) {
+            return _respuestaJson({
+              ok: false, fueraGeocerca: true, gpsAusente: gpsAusente,
+              distanciaMetros: distanciaMetros,
+              error: gpsAusente
+                ? 'GPS no disponible. Se requiere autorización de supervisor para registrar sin ubicación.'
+                : 'Fuera de la geocerca. Se requiere autorización de supervisor para registrar.'
+            });
+          }
+        }
+
+        if (datos.sinBiometria === true) {
+          const svBio = _validarSesion(datos.supervisorToken, ['supervisor']);
+          if (!svBio.ok) {
+            return _respuestaJson({
+              ok: false,
+              error: 'Marcación sin reconocimiento facial requiere autorización de supervisor. ' + svBio.error
+            });
+          }
+        }
+
+        if (datos.sinBiometria !== true) {
+          const dist = datos.distanciaFacial;
+          if (dist == null || dist === '')
+            return _respuestaJson({ ok: false, error: 'Se requiere reconocimiento facial para registrar.' });
+          const distNum = parseFloat(dist);
+          if (isNaN(distNum) || distNum < 0 || distNum > 1)
+            return _respuestaJson({ ok: false, error: 'Valor de reconocimiento facial inválido.' });
+          const umbral = parseFloat(appCfg.umbral);
+          if (isNaN(umbral) || umbral <= 0 || umbral > 1)
+            return _respuestaJson({ ok: false, error: 'Umbral facial no configurado en el servidor. Configura el parámetro umbral antes de registrar marcaciones biométricas.' });
+          if (distNum > umbral)
+            return _respuestaJson({
+              ok: false,
+              error: 'Reconocimiento facial no coincide con el registro (distancia: ' + distNum.toFixed(3) + ', umbral: ' + umbral + ').'
+            });
+        }
+
+        const nombre = empleado.nombre;
+        const cargo  = empleado.cargo;
+        const finca  = appCfg.fincaNombre || dv.finca || '';
+
+        let resultadoFacial;
+        if      (datos.sinBiometria && esFueraGeo && gpsAusente) resultadoFacial = 'SUPERVISOR_BIO_GPS_GEO';
+        else if (datos.sinBiometria && gpsAusente)               resultadoFacial = 'SUPERVISOR_BIO_GPS';
+        else if (datos.sinBiometria && esFueraGeo)               resultadoFacial = 'SUPERVISOR_BIO_GEO';
+        else if (datos.sinBiometria)                             resultadoFacial = 'SUPERVISOR_BIO';
+        else if (gpsAusente)                                     resultadoFacial = 'SUPERVISOR_GPS';
+        else if (esFueraGeo)                                     resultadoFacial = 'SUPERVISOR_GEO';
+        else if (datos.distanciaFacial != null)                  resultadoFacial = 'FACIAL';
+        else                                                     resultadoFacial = 'SIN_BIOMETRIA';
+
+        // Puntualidad oficial (servidor, zona America/Bogota)
+        const diaSemana   = _diaSemanaDeStr(hoyStr);
+        const horarioDia  = _getHorarioPorDia(diaSemana, appCfg);
+        const puntualidad = _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia);
+
+        // ── Insertar fila con 30 columnas ──
+        hoja.appendRow([
+          marcacionId,                                                          // MarcacionID
+          hoyStr,                                                               // Fecha
+          horaStr,                                                              // HoraServidor
+          sanitizarCelda(documento),                                            // Documento
+          sanitizarCelda(nombre),                                               // Nombre
+          sanitizarCelda(cargo),                                                // Cargo
+          sanitizarCelda(finca),                                                // Finca
+          tipo,                                                                 // Tipo
+          sanitizarCelda(String(datos.fechaLocal || '')),                       // FechaLocal
+          sanitizarCelda(String(datos.fechaHora  || '')),                       // FechaHoraCliente
+          puntualidad.estado,                                                   // EstadoPuntualidad
+          puntualidad.minutosDiferencia,                                        // MinutosDiferencia
+          puntualidad.mensajePuntualidad,                                       // MensajePuntualidad
+          gpsValido ? lat : '',                                                 // Latitud
+          gpsValido ? lng : '',                                                 // Longitud
+          datos.precisionGPS != null ? parseFloat(datos.precisionGPS).toFixed(1) : '', // PrecisionGPS
+          estadoGPS,                                                            // EstadoGPS
+          distanciaMetros != null ? distanciaMetros : '',                       // DistanciaGeocerca
+          dentroGeocerca ? 'SI' : (gpsAusente ? 'GPS_AUSENTE' : 'NO'),        // DentroGeocerca
+          datos.distanciaFacial != null ? parseFloat(datos.distanciaFacial).toFixed(3) : '', // DistanciaFacial
+          datos.sinBiometria ? 'SI' : 'NO',                                    // SinBiometria
+          sanitizarCelda(String(datos.supervisorId || '')),                     // SupervisorID
+          sanitizarCelda(String(datos.tipoExcepcion || '')),                    // TipoExcepcion
+          sanitizarCelda(String(datos.motivoSupervisor || '')),                 // MotivoSupervisor
+          sanitizarCelda(String(datos.fechaHoraAutorizacion || '')),            // FechaHoraAutorizacion
+          sanitizarCelda(dv.deviceId),                                          // DeviceID
+          sanitizarCelda(String(datos.appVersion || '')),                       // AppVersion
+          datos.sinConexion ? 'OFFLINE' : 'ONLINE',                            // SinConexion
+          new Date().toISOString(),                                             // FechaSincronizacion
+          resultadoFacial                                                       // ResultadoFacial
+        ]);
+        SpreadsheetApp.flush();
+
+        _actualizarUltimaConexion(datos.deviceToken);
+
+        if (tipo === 'Salida') {
+          try { calcularResumenDiario(); } catch (e) { Logger.log('calcularResumenDiario: ' + e.message); }
+        }
+
+        return _respuestaJson({
+          ok: true, nombre: nombre, cargo: cargo, finca: finca,
+          dentroGeocerca: dentroGeocerca, distanciaMetros: distanciaMetros,
+          horaServidor: horaStr,
+          estadoPuntualidad:  puntualidad.estado,
+          mensajePuntualidad: puntualidad.mensajePuntualidad,
+          minutosDiferencia:  puntualidad.minutosDiferencia,
+        });
+
+      } finally {
+        lock.releaseLock();
       }
-
-      // REGLA GEOCERCA/GPS: si está fuera o sin GPS (y hay config), exigir supervisor
-      const esFueraGeo = !dentroGeocerca && !sinConfigGeo;
-      if (esFueraGeo) {
-        const svGeo = _validarSesion(datos.supervisorToken, ['supervisor']);
-        if (!svGeo.ok) {
-          return _respuestaJson({
-            ok: false, fueraGeocerca: true, gpsAusente: gpsAusente,
-            distanciaMetros: distanciaMetros,
-            error: gpsAusente
-              ? 'GPS no disponible. Se requiere autorización de supervisor para registrar sin ubicación.'
-              : 'Fuera de la geocerca. Se requiere autorización de supervisor para registrar.'
-          });
-        }
-      }
-
-      // REGLA SIN BIOMETRÍA: siempre exige supervisor, independiente de geocerca (tarea 3)
-      if (datos.sinBiometria === true) {
-        const svBio = _validarSesion(datos.supervisorToken, ['supervisor']);
-        if (!svBio.ok) {
-          return _respuestaJson({
-            ok: false,
-            error: 'Marcación sin reconocimiento facial requiere autorización de supervisor. ' + svBio.error
-          });
-        }
-      }
-
-      // REGLA DISTANCIA FACIAL: validar contra umbral del servidor (tarea 4)
-      if (datos.sinBiometria !== true) {
-        const dist = datos.distanciaFacial;
-        if (dist == null || dist === '') {
-          return _respuestaJson({ ok: false, error: 'Se requiere reconocimiento facial para registrar.' });
-        }
-        const distNum = parseFloat(dist);
-        if (isNaN(distNum) || distNum < 0 || distNum > 1) {
-          return _respuestaJson({ ok: false, error: 'Valor de reconocimiento facial inválido.' });
-        }
-        const umbral = parseFloat(appCfg.umbral);
-        if (isNaN(umbral) || umbral <= 0 || umbral > 1) {
-          return _respuestaJson({ ok: false, error: 'Umbral facial no configurado en el servidor. Configura el parámetro umbral antes de registrar marcaciones biométricas.' });
-        }
-        if (distNum > umbral) {
-          return _respuestaJson({
-            ok: false,
-            error: 'Reconocimiento facial no coincide con el registro (distancia: ' + distNum.toFixed(3) + ', umbral: ' + umbral + ').'
-          });
-        }
-      }
-
-      // Nombre, cargo y finca vienen del backend, no del payload
-      const nombre = empleado.nombre;
-      const cargo  = empleado.cargo;
-      const finca  = appCfg.fincaNombre || dv.finca || '';
-
-      // Clasificar autorización para auditoría
-      let resultadoFacial;
-      if      (datos.sinBiometria && esFueraGeo && gpsAusente) resultadoFacial = 'SUPERVISOR_BIO_GPS_GEO';
-      else if (datos.sinBiometria && gpsAusente)               resultadoFacial = 'SUPERVISOR_BIO_GPS';
-      else if (datos.sinBiometria && esFueraGeo)               resultadoFacial = 'SUPERVISOR_BIO_GEO';
-      else if (datos.sinBiometria)                             resultadoFacial = 'SUPERVISOR_BIO';
-      else if (gpsAusente)                                     resultadoFacial = 'SUPERVISOR_GPS';
-      else if (esFueraGeo)                                     resultadoFacial = 'SUPERVISOR_GEO';
-      else if (datos.distanciaFacial != null)                  resultadoFacial = 'FACIAL';
-      else                                                     resultadoFacial = 'SIN_BIOMETRIA';
-
-      const hoja = obtenerOhCrearHoja();
-      hoja.appendRow([
-        hoyStr, horaStr,
-        sanitizarCelda(nombre),
-        sanitizarCelda(documento),
-        sanitizarCelda(cargo),
-        sanitizarCelda(finca),
-        tipo,
-        gpsValido ? lat : '',
-        gpsValido ? lng : '',
-        dentroGeocerca ? 'SI' : (gpsAusente ? 'GPS_AUSENTE' : 'NO'),
-        datos.distanciaFacial != null ? parseFloat(datos.distanciaFacial).toFixed(3) : '',
-        ahoraServidor,
-        sanitizarCelda(dv.deviceId),
-        datos.precisionGPS != null ? parseFloat(datos.precisionGPS).toFixed(1) : '',
-        sanitizarCelda(String(datos.appVersion || '')),
-        datos.sinConexion ? 'OFFLINE' : 'ONLINE',
-        resultadoFacial,
-        estadoGPS
-      ]);
-      SpreadsheetApp.flush();
-
-      _actualizarUltimaConexion(datos.deviceToken);
-
-      if (tipo === 'Salida') {
-        try { calcularResumenDiario(); } catch (e) { Logger.log('calcularResumenDiario: ' + e.message); }
-      }
-
-      return _respuestaJson({
-        ok: true, nombre: nombre, cargo: cargo, finca: finca,
-        dentroGeocerca: dentroGeocerca, distanciaMetros: distanciaMetros,
-        horaServidor: horaStr
-      });
     }
 
     /* ── Acción desconocida: rechazar explícitamente ── */
@@ -1027,8 +1127,20 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     : 999;
   const porPersona = {};
 
+  const colMap  = _getColMarcaciones(hoja);
+  const iFecha  = colMap['Fecha']       != null ? colMap['Fecha']       : 1;
+  const iHora   = colMap['HoraServidor']!= null ? colMap['HoraServidor']: 2;
+  const iDoc    = colMap['Documento']   != null ? colMap['Documento']   : 3;
+  const iNombre = colMap['Nombre']      != null ? colMap['Nombre']      : 4;
+  const iCargo  = colMap['Cargo']       != null ? colMap['Cargo']       : 5;
+  const iFinca  = colMap['Finca']       != null ? colMap['Finca']       : 6;
+  const iTipo   = colMap['Tipo']        != null ? colMap['Tipo']        : 7;
+
   for (let i = 1; i < datos.length; i++) {
-    const [fechaFila, hora, nombre, documento, cargo, finca, tipo] = datos[i];
+    const fila = datos[i];
+    const fechaFila = fila[iFecha], hora = fila[iHora], nombre = fila[iNombre];
+    const documento = fila[iDoc],   cargo = fila[iCargo], finca = fila[iFinca];
+    const tipo      = fila[iTipo];
     if (normalizarFecha(fechaFila) !== fecha) continue;
     if (fincaFiltro && String(finca) !== String(fincaFiltro)) continue;
     const clave = String(documento);
@@ -1092,8 +1204,19 @@ function calcularResumenDiario() {
   const horarioHoy = _getHorarioPorDia(diaSemanaHoy, cfg);
   const marcasHoy = {};
 
+  const colMap2  = _getColMarcaciones(hoja);
+  const iFecha2  = colMap2['Fecha']       != null ? colMap2['Fecha']       : 1;
+  const iHora2   = colMap2['HoraServidor']!= null ? colMap2['HoraServidor']: 2;
+  const iDoc2    = colMap2['Documento']   != null ? colMap2['Documento']   : 3;
+  const iNombre2 = colMap2['Nombre']      != null ? colMap2['Nombre']      : 4;
+  const iCargo2  = colMap2['Cargo']       != null ? colMap2['Cargo']       : 5;
+  const iFinca2  = colMap2['Finca']       != null ? colMap2['Finca']       : 6;
+  const iTipo2   = colMap2['Tipo']        != null ? colMap2['Tipo']        : 7;
+
   for (let i = 1; i < datos.length; i++) {
-    const [fecha, hora, nombre, documento, cargo, finca, tipo] = datos[i];
+    const fila = datos[i];
+    const fecha = fila[iFecha2], hora = fila[iHora2], nombre = fila[iNombre2];
+    const documento = fila[iDoc2], cargo = fila[iCargo2], finca = fila[iFinca2], tipo = fila[iTipo2];
     if (normalizarFecha(fecha) !== hoy) continue;
     const clave = String(documento);
     if (!marcasHoy[clave]) marcasHoy[clave] = { nombre: nombre, cargo: cargo, finca: finca };
