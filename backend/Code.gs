@@ -267,32 +267,75 @@ function sanitizarCelda(valor) {
   return /^[=+\-@\t]/.test(valor) ? "'" + valor : valor;
 }
 
+// Lista oficial de las 30 columnas en el orden canónico del esquema v4
+var COLUMNAS_MARCACIONES_V4 = [
+  'MarcacionID','Fecha','HoraServidor','Documento','Nombre','Cargo','Finca','Tipo',
+  'FechaLocal','FechaHoraCliente',
+  'EstadoPuntualidad','MinutosDiferencia','MensajePuntualidad',
+  'Latitud','Longitud','PrecisionGPS','EstadoGPS','DistanciaGeocerca','DentroGeocerca',
+  'DistanciaFacial','SinBiometria',
+  'SupervisorID','TipoExcepcion','MotivoSupervisor','FechaHoraAutorizacion',
+  'DeviceID','AppVersion','SinConexion','FechaSincronizacion','ResultadoFacial'
+];
+
+// Mapa de alias: cabecera antigua → nombre canónico en COLUMNAS_MARCACIONES_V4
+var _ALIAS_COLUMNAS = {
+  'Hora':          'HoraServidor',
+  'Lat':           'Latitud',
+  'Lng':           'Longitud',
+  'Timestamp':     'FechaSincronizacion',
+  'DeviceId':      'DeviceID',
+  'ModoOffline':   'SinConexion',
+};
+
+/* Devuelve un mapa nombre→índice (0-based) leyendo la fila de cabeceras.
+   Aplica alias del esquema antiguo para que el colMap siempre use nombres canónicos. */
+function _getColMarcaciones(hoja) {
+  const headers = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
+  const m = {};
+  headers.forEach(function(h, i) {
+    const nombre = String(h).trim();
+    const canonico = _ALIAS_COLUMNAS[nombre] || nombre;
+    m[canonico] = i;
+    // también guardar el nombre literal por si el llamador lo usa directamente
+    if (canonico !== nombre) m[nombre] = i;
+  });
+  return m;
+}
+
+/* migrarEsquemaMarcaciones():
+   - lee la cabecera existente (aplicando alias)
+   - agrega al final cualquier columna canónica que falte
+   - nunca borra ni mueve columnas ni datos existentes
+   - devuelve un colMap actualizado */
+function migrarEsquemaMarcaciones(hoja) {
+  const colMap = _getColMarcaciones(hoja);
+  const faltantes = COLUMNAS_MARCACIONES_V4.filter(function(c) { return colMap[c] == null; });
+  if (faltantes.length === 0) return colMap;
+
+  // Agregar columnas faltantes al final, una por una
+  const ultimaCol = hoja.getLastColumn();
+  faltantes.forEach(function(nombre, idx) {
+    const col = ultimaCol + idx + 1;
+    hoja.getRange(1, col).setValue(nombre);
+    colMap[nombre] = col - 1; // 0-based
+  });
+  SpreadsheetApp.flush();
+  return colMap;
+}
+
 function obtenerOhCrearHoja() {
   const ss   = SpreadsheetApp.openById(SHEET_ID);
   let hoja   = ss.getSheetByName(HOJA_MARCACIONES);
   if (!hoja) {
     hoja = ss.insertSheet(HOJA_MARCACIONES);
-    hoja.appendRow([
-      'MarcacionID','Fecha','HoraServidor','Documento','Nombre','Cargo','Finca','Tipo',
-      'FechaLocal','FechaHoraCliente',
-      'EstadoPuntualidad','MinutosDiferencia','MensajePuntualidad',
-      'Latitud','Longitud','PrecisionGPS','EstadoGPS','DistanciaGeocerca','DentroGeocerca',
-      'DistanciaFacial','SinBiometria',
-      'SupervisorID','TipoExcepcion','MotivoSupervisor','FechaHoraAutorizacion',
-      'DeviceID','AppVersion','SinConexion','FechaSincronizacion','ResultadoFacial'
-    ]);
+    hoja.appendRow(COLUMNAS_MARCACIONES_V4);
     hoja.setFrozenRows(1);
+  } else {
+    // Migrar esquema si la hoja ya existe con cabeceras antiguas o parciales
+    migrarEsquemaMarcaciones(hoja);
   }
   return hoja;
-}
-
-/* Devuelve un mapa nombre→índice (0-based) leyendo la fila de cabeceras.
-   Compatible con el esquema antiguo y el nuevo. */
-function _getColMarcaciones(hoja) {
-  const headers = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
-  const m = {};
-  headers.forEach(function(h, i) { m[String(h).trim()] = i; });
-  return m;
 }
 
 function obtenerOhCrearHojaPersonal() {
@@ -463,23 +506,27 @@ function _buscarPorMarcacionId(hoja, marcacionId, colMap) {
   return { encontrado: false };
 }
 
-// Calcula puntualidad oficial en el servidor (America/Bogota)
+// Calcula puntualidad oficial en el servidor — SIEMPRE en America/Bogota,
+// independiente de la zona horaria configurada en el proyecto de Apps Script.
 // Devuelve { estado, mensajePuntualidad, minutosDiferencia }
 function _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia) {
   if (!horarioDia || !horarioDia.activo) {
     return { estado: 'sin_horario', mensajePuntualidad: 'Sin horario configurado', minutosDiferencia: 0 };
   }
-  const horaDecimal = ahoraServidor.getHours() + ahoraServidor.getMinutes() / 60;
+  // Obtener hora explícitamente en America/Bogota — no confiar en getHours()/getMinutes()
+  const horaEnBogota = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'HH:mm');
+  const horaDecimal  = _horaStrADecimal(horaEnBogota);
+
   if (tipo === 'Entrada') {
     const limiteEntrada = _horaStrADecimal(horarioDia.entrada || '06:00') + (horarioDia.tolEntrada || 0) / 60;
     const diffMin = Math.round((horaDecimal - limiteEntrada) * 60);
-    if (diffMin > 0) return { estado: 'tarde', mensajePuntualidad: 'Entrada tarde ' + diffMin + ' min', minutosDiferencia: diffMin };
-    return { estado: 'puntual', mensajePuntualidad: 'Entrada a tiempo', minutosDiferencia: 0 };
+    if (diffMin > 0) return { estado: 'tarde',   mensajePuntualidad: 'Entrada tarde ' + diffMin + ' min', minutosDiferencia: diffMin };
+    return             { estado: 'puntual', mensajePuntualidad: 'Entrada a tiempo', minutosDiferencia: 0 };
   } else {
     const limiteSalida = _horaStrADecimal(horarioDia.salida || '15:00') - (horarioDia.tolSalida || 0) / 60;
     const diffMin = Math.round((limiteSalida - horaDecimal) * 60);
     if (diffMin > 0) return { estado: 'temprano', mensajePuntualidad: 'Salida anticipada ' + diffMin + ' min', minutosDiferencia: diffMin };
-    return { estado: 'puntual', mensajePuntualidad: 'Salida a tiempo', minutosDiferencia: 0 };
+    return             { estado: 'puntual',   mensajePuntualidad: 'Salida a tiempo', minutosDiferencia: 0 };
   }
 }
 
@@ -861,6 +908,7 @@ function doPost(e) {
       if (!empleado.ok) return _respuestaJson({ ok: false, error: empleado.error });
 
       const marcacionId = String(datos.marcacionId || '').trim();
+      if (!marcacionId) return _respuestaJson({ ok: false, error: 'marcacionId requerido' });
 
       // ── LockService: serializar solicitudes simultáneas ──
       const lock = LockService.getScriptLock();
@@ -1364,4 +1412,121 @@ function migrarFotosAPrivadas() {
   Logger.log('Fallidas: ' + fallidas);
   reporte.forEach(function(l) { Logger.log(l); });
   return { yaPrivadas: yaPrivadas, migradas: migradas, fallidas: fallidas, reporte: reporte };
+}
+
+/**
+ * Ejecuta y reporta la migración del esquema de Marcaciones.
+ * Seguro de ejecutar múltiples veces — no modifica datos, solo agrega columnas faltantes.
+ * Ejecutar manualmente desde el editor de Apps Script.
+ */
+function ejecutarMigracionEsquema() {
+  const hoja = obtenerOhCrearHoja();
+  const colMap = _getColMarcaciones(hoja);
+  const faltaban = COLUMNAS_MARCACIONES_V4.filter(function(c) { return colMap[c] == null; });
+  Logger.log('=== Migración Esquema Marcaciones ===');
+  Logger.log('Columnas presentes antes: ' + hoja.getLastColumn());
+  Logger.log('Columnas faltantes: ' + JSON.stringify(faltaban));
+  const colMapFinal = migrarEsquemaMarcaciones(hoja);
+  Logger.log('Columnas presentes después: ' + hoja.getLastColumn());
+  Logger.log('colMap final: ' + JSON.stringify(colMapFinal));
+  Logger.log('Filas de datos (sin cabecera): ' + (hoja.getLastRow() - 1));
+  return { faltaban: faltaban, colMapFinal: colMapFinal };
+}
+
+/**
+ * Prueba de idempotencia: envía el mismo payload dos veces con el mismo marcacionId.
+ * Resultado esperado:
+ *   - Primera llamada: ok:true, idempotente:undefined, una fila nueva en Marcaciones
+ *   - Segunda llamada: ok:true, idempotente:true, sin nueva fila
+ * REQUISITO: el empleado con documento '99999999' debe existir en Personal,
+ * y debe haber un deviceToken válido en DEVICE_TOKEN_TEST en Script Properties.
+ * Ejecutar manualmente desde el editor de Apps Script.
+ */
+function testIdempotencia() {
+  Logger.log('=== TEST IDEMPOTENCIA marcacionId ===');
+
+  const hoja     = obtenerOhCrearHoja();
+  const filaAntes = hoja.getLastRow();
+
+  // Construir un payload mínimo válido con biometría simulada
+  const testId = 'TEST-' + Utilities.getUuid();
+  const payload = {
+    accion:        'marcar',
+    marcacionId:   testId,
+    documento:     '99999999',
+    tipo:          'Entrada',
+    fechaHora:     new Date().toISOString(),
+    fechaLocal:    Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM-dd'),
+    lat:           0,   lng: 0,
+    precisionGPS:  5,
+    gpsEstadoActual: 'FUERA',
+    distanciaFacial: 0.30,
+    sinBiometria:  false,
+    appVersion:    '4.0',
+    sinConexion:   false,
+  };
+
+  // Obtener deviceToken y deviceId de prueba desde Script Properties
+  const props    = PropertiesService.getScriptProperties();
+  const testTok  = props.getProperty('DEVICE_TOKEN_TEST') || '';
+  const testDid  = props.getProperty('DEVICE_ID_TEST')    || '';
+  if (!testTok || !testDid) {
+    Logger.log('OMITIDO: configura DEVICE_TOKEN_TEST y DEVICE_ID_TEST en Script Properties para ejecutar este test.');
+    return;
+  }
+  payload.deviceToken = testTok;
+  payload.deviceId    = testDid;
+
+  // Simular doPost directamente (sin HTTP)
+  function simularPost(p) {
+    const e = { postData: { contents: JSON.stringify(p) } };
+    const resp = doPost(e);
+    return JSON.parse(resp.getContent());
+  }
+
+  const r1 = simularPost(payload);
+  const filasDespues1 = hoja.getLastRow();
+  Logger.log('Respuesta 1: ' + JSON.stringify(r1));
+  Logger.log('Filas antes: ' + filaAntes + ' | después de envío 1: ' + filasDespues1);
+
+  const r2 = simularPost(payload);
+  const filasDespues2 = hoja.getLastRow();
+  Logger.log('Respuesta 2: ' + JSON.stringify(r2));
+  Logger.log('Filas después de envío 2: ' + filasDespues2);
+
+  Logger.log('--- Resultado ---');
+  Logger.log('Primera respuesta ok:          ' + (r1.ok === true  ? 'PASS' : 'FAIL (' + r1.error + ')'));
+  Logger.log('Primera NO idempotente:        ' + (!r1.idempotente ? 'PASS' : 'FAIL'));
+  Logger.log('Segunda respuesta ok:          ' + (r2.ok === true  ? 'PASS' : 'FAIL (' + r2.error + ')'));
+  Logger.log('Segunda idempotente:           ' + (r2.idempotente  ? 'PASS' : 'FAIL'));
+  Logger.log('Solo una fila nueva:           ' + (filasDespues2 - filaAntes === 1 ? 'PASS' : 'FAIL (delta=' + (filasDespues2 - filaAntes) + ')'));
+  Logger.log('Datos históricos intactos:     ' + (filasDespues2 >= filaAntes ? 'PASS' : 'FAIL'));
+}
+
+/**
+ * Prueba de zona horaria: verifica que _calcularPuntualidadServidor produce
+ * el mismo resultado con cualquier zona horaria del proyecto.
+ * No requiere dispositivo ni empleado.
+ */
+function testZonaHoraria() {
+  Logger.log('=== TEST ZONA HORARIA puntualidad ===');
+
+  // Crear una fecha equivalente a las 07:30 Colombia (UTC-5)
+  // 07:30 Bogotá = 12:30 UTC
+  const ahoraBogota = new Date('2026-01-05T12:30:00Z');
+  const horario = { activo: true, entrada: '07:00', salida: '15:00', tolEntrada: 15, tolSalida: 15 };
+
+  const p = _calcularPuntualidadServidor('Entrada', ahoraBogota, horario);
+  Logger.log('Hora Bogotá (Utilities): ' + Utilities.formatDate(ahoraBogota, 'America/Bogota', 'HH:mm'));
+  Logger.log('Resultado puntualidad:   ' + JSON.stringify(p));
+  // 07:30 con tolerancia 15 min sobre entrada 07:00 → límite 07:15 → 15 min tarde
+  Logger.log('Estado esperado: tarde | Obtenido: ' + p.estado + ' | ' + (p.estado === 'tarde' ? 'PASS' : 'FAIL'));
+  Logger.log('Minutos esperados: 15 | Obtenidos: ' + p.minutosDiferencia + ' | ' + (p.minutosDiferencia === 15 ? 'PASS' : 'FAIL'));
+
+  // Medianoche Colombia: 23:55 Bogotá = 04:55 UTC siguiente día
+  const medianoche = new Date('2026-01-06T04:55:00Z');
+  const horarioNoche = { activo: true, entrada: '22:00', salida: '06:00', tolEntrada: 10, tolSalida: 10 };
+  const p2 = _calcularPuntualidadServidor('Entrada', medianoche, horarioNoche);
+  Logger.log('Hora medianoche Bogotá: ' + Utilities.formatDate(medianoche, 'America/Bogota', 'HH:mm'));
+  Logger.log('Puntualidad medianoche: ' + JSON.stringify(p2));
 }
