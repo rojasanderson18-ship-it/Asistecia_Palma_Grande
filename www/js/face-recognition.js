@@ -407,6 +407,17 @@ async function procesarEnrolar(_esReintentoModelos) {
   const pe   = getPC().find(p => p.nombre === nombreGuardado);
   const foto = fotoCapturada || '';
 
+  // Mostrar de inmediato una pantalla de carga: subir la foto puede tardar
+  // varios segundos y, sin esto, el usuario se queda viendo los restos de
+  // la cámara ya apagada (como si la app se hubiera trabado).
+  mostrarPantalla('pantallaResultado');
+  document.getElementById('resultadoContenido').innerHTML = `
+    <div class="conf-full">
+      <div class="btn-loading" style="width:52px;height:52px;border-radius:50%;margin:0 auto 22px;"></div>
+      <div class="err-tit">Guardando biometría…</div>
+      <div class="err-sub">Un momento, por favor.</div>
+    </div>`;
+
   function _volverMenuTrasEnrolar() {
     mostrarPantalla('pantallaMenu');
   }
