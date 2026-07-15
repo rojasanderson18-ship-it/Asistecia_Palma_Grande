@@ -430,18 +430,37 @@ function _renderResetDia() {
       const doc = btn.dataset.doc;
       const persona = (typeof getPorDoc === 'function') ? getPorDoc(doc) : null;
       const nombre  = persona ? persona.nombre : doc;
-      const ok = await showConfirm(`¿Borrar el registro de hoy de ${nombre}?\nEsto eliminará su entrada/salida del caché local.`, 'Borrar', true);
+      const ok = await showConfirm(
+        `¿Borrar el registro de hoy de ${nombre}?\nEsto elimina su entrada/salida del caché local Y del servidor (Google Sheet). Esta acción no se puede deshacer.`,
+        'Borrar', true
+      );
       if (!ok) return;
-      // Limpiar caché del día
+
+      btn.disabled = true;
+      btn.classList.add('btn-loading');
+
+      // 1. Borrar en el servidor (registro real en el Sheet)
+      const hoy = (typeof fechaLocalISO === 'function') ? fechaLocalISO() : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+      const r = await enviarConResp({ accion: 'borrarMarcacionesDelDia', token: getAdminToken(), documento: doc, fecha: hoy });
+
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+
+      if (!r || !r.ok) {
+        showToast('Error: ' + ((r && r.error) || 'No se pudo borrar en el servidor'));
+        return;
+      }
+
+      // 2. Limpiar caché local del día
       const c = JSON.parse(localStorage.getItem('marcas_hoy_cache') || '{}');
       delete c[doc];
       localStorage.setItem('marcas_hoy_cache', JSON.stringify(c));
-      // Limpiar cola offline de este documento (registros de hoy)
+      // 3. Limpiar cola offline de este documento (registros de hoy)
       const q = JSON.parse(localStorage.getItem('cola') || '[]');
       const qFiltrada = q.filter(i => String(i.documento) !== String(doc));
       localStorage.setItem('cola', JSON.stringify(qFiltrada));
       if (typeof updColaBadge === 'function') updColaBadge();
-      showToast(`Registro de ${nombre} limpiado`);
+      showToast(`Registro de ${nombre} borrado (${r.borradas || 0} fila(s) en el servidor)`);
       _renderResetDia();
     };
   });

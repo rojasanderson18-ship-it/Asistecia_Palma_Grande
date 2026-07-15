@@ -25,6 +25,7 @@
  *   POST accion=eliminarPersonal        — eliminar empleado
  *   POST accion=listarPersonal          — listar empleados (catálogo completo)
  *   POST accion=resumenDashboard        — resumen del día
+ *   POST accion=borrarMarcacionesDelDia — borrar marcaciones de una persona en una fecha (admin)
  *   POST accion=obtenerFoto             — foto privada de empleado (base64)
  *   POST accion=autorizarDispositivo    — registrar y autorizar kiosco
  *   POST accion=listarDispositivos      — ver dispositivos autorizados
@@ -771,6 +772,34 @@ function doPost(e) {
       } catch (ex) {
         return _respuestaJson({ ok: false, error: 'No se pudo obtener la foto' });
       }
+    }
+
+    /* ── Borrar marcaciones del día de una persona (requiere sesión admin) ── */
+    if (accion === 'borrarMarcacionesDelDia') {
+      const sv = _validarSesion(datos.token, ['admin']);
+      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const documento = String(datos.documento || '').trim();
+      if (!documento) return _respuestaJson({ ok: false, error: 'documento requerido' });
+      const fecha = _isoADdMmYyyy(datos.fecha) || String(datos.fecha || '').trim();
+      if (!fecha) return _respuestaJson({ ok: false, error: 'fecha requerida' });
+
+      const hoja   = obtenerOhCrearHoja();
+      const datosH = hoja.getDataRange().getValues();
+      const colMap = _getColMarcaciones(hoja);
+      const iDoc   = colMap['Documento'] != null ? colMap['Documento'] : 3;
+      const iFech  = colMap['Fecha']     != null ? colMap['Fecha']     : 1;
+
+      let borradas = 0;
+      for (let i = datosH.length - 1; i >= 1; i--) {
+        const fila = datosH[i];
+        if (normalizarFecha(fila[iFech]) === fecha && String(fila[iDoc]).trim() === documento) {
+          hoja.deleteRow(i + 1);
+          borradas++;
+        }
+      }
+      if (borradas > 0) SpreadsheetApp.flush();
+      _auditarIntento(documento, 'BORRAR-MARCACIONES-DIA', 'admin:' + fecha + ':' + borradas + ' fila(s)');
+      return _respuestaJson({ ok: true, borradas: borradas });
     }
 
     /* ── Resumen dashboard (requiere sesión admin) ── */
