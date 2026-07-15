@@ -245,6 +245,25 @@ body {
 }
 .pantalla.show { display: flex; }
 
+/* Evitar parpadeo del teclado al restaurar sesión admin tras refresh:
+   el atributo data-boot-screen se fija de forma síncrona antes de cargar
+   face-api.min.js (ver index.html), así que estas reglas aplican antes
+   de que app.js termine de ejecutarse y agregue la clase .show real. */
+html[data-boot-screen] #pantallaMarcacion { display: none !important; }
+html[data-boot-screen="pantallaMenu"]               #pantallaMenu,
+html[data-boot-screen="pantallaConfig"]             #pantallaConfig,
+html[data-boot-screen="pantallaReporte"]            #pantallaReporte,
+html[data-boot-screen="pantallaEnrolar"]            #pantallaEnrolar,
+html[data-boot-screen="pantallaRostros"]            #pantallaRostros,
+html[data-boot-screen="pantallaPersonal"]           #pantallaPersonal,
+html[data-boot-screen="pantallaAgregar"]            #pantallaAgregar,
+html[data-boot-screen="pantallaResetDia"]           #pantallaResetDia,
+html[data-boot-screen="pantallaFichaPersonal"]      #pantallaFichaPersonal,
+html[data-boot-screen="pantallaFormPersonal"]       #pantallaFormPersonal,
+html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
+  display: flex !important;
+}
+
 /* ══════════════════════════════════════════════════
    PANTALLA MARCACIÓN — IDLE / TECLADO
 ══════════════════════════════════════════════════ */

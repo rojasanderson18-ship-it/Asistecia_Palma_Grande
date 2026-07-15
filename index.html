@@ -11,6 +11,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..900;1,14..32,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<script>
+/* Decide la pantalla inicial ANTES de cargar face-api.min.js (pesado) para
+   evitar el parpadeo del teclado cuando se restaura una sesión admin activa. */
+(function () {
+  try {
+    var tok    = sessionStorage.getItem('_adm_tok');
+    var exp    = parseInt(sessionStorage.getItem('_adm_exp') || '0', 10);
+    var screen = sessionStorage.getItem('_adm_screen');
+    if (tok && exp > Date.now() && screen) {
+      document.documentElement.setAttribute('data-boot-screen', screen);
+    }
+  } catch (e) {}
+})();
+</script>
 <script src="lib/face-api/face-api.min.js"></script>
 <script src="js/audio.js"></script>
 </head>
