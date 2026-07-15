@@ -95,6 +95,11 @@ if (!isAppConfigured()) {
     mostrarPantalla(_pantallaGuardada);
   }
 }
+// El atributo data-boot-screen (ver index.html) solo cubre el primer pintado;
+// a partir de aquí mostrarPantalla() maneja la navegación con la clase .show.
+// Si no se retira, su regla CSS (!important) queda fijando esa pantalla visible
+// para siempre, superpuesta con cualquier otra a la que el usuario navegue después.
+document.documentElement.removeAttribute('data-boot-screen');
 
 /* ── Logo: solo eliminar title para no exponer hint ── */
 const _logoEl = document.getElementById('hdrLogo');
