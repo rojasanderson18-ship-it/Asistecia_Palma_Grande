@@ -149,7 +149,7 @@ function resetWorker() {
   const docVal = document.getElementById('docVal');
   if (docVal) { docVal.textContent = 'Digite su cédula'; docVal.className = 'doc-number ph'; }
   const docSub = document.getElementById('docSub');
-  if (docSub) docSub.style.display = 'none';
+  if (docSub) docSub.classList.add('doc-info-oculto');
   const docChk = document.getElementById('docChk');
   if (docChk) docChk.classList.remove('show');
 }
@@ -545,7 +545,7 @@ async function procesarDoc(docVal, requestId) {
   const docChkEl = document.getElementById('docChk');
 
   if (!docNum) {
-    if (docSubEl) docSubEl.style.display = 'none';
+    if (docSubEl) docSubEl.classList.add('doc-info-oculto');
     if (docChkEl) docChkEl.classList.remove('show');
     setWorkerState('IDLE');
     return;
@@ -555,13 +555,13 @@ async function procesarDoc(docVal, requestId) {
   if (!persona) {
     const inputActual = (document.getElementById('documentoInput')?.value || '').replace(/\D/g, '');
     if (docNum === inputActual) {
-      if (docSubEl) { docSubEl.textContent = 'Documento no encontrado'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+      if (docSubEl) { docSubEl.textContent = 'Documento no encontrado'; docSubEl.className = 'doc-info er'; }
       if (docChkEl) docChkEl.classList.remove('show');
     }
     return;
   }
 
-  if (docSubEl) { docSubEl.textContent = 'Verificando…'; docSubEl.className = 'doc-info'; docSubEl.style.display = 'block'; }
+  if (docSubEl) { docSubEl.textContent = 'Verificando…'; docSubEl.className = 'doc-info'; }
   if (docChkEl) docChkEl.classList.add('show');
 
   const res = await getTipo(docNum);
@@ -579,15 +579,15 @@ async function procesarDoc(docVal, requestId) {
     // Sin estado del servidor: si el dispositivo no está configurado, no puede marcar
     const puedeOffline = !!(CONFIG.GS_URL && (typeof getDeviceToken === 'function') && getDeviceToken());
     if (!puedeOffline) {
-      if (docSubEl) { docSubEl.textContent = 'Dispositivo no configurado'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+      if (docSubEl) { docSubEl.textContent = 'Dispositivo no configurado'; docSubEl.className = 'doc-info er'; }
       if (docChkEl) docChkEl.classList.remove('show');
       return;
     }
     // Dispositivo autorizado pero sin red: asumir Entrada y continuar en modo offline
     res.tipo = 'Entrada';
-    if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo + ' · Sin red'; docSubEl.className = 'doc-info er'; docSubEl.style.display = 'block'; }
+    if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo + ' · Sin red'; docSubEl.className = 'doc-info er'; }
   } else {
-    if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo; docSubEl.className = 'doc-info'; docSubEl.style.display = 'block'; }
+    if (docSubEl) { docSubEl.textContent = persona.nombre + ' · ' + persona.cargo; docSubEl.className = 'doc-info'; }
   }
 
   WORKER.nombre = persona.nombre;

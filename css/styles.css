@@ -370,6 +370,16 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   font-weight: 600;
   border-top: 1px solid var(--k-border);
   background: rgba(46,173,110,0.06);
+  box-sizing: border-box;
+  min-height: 36px;
+  transition: opacity 0.12s;
+}
+/* Reserva el espacio siempre para que el teclado no se desplace al aparecer/desaparecer */
+.doc-info-oculto {
+  opacity: 0;
+  pointer-events: none;
+  border-top-color: transparent;
+  background: transparent;
 }
 
 /* ── TECLADO NUMÉRICO ── */
