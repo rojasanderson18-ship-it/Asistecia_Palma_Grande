@@ -2378,18 +2378,33 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 .hor-toggle input:checked + .hor-track { background: var(--dg); }
 .hor-toggle input:checked + .hor-track::before { transform: translateX(14px); }
 .hor-time {
+  -webkit-appearance: none; appearance: none;
   width: 100%; box-sizing: border-box; background: var(--wh);
   border: 1px solid var(--bd); border-radius: 6px;
   color: var(--tx); font-size: 12px; padding: 4px 5px;
   font-family: inherit; outline: none;
 }
 .hor-time:focus { border-color: var(--dg); }
-.hor-time:disabled { opacity: .35; cursor: not-allowed; }
+/* iOS Safari ignora background/border en <input> deshabilitados salvo que se
+   fuerce -webkit-appearance:none — sin esto, Entrada/Salida se ven fusionados
+   en una sola barra nativa en las filas inactivas (ej. Domingo). */
+.hor-time:disabled {
+  -webkit-appearance: none; appearance: none;
+  opacity: .35; cursor: not-allowed;
+  background: var(--wh); border: 1px solid var(--bd);
+  -webkit-text-fill-color: var(--tx);
+}
 .hor-tol {
+  -webkit-appearance: none; appearance: none;
   width: 100%; box-sizing: border-box; background: var(--wh);
   border: 1px solid var(--bd); border-radius: 6px;
   color: var(--tx); font-size: 12px; padding: 4px 4px;
   font-family: inherit; outline: none; text-align: center;
 }
 .hor-tol:focus { border-color: var(--dg); }
-.hor-tol:disabled { opacity: .35; cursor: not-allowed; }
+.hor-tol:disabled {
+  -webkit-appearance: none; appearance: none;
+  opacity: .35; cursor: not-allowed;
+  background: var(--wh); border: 1px solid var(--bd);
+  -webkit-text-fill-color: var(--tx);
+}
