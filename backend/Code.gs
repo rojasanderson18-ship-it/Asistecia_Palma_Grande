@@ -520,7 +520,10 @@ function _buscarPorMarcacionId(hoja, marcacionId, colMap) {
 // Calcula puntualidad oficial en el servidor — SIEMPRE en America/Bogota,
 // independiente de la zona horaria configurada en el proyecto de Apps Script.
 // Devuelve { estado, mensajePuntualidad, minutosDiferencia }
-function _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia) {
+// tipoExcepcion: si es 'SALIDA_ANTICIPADA_AUTORIZADA' (ya validada contra
+// sesión de supervisor por el llamador), la salida anticipada no cuenta
+// como deuda de tiempo — quedó autorizada (ej. jornada continua).
+function _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia, tipoExcepcion) {
   if (!horarioDia || !horarioDia.activo) {
     return { estado: 'sin_horario', mensajePuntualidad: 'Sin horario configurado', minutosDiferencia: 0 };
   }
@@ -536,8 +539,13 @@ function _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia) {
   } else {
     const limiteSalida = _horaStrADecimal(horarioDia.salida || '15:00') - (horarioDia.tolSalida || 0) / 60;
     const diffMin = Math.round((limiteSalida - horaDecimal) * 60);
-    if (diffMin > 0) return { estado: 'temprano', mensajePuntualidad: 'Salida anticipada ' + diffMin + ' min', minutosDiferencia: diffMin };
-    return             { estado: 'puntual',   mensajePuntualidad: 'Salida a tiempo', minutosDiferencia: 0 };
+    if (diffMin > 0) {
+      if (tipoExcepcion === 'SALIDA_ANTICIPADA_AUTORIZADA') {
+        return { estado: 'autorizada', mensajePuntualidad: 'Salida anticipada autorizada por supervisor (' + diffMin + ' min)', minutosDiferencia: 0 };
+      }
+      return { estado: 'temprano', mensajePuntualidad: 'Salida anticipada ' + diffMin + ' min', minutosDiferencia: diffMin };
+    }
+    return { estado: 'puntual', mensajePuntualidad: 'Salida a tiempo', minutosDiferencia: 0 };
   }
 }
 
@@ -1096,6 +1104,19 @@ function doPost(e) {
           }
         }
 
+        // Salida anticipada autorizada (ej. jornada continua sin almuerzo):
+        // exigir sesión de supervisor real — nunca confiar en que el cliente
+        // marque la excepción sin haberla validado.
+        if (datos.tipoExcepcion === 'SALIDA_ANTICIPADA_AUTORIZADA') {
+          const svSalida = _validarSesion(datos.supervisorToken, ['supervisor']);
+          if (!svSalida.ok) {
+            return _respuestaJson({
+              ok: false,
+              error: 'Salida anticipada requiere autorización de supervisor. ' + svSalida.error
+            });
+          }
+        }
+
         if (datos.sinBiometria !== true) {
           const dist = datos.distanciaFacial;
           if (dist == null || dist === '')
@@ -1130,7 +1151,7 @@ function doPost(e) {
         // Puntualidad oficial (servidor, zona America/Bogota)
         const diaSemana   = _diaSemanaDeStr(hoyStr);
         const horarioDia  = _getHorarioPorDia(diaSemana, appCfg);
-        const puntualidad = _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia);
+        const puntualidad = _calcularPuntualidadServidor(tipo, ahoraServidor, horarioDia, datos.tipoExcepcion);
 
         // ── Insertar fila usando colMap: correcto sin importar el orden físico de columnas ──
         // (una hoja migrada puede tener las columnas en otro orden que una hoja nueva)
@@ -1246,6 +1267,7 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
   const iCargo  = colMap['Cargo']       != null ? colMap['Cargo']       : 5;
   const iFinca  = colMap['Finca']       != null ? colMap['Finca']       : 6;
   const iTipo   = colMap['Tipo']        != null ? colMap['Tipo']        : 7;
+  const iExcep  = colMap['TipoExcepcion'];
 
   for (let i = 1; i < datos.length; i++) {
     const fila = datos[i];
@@ -1257,6 +1279,7 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     const clave = String(documento);
     if (!porPersona[clave]) porPersona[clave] = { nombre: nombre, cargo: cargo, finca: finca };
     porPersona[clave][tipo] = normalizarHora(hora);
+    if (tipo === 'Salida' && iExcep != null) porPersona[clave].excepcionSalida = String(fila[iExcep] || '');
   }
 
   let tardanzas = 0, jornadasCompletas = 0, totalHoras = 0;
@@ -1291,9 +1314,13 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
       marcas.push('Salida');
       const hSalida = horaADecimal(p.Salida);
       if (hSalida < HORA_TOLERANCIA_SALIDA) {
-        const minutos = Math.round((HORA_TOLERANCIA_SALIDA - hSalida) * 60);
-        minutosDeuda += minutos;
-        puntualidad.push({ tipo: 'Salida', estado: 'temprano', minutos: minutos });
+        if (p.excepcionSalida === 'SALIDA_ANTICIPADA_AUTORIZADA') {
+          puntualidad.push({ tipo: 'Salida', estado: 'autorizada', minutos: 0 });
+        } else {
+          const minutos = Math.round((HORA_TOLERANCIA_SALIDA - hSalida) * 60);
+          minutosDeuda += minutos;
+          puntualidad.push({ tipo: 'Salida', estado: 'temprano', minutos: minutos });
+        }
       }
     }
     let horasLaboradas = '';

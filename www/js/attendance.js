@@ -48,6 +48,7 @@ function _motivoDesdeExcepcion(tipo) {
     GPS_IMPRECISO:        'GPS con baja precisión',
     SIN_BIOMETRIA:        'Sin biometría registrada',
     FALLO_RECONOCIMIENTO: 'Fallo de reconocimiento facial',
+    SALIDA_ANTICIPADA_AUTORIZADA: 'Salida anticipada autorizada por supervisor',
   };
   return MOTIVOS[tipo] || tipo || 'Excepción manual';
 }
@@ -306,6 +307,25 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
   // Puntualidad local (informativa); la oficial vendrá del servidor
   const puntLocal = calcularPuntualidad(tipo, hora);
 
+  // Salida anticipada (ej. trabajó jornada continua, sin almuerzo): dar la
+  // opción de que un supervisor la autorice ANTES de registrar. Si no se
+  // autoriza, se registra igual y cuenta como salida anticipada normal.
+  if (tipo === 'Salida' && tipoExcepcion !== 'SALIDA_ANTICIPADA_AUTORIZADA' && puntLocal.estado === 'temprano') {
+    setWorkerState('IDLE');
+    const autorizar = await showChoice(
+      `<b>${xh(nombre)}</b> está saliendo ${puntLocal.minutos} min antes de su horario.\n¿Un supervisor autoriza esta salida anticipada (ej. trabajó jornada continua)?`,
+      'Autorizar con supervisor', 'Registrar igual'
+    );
+    if (autorizar) {
+      abrirModalSupervisor(
+        `Autorizar salida anticipada de <b>${xh(nombre)}</b> (${puntLocal.minutos} min antes de su horario).`,
+        () => ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, 'SALIDA_ANTICIPADA_AUTORIZADA')
+      );
+      return;
+    }
+    // "Registrar igual": continúa el flujo normal más abajo, sin excepción.
+  }
+
   // ID único de esta marcación — se conserva en todos los reintentos
   const marcacionId = _generarMarcacionId();
 
@@ -314,7 +334,10 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
     ? Math.round(_distanciaGPS(gpsCoords.lat, gpsCoords.lng, CONFIG.FINCA.lat, CONFIG.FINCA.lng))
     : null;
 
-  const excepcionFinal = sinBiometria ? (tipoExcepcion || 'SIN_BIOMETRIA') : null;
+  // El tipo de excepción explícito (ej. autorización de salida anticipada)
+  // debe registrarse aunque la biometría haya sido válida — antes solo se
+  // enviaba cuando sinBiometria era true, perdiendo esta marca en el Sheet.
+  const excepcionFinal = tipoExcepcion || (sinBiometria ? 'SIN_BIOMETRIA' : null);
 
   const payload = {
     accion:              'marcar',
