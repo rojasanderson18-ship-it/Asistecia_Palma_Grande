@@ -149,7 +149,7 @@ function resetWorker() {
   const docVal = document.getElementById('docVal');
   if (docVal) { docVal.textContent = 'Digite su cédula'; docVal.className = 'doc-number ph'; }
   const docSub = document.getElementById('docSub');
-  if (docSub) docSub.classList.add('doc-info-oculto');
+  if (docSub) docSub.className = 'doc-info doc-info-oculto doc-info-colapsado';
   const docChk = document.getElementById('docChk');
   if (docChk) docChk.classList.remove('show');
 }
@@ -545,7 +545,7 @@ async function procesarDoc(docVal, requestId) {
   const docChkEl = document.getElementById('docChk');
 
   if (!docNum) {
-    if (docSubEl) docSubEl.classList.add('doc-info-oculto');
+    if (docSubEl) docSubEl.className = 'doc-info doc-info-oculto doc-info-colapsado';
     if (docChkEl) docChkEl.classList.remove('show');
     setWorkerState('IDLE');
     return;

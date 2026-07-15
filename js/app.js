@@ -129,7 +129,7 @@ function resetDocumentoInicio() {
   const ds = document.getElementById('docSub');
   const dc = document.getElementById('docChk');
   if (dv) { dv.textContent = 'Digite su cédula'; dv.className = 'doc-number ph'; }
-  if (ds) ds.classList.add('doc-info-oculto');
+  if (ds) ds.className = 'doc-info doc-info-oculto doc-info-colapsado';
   if (dc) dc.classList.remove('show');
 
   // 4. Detener cámara si estaba activa y resetear worker
@@ -166,7 +166,15 @@ document.getElementById('teclado').addEventListener('click', e => {
       dv.classList.remove('doc-pop'); void dv.offsetWidth; dv.classList.add('doc-pop');
     }
   }
-  if (ds && !val) ds.classList.add('doc-info-oculto');
+  if (ds) {
+    if (!val) {
+      ds.className = 'doc-info doc-info-oculto doc-info-colapsado';
+    } else {
+      // Reservar el espacio desde el primer dígito (aunque el texto real
+      // tarde ~300ms en llegar) para que el teclado no salte al aparecer.
+      ds.classList.remove('doc-info-colapsado');
+    }
+  }
 
   // Si borraron hasta vacío, cancelar todo
   if (!val) { resetDocumentoInicio(); return; }

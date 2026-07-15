@@ -374,12 +374,21 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   min-height: 36px;
   transition: opacity 0.12s;
 }
-/* Reserva el espacio siempre para que el teclado no se desplace al aparecer/desaparecer */
+/* En reposo (sin dígitos) el espacio se colapsa del todo, para no robarle
+   altura permanente al resto de la pantalla. Mientras hay dígitos, el
+   espacio queda reservado (oculto solo con opacidad) para que el texto de
+   estado ("Verificando…", nombre, error) no desplace el teclado al aparecer. */
 .doc-info-oculto {
   opacity: 0;
   pointer-events: none;
   border-top-color: transparent;
   background: transparent;
+}
+.doc-info-colapsado {
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top: none;
 }
 
 /* ── TECLADO NUMÉRICO ── */
