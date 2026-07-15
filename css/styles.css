@@ -128,7 +128,7 @@ body {
 ══════════════════════════════════════════════════ */
 .hdr {
   background: var(--k-bg2);
-  padding: 14px 20px 12px;
+  padding: 10px 20px 10px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -136,8 +136,8 @@ body {
   border-bottom: 1px solid var(--k-border);
 }
 .hdr-logo {
-  width: 91px; height: 91px;
-  border-radius: 22px;
+  width: 80px; height: 80px;
+  border-radius: 20px;
   flex-shrink: 0;
   background: var(--g700);
   display: flex;
@@ -273,10 +273,10 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 16px 8px;
+  padding: 6px 16px 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 /* ── RELOJ KIOSCO ── */
@@ -286,7 +286,7 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   flex-shrink: 0;
 }
 .kiosco-time {
-  font-size: clamp(48px, 14vw, 72px);
+  font-size: clamp(42px, 12vw, 64px);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--k-text);
@@ -309,7 +309,7 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   overflow: hidden;
 }
 .blk-hdr {
-  padding: 10px 18px;
+  padding: 7px 18px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -332,8 +332,8 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px;
-  min-height: 56px;
+  padding: 9px 20px;
+  min-height: 50px;
   border-bottom: 1px solid var(--k-border);
   background: rgba(255,255,255,0.03);
 }
@@ -364,14 +364,14 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
 }
 .doc-chk svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2.5; }
 .doc-info {
-  padding: 7px 18px;
+  padding: 5px 18px;
   font-size: 12px;
   color: var(--g500);
   font-weight: 600;
   border-top: 1px solid var(--k-border);
   background: rgba(46,173,110,0.06);
   box-sizing: border-box;
-  min-height: 28px;
+  min-height: 24px;
   transition: opacity 0.12s;
 }
 /* En reposo (sin dígitos) el espacio se colapsa del todo, para no robarle
@@ -400,7 +400,7 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   flex-shrink: 0;
 }
 .key {
-  aspect-ratio: 2.35 / 1;
+  aspect-ratio: 1.85 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
