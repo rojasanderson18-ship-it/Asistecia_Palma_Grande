@@ -747,7 +747,16 @@ function abrirFichaPersonal(nombre) {
     delBtn.disabled = false;
     if (r && r.ok) {
       const ex = getPE().filter(t => t.nombre !== nombre); savePE(ex);
+      // También purgar del caché sincronizado del backend — si no, sigue
+      // apareciendo (ej. en "Última marcación") hasta la próxima sincronización.
+      const cache = getPersonalCache().filter(t => t.nombre !== nombre); savePersonalCache(cache);
+      // Si el último registro mostrado en el kiosco era de esta persona, limpiarlo.
+      try {
+        const ultima = JSON.parse(localStorage.getItem('ultima_marc') || 'null');
+        if (ultima && ultima.nombre === nombre) localStorage.removeItem('ultima_marc');
+      } catch {}
       deleteRostro(nombre); showToast('✓ Trabajador eliminado');
+      if (typeof showUltima === 'function') showUltima();
       mostrarPantalla('pantallaPersonal'); renderPersonalList();
     } else { showToast('Error: ' + ((r && r.error) || 'No se pudo eliminar')); }
   };
