@@ -1866,9 +1866,13 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 /* Botón cargar reporte */
 .rep-btn-cargar { transition: background 0.15s, transform 0.1s; }
 .rep-btn-cargar:active { transform: scale(0.97); }
-/* Estado loading del botón cargar */
-.rep-btn-cargar.loading { position: relative; color: transparent; pointer-events: none; }
-.rep-btn-cargar.loading::after {
+/* Estado loading del botón cargar (genérico — cualquier botón puede usar .btn-loading) */
+.rep-btn-cargar.loading,
+.btn-loading {
+  position: relative; color: transparent !important; pointer-events: none;
+}
+.rep-btn-cargar.loading::after,
+.btn-loading::after {
   content: '';
   position: absolute;
   inset: 0; margin: auto;

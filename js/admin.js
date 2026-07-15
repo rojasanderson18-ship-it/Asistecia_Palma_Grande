@@ -38,8 +38,10 @@ document.getElementById('btnPinConfirmar').onclick = async () => {
   const val = document.getElementById('pinInput').value;
   const errEl = document.getElementById('pinErr');
   btn.disabled = true;
+  btn.classList.add('btn-loading');
   const result = await login(val);
   btn.disabled = false;
+  btn.classList.remove('btn-loading');
   if (result.ok) {
     cargarPersonalDesdeBackend();
     if (_pinDest === 'setup') {
