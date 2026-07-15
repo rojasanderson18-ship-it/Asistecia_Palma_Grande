@@ -672,6 +672,26 @@ let _persNombreActual = null;
 let _persFormModo = 'crear';
 let _importDatos = [];
 
+// Actualiza los campos dados (ej. {cargo, activo}) de una persona en el
+// caché local correspondiente — el sincronizado del backend (personal_cache)
+// si ya vive ahí, o el local (personal_extra) si todavía no se ha sincronizado.
+// Así el cambio se ve de inmediato sin esperar a la próxima sincronización.
+function _actualizarPersonaLocal(nombre, cambios) {
+  const cache = getPersonalCache();
+  const idxCache = cache.findIndex(t => t.nombre === nombre);
+  if (idxCache >= 0) {
+    Object.assign(cache[idxCache], cambios);
+    savePersonalCache(cache);
+    return;
+  }
+  const extra = getPE();
+  const idxExtra = extra.findIndex(t => t.nombre === nombre);
+  if (idxExtra >= 0) {
+    Object.assign(extra[idxExtra], cambios);
+    savePE(extra);
+  }
+}
+
 /* ── Listado ── */
 function abrirPersonal() {
   renderPersonalList();
@@ -844,15 +864,24 @@ function abrirFichaPersonal(nombre) {
   fichaEl.querySelector('#fichaBtnToggleActivo').onclick = async () => {
     const nuevoEstado = !activo;
     if (!await showConfirm(`¿${nuevoEstado ? 'Reactivar' : 'Inactivar'} a ${nombre}?`, nuevoEstado ? 'Reactivar' : 'Inactivar')) return;
-    const ex = getPE(); const idx = ex.findIndex(t => t.nombre === nombre);
-    if (idx >= 0) { ex[idx].activo = nuevoEstado; savePE(ex); }
+    const persona = getPC().find(t => t.nombre === nombre);
+    const documento = persona ? persona.documento : '';
+    const btn = fichaEl.querySelector('#fichaBtnToggleActivo'); btn.disabled = true;
+    const r = await enviarConResp({accion: nuevoEstado ? 'activarPersonal' : 'inactivarPersonal', token:getAdminToken(), documento});
+    btn.disabled = false;
+    if (!r || !r.ok) { showToast('Error: ' + ((r && r.error) || 'No se pudo actualizar en el servidor')); return; }
+    _actualizarPersonaLocal(nombre, { activo: nuevoEstado });
     showToast(nuevoEstado ? '✓ Trabajador reactivado' : '✓ Trabajador inactivado');
     abrirFichaPersonal(nombre);
   };
   fichaEl.querySelector('#fichaBtnEliminar').onclick = async () => {
     if (!await showConfirm(`¿Eliminar permanentemente a ${nombre}?\nEsta acción no se puede deshacer.`, 'Eliminar', true)) return;
     const delBtn = fichaEl.querySelector('#fichaBtnEliminar'); delBtn.disabled = true;
-    const r = await enviarConResp({accion:'eliminarPersonal', token:getAdminToken(), nombre});
+    // El backend busca por documento, no por nombre — sin esto el borrado
+    // en el Sheet nunca encontraba la fila y fallaba en silencio.
+    const persona = getPC().find(t => t.nombre === nombre);
+    const documento = persona ? persona.documento : '';
+    const r = await enviarConResp({accion:'eliminarPersonal', token:getAdminToken(), documento, nombre});
     delBtn.disabled = false;
     if (r && r.ok) {
       const ex = getPE().filter(t => t.nombre !== nombre); savePE(ex);
@@ -1034,12 +1063,14 @@ document.getElementById('btnGuardarFormPersonal').addEventListener('click', asyn
     const ex = getPE(); ex.push({documento:doc, nombre:nom, cargo:car, activo:true}); savePE(ex);
     showToast('✓ Trabajador registrado'); _persNombreActual = nom; abrirFichaPersonal(nom);
   } else {
-    const ex = getPE(); const idx = ex.findIndex(t => t.nombre === _persNombreActual);
-    if (idx >= 0) { ex[idx].cargo = car; ex[idx].activo = activo; savePE(ex); }
-    const r = await enviarConResp({accion:'actualizarPersonal', token:getAdminToken(), nombre:_persNombreActual, cargo:car, activo, fechaHora:new Date().toISOString()});
+    // El backend identifica al trabajador por documento, no por nombre.
+    const persona = getPC().find(t => t.nombre === _persNombreActual);
+    const documento = persona ? persona.documento : '';
+    const r = await enviarConResp({accion:'actualizarPersonal', token:getAdminToken(), documento, cargo:car, activo, fechaHora:new Date().toISOString()});
     btn.disabled = false;
-    if (r && !r.ok) showToast('Guardado localmente · ' + (r.error || 'Error al sincronizar'));
-    else showToast('✓ Datos actualizados');
+    if (!r || !r.ok) { showToast('Error: ' + ((r && r.error) || 'No se pudo guardar en el servidor')); return; }
+    _actualizarPersonaLocal(_persNombreActual, { cargo: car, activo });
+    showToast('✓ Datos actualizados');
     abrirFichaPersonal(_persNombreActual);
   }
 });

@@ -23,6 +23,9 @@
  *   POST accion=registrarPersonal       — registrar empleado
  *   POST accion=guardarFotoPersonal     — guardar foto de enrolamiento
  *   POST accion=eliminarPersonal        — eliminar empleado
+ *   POST accion=actualizarPersonal      — actualizar cargo/estado de empleado
+ *   POST accion=activarPersonal         — reactivar empleado
+ *   POST accion=inactivarPersonal       — inactivar empleado (conserva historial)
  *   POST accion=listarPersonal          — listar empleados (catálogo completo)
  *   POST accion=resumenDashboard        — resumen del día
  *   POST accion=borrarMarcacionesDelDia — borrar marcaciones de una persona en una fecha (admin)
@@ -725,6 +728,26 @@ function doPost(e) {
       for (let i = 1; i < filas.length; i++) {
         if (String(filas[i][0]).trim() === doc) {
           hoja.getRange(i + 1, 6).setValue('INACTIVO');
+          SpreadsheetApp.flush();
+          CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          return _respuestaJson({ ok: true });
+        }
+      }
+      return _respuestaJson({ ok: false, error: 'Empleado no encontrado' });
+    }
+
+    /* ── Actualizar cargo/estado de personal (requiere sesión admin) ── */
+    if (accion === 'actualizarPersonal') {
+      const sv = _validarSesion(datos.token, ['admin']);
+      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const hoja  = obtenerOhCrearHojaPersonal();
+      const filas = hoja.getDataRange().getValues();
+      const doc   = String(datos.documento || '').trim();
+      if (!doc) return _respuestaJson({ ok: false, error: 'documento requerido' });
+      for (let i = 1; i < filas.length; i++) {
+        if (String(filas[i][0]).trim() === doc) {
+          if (datos.cargo) hoja.getRange(i + 1, 3).setValue(datos.cargo);
+          if (typeof datos.activo === 'boolean') hoja.getRange(i + 1, 6).setValue(datos.activo ? 'ACTIVO' : 'INACTIVO');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
           return _respuestaJson({ ok: true });
