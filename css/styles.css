@@ -2325,7 +2325,7 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
   border-top: 1px solid var(--bd); transition: background .15s;
 }
 .hor-row-off { opacity: .45; }
-.hor-dia { font-size: 12px; font-weight: 700; color: var(--tx); }
+.hor-dia { font-size: 12px; font-weight: 700; color: var(--k-text); }
 .hor-toggle { position: relative; display: inline-block; width: 32px; height: 18px; }
 .hor-toggle input { opacity: 0; width: 0; height: 0; }
 .hor-track {
