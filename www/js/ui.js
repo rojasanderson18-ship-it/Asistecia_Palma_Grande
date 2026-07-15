@@ -146,6 +146,35 @@ document.getElementById('mgenCancel').addEventListener('click', () => {
   if (_mgenResolve) { _mgenResolve(false); _mgenResolve = null; }
 });
 
+/* Pide una contraseña (para cifrar/descifrar respaldos) reutilizando el
+   modal genérico — inyecta un <input type="password"> sobre los botones. */
+function askPassword(msg, okText) {
+  return new Promise(resolve => {
+    document.getElementById('mgenMsg').textContent = msg;
+    let inp = document.getElementById('mgenPass');
+    if (!inp) {
+      inp = document.createElement('input');
+      inp.type = 'password';
+      inp.id = 'mgenPass';
+      inp.autocomplete = 'off';
+      inp.style.cssText = 'width:100%;box-sizing:border-box;margin:10px 0 2px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);font-size:14px;';
+      document.getElementById('mgenMsg').insertAdjacentElement('afterend', inp);
+    }
+    inp.value = '';
+    inp.style.display = '';
+    document.getElementById('mgenCancel').style.display = '';
+    document.getElementById('mgenCancel').textContent = 'Cancelar';
+    document.getElementById('mgenOk').textContent = okText || 'Continuar';
+    document.getElementById('mgenOk').className = 'mgen-ok';
+    document.getElementById('modalGen').style.display = 'flex';
+    setTimeout(() => inp.focus(), 60);
+    _mgenResolve = (ok) => {
+      inp.style.display = 'none';
+      resolve(ok ? inp.value : null);
+    };
+  });
+}
+
 function showAlert(msg) {
   return new Promise(resolve => {
     _mgenResolve = () => resolve();

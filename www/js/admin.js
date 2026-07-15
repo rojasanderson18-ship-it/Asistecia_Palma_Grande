@@ -199,6 +199,100 @@ document.getElementById('btnBorrarTodosRostros').onclick = async () => {
   abrirGestionRostros();
 };
 
+/* ── Respaldo cifrado de enrolamientos (AES-GCM, Web Crypto nativo) ──
+   Los rostros solo viven en localStorage; si se borra la app se pierden.
+   Esto permite exportar/importar un archivo cifrado con contraseña propia
+   (distinta del PIN admin) para restaurarlos en otro dispositivo. ── */
+async function _derivarClaveRespaldo(password, salt) {
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+function _bufAB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function _b64ABuf(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+
+document.getElementById('btnRespaldarRostros').onclick = async () => {
+  const rostros = getRostros();
+  const n = Object.keys(rostros).length;
+  if (!n) { showToast('No hay rostros enrolados para respaldar'); return; }
+
+  const pass1 = await askPassword(`Crea una contraseña para cifrar el respaldo de ${n} rostro(s).\nGuárdala bien — sin ella no se podrá restaurar.`, 'Continuar');
+  if (!pass1) return;
+  if (pass1.length < 6) { await showAlert('Usa una contraseña de al menos 6 caracteres.'); return; }
+  const pass2 = await askPassword('Repite la contraseña para confirmar.', 'Confirmar');
+  if (pass2 !== pass1) { await showAlert('Las contraseñas no coinciden. Intenta de nuevo.'); return; }
+
+  try {
+    const datos = { rostros, meta: getRostrosMeta() };
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const key  = await _derivarClaveRespaldo(pass1, salt);
+    const enc  = new TextEncoder();
+    const cifrado = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(datos)));
+    const payload = { v: 1, salt: _bufAB64(salt), iv: _bufAB64(iv), data: _bufAB64(cifrado) };
+
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `respaldo_rostros_${fechaLocalISO()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`✓ Respaldo de ${n} rostro(s) descargado`);
+  } catch (e) {
+    await showAlert('No se pudo generar el respaldo: ' + (e.message || 'error desconocido'));
+  }
+};
+
+document.getElementById('btnRestaurarRostros').onclick = () => {
+  document.getElementById('inputRestaurarRostros').click();
+};
+document.getElementById('inputRestaurarRostros').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+    if (!payload || payload.v !== 1 || !payload.salt || !payload.iv || !payload.data) throw new Error('formato');
+  } catch {
+    await showAlert('Ese archivo no es un respaldo de rostros válido.');
+    return;
+  }
+
+  const pass = await askPassword('Contraseña del respaldo:', 'Restaurar');
+  if (!pass) return;
+
+  try {
+    const salt = _b64ABuf(payload.salt);
+    const iv   = _b64ABuf(payload.iv);
+    const key  = await _derivarClaveRespaldo(pass, salt);
+    const plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, _b64ABuf(payload.data));
+    const datos = JSON.parse(new TextDecoder().decode(plano));
+
+    const actuales = getRostros();
+    const n = Object.keys(datos.rostros || {}).length;
+    if (!await showConfirm(`Se restaurarán ${n} rostro(s). Los que ya existan en este dispositivo con el mismo nombre se sobrescribirán. ¿Continuar?`, 'Restaurar', true)) return;
+
+    const rostrosFusionados = { ...actuales, ...(datos.rostros || {}) };
+    const metaFusionada = { ...getRostrosMeta(), ...(datos.meta || {}) };
+    localStorage.setItem('rostros_enrolados', JSON.stringify(rostrosFusionados));
+    localStorage.setItem('rostros_meta', JSON.stringify(metaFusionada));
+    showToast(`✓ ${n} rostro(s) restaurado(s)`);
+    abrirGestionRostros();
+  } catch (e) {
+    // AES-GCM falla su verificación de integridad si la contraseña es incorrecta
+    await showAlert('No se pudo restaurar — la contraseña es incorrecta o el archivo está dañado.');
+  }
+});
+
 /* ── Configuración ── */
 
 /* ── Tabla de horarios (7 días) ── */
