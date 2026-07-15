@@ -29,6 +29,7 @@
  *   POST accion=listarPersonal          — listar empleados (catálogo completo)
  *   POST accion=resumenDashboard        — resumen del día
  *   POST accion=borrarMarcacionesDelDia — borrar marcaciones de una persona en una fecha (admin)
+ *   POST accion=autorizarSalidaAnticipada — autorizar salida anticipada ya registrada (admin)
  *   POST accion=obtenerFoto             — foto privada de empleado (base64)
  *   POST accion=autorizarDispositivo    — registrar y autorizar kiosco
  *   POST accion=listarDispositivos      — ver dispositivos autorizados
@@ -831,6 +832,39 @@ function doPost(e) {
       if (borradas > 0) SpreadsheetApp.flush();
       _auditarIntento(documento, 'BORRAR-MARCACIONES-DIA', 'admin:' + fecha + ':' + borradas + ' fila(s)');
       return _respuestaJson({ ok: true, borradas: borradas });
+    }
+
+    /* ── Autorizar salida anticipada de un día ya registrado (requiere sesión
+       admin) — corrección posterior, no interrumpe al trabajador en el kiosco. ── */
+    if (accion === 'autorizarSalidaAnticipada') {
+      const sv = _validarSesion(datos.token, ['admin']);
+      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const documento = String(datos.documento || '').trim();
+      if (!documento) return _respuestaJson({ ok: false, error: 'documento requerido' });
+      const fecha = _isoADdMmYyyy(datos.fecha) || String(datos.fecha || '').trim();
+      if (!fecha) return _respuestaJson({ ok: false, error: 'fecha requerida' });
+
+      const hoja   = obtenerOhCrearHoja();
+      const datosH = hoja.getDataRange().getValues();
+      const colMap = _getColMarcaciones(hoja);
+      const iDoc   = colMap['Documento'] != null ? colMap['Documento'] : 3;
+      const iFech  = colMap['Fecha']     != null ? colMap['Fecha']     : 1;
+      const iTipo  = colMap['Tipo']      != null ? colMap['Tipo']      : 7;
+
+      for (let i = 1; i < datosH.length; i++) {
+        const fila = datosH[i];
+        if (normalizarFecha(fila[iFech]) === fecha && String(fila[iDoc]).trim() === documento && fila[iTipo] === 'Salida') {
+          if (colMap['TipoExcepcion'] != null)     hoja.getRange(i + 1, colMap['TipoExcepcion'] + 1).setValue('SALIDA_ANTICIPADA_AUTORIZADA');
+          if (colMap['EstadoPuntualidad'] != null) hoja.getRange(i + 1, colMap['EstadoPuntualidad'] + 1).setValue('autorizada');
+          if (colMap['MinutosDiferencia'] != null) hoja.getRange(i + 1, colMap['MinutosDiferencia'] + 1).setValue(0);
+          if (colMap['MensajePuntualidad'] != null)hoja.getRange(i + 1, colMap['MensajePuntualidad'] + 1).setValue('Salida anticipada autorizada por administrador');
+          if (colMap['MotivoSupervisor'] != null)  hoja.getRange(i + 1, colMap['MotivoSupervisor'] + 1).setValue('Autorizado desde Reporte de asistencia');
+          SpreadsheetApp.flush();
+          _auditarIntento(documento, 'AUTORIZAR-SALIDA-ANTICIPADA', 'admin:' + fecha);
+          return _respuestaJson({ ok: true });
+        }
+      }
+      return _respuestaJson({ ok: false, error: 'No se encontró una Salida registrada ese día para esta persona' });
     }
 
     /* ── Resumen dashboard (requiere sesión admin) ── */

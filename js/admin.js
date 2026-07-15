@@ -604,7 +604,7 @@ async function cargarReporte() {
       if (!doc) return;
       if (!porDoc[doc]) {
         const persona = getPorDoc(doc);
-        porDoc[doc] = { nombre: persona ? persona.nombre : doc, cargo: persona ? persona.cargo : '', marcas: [], minutosDeuda: 0, puntualidad: [] };
+        porDoc[doc] = { documento: doc, nombre: persona ? persona.nombre : doc, cargo: persona ? persona.cargo : '', marcas: [], minutosDeuda: 0, puntualidad: [] };
       }
       if (m.tipo && !porDoc[doc].marcas.includes(m.tipo)) porDoc[doc].marcas.push(m.tipo);
       if (m.minutosDeuda) porDoc[doc].minutosDeuda += m.minutosDeuda;
@@ -645,8 +645,9 @@ async function cargarReporte() {
   _setBar('repCntTemprano',    totalTemprano,    Math.max(totalPresentes, 1));
   _setBar('repCntPendientes',  colaPendientes,   Math.max(colaPendientes, 10));
   _setBar('repCntExcepciones', totalExcepciones, Math.max(totalPresentes, 1));
-  tabEl.innerHTML = datos.map(e => {
+  tabEl.innerHTML = datos.map((e, idx) => {
     const tieneDeuda = (e.minutosDeuda || 0) > 0;
+    const salidaTemprana = (e.puntualidad || []).find(x => x.tipo === 'Salida' && x.estado === 'temprano');
     return `<div style="background:var(--wh);border-radius:14px;padding:14px;border:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;gap:10px;">
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:38px;height:38px;border-radius:50%;background:var(--xl);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--dg);flex-shrink:0;">${xh(inic(e.nombre))}</div>
@@ -660,8 +661,26 @@ async function cargarReporte() {
         ${(e.marcas||[]).map(m => `<span style="background:var(--xl);color:var(--dg);font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 8px;">${xh(m)}</span>`).join('')}
         ${!(e.marcas||[]).length ? '<span style="color:var(--t2);font-size:11px;">Sin marcaciones</span>' : ''}
       </div>
+      ${salidaTemprana && e.documento ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border-radius:10px;padding:8px 10px;">
+        <span style="font-size:11px;color:var(--t2);">Salida ${salidaTemprana.minutos} min antes — ej. jornada continua sin almuerzo</span>
+        <button class="btn-autorizar-salida" data-doc="${xh(e.documento)}" data-nombre="${xh(e.nombre)}" style="background:var(--dg);color:#fff;border:none;border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Autorizar</button>
+      </div>` : ''}
     </div>`;
   }).join('') || '<div style="text-align:center;color:var(--t2);font-size:13px;padding:20px 0;">Sin registros</div>';
+
+  tabEl.querySelectorAll('.btn-autorizar-salida').forEach(btn => {
+    btn.onclick = async () => {
+      const doc = btn.dataset.doc, nombre = btn.dataset.nombre;
+      const fechaVal = document.getElementById('repFecha').value;
+      if (!await showConfirm(`¿Autorizar la salida anticipada de ${nombre} ese día?\nDejará de contar como deuda de tiempo.`, 'Autorizar', false)) return;
+      btn.disabled = true; btn.textContent = 'Autorizando…';
+      const r = await enviarConResp({ accion: 'autorizarSalidaAnticipada', token: getAdminToken(), documento: doc, fecha: fechaVal });
+      if (!r || !r.ok) { showToast('Error: ' + ((r && r.error) || 'No se pudo autorizar')); btn.disabled = false; btn.textContent = 'Autorizar'; return; }
+      showToast(`✓ Salida anticipada de ${nombre} autorizada`);
+      cargarReporte();
+    };
+  });
 }
 
 /* ══════════════════════════════════════════

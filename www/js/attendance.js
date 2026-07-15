@@ -307,24 +307,10 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
   // Puntualidad local (informativa); la oficial vendrá del servidor
   const puntLocal = calcularPuntualidad(tipo, hora);
 
-  // Salida anticipada (ej. trabajó jornada continua, sin almuerzo): dar la
-  // opción de que un supervisor la autorice ANTES de registrar. Si no se
-  // autoriza, se registra igual y cuenta como salida anticipada normal.
-  if (tipo === 'Salida' && tipoExcepcion !== 'SALIDA_ANTICIPADA_AUTORIZADA' && puntLocal.estado === 'temprano') {
-    setWorkerState('IDLE');
-    const autorizar = await showChoice(
-      `<b>${xh(nombre)}</b> está saliendo ${puntLocal.minutos} min antes de su horario.\n¿Un supervisor autoriza esta salida anticipada (ej. trabajó jornada continua)?`,
-      'Autorizar con supervisor', 'Registrar igual'
-    );
-    if (autorizar) {
-      abrirModalSupervisor(
-        `Autorizar salida anticipada de <b>${xh(nombre)}</b> (${puntLocal.minutos} min antes de su horario).`,
-        () => ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, 'SALIDA_ANTICIPADA_AUTORIZADA')
-      );
-      return;
-    }
-    // "Registrar igual": continúa el flujo normal más abajo, sin excepción.
-  }
+  // Nota: la salida anticipada NO se autoriza aquí (no se interrumpe al
+  // trabajador en el kiosco). Se registra normal, y un admin/supervisor
+  // puede autorizarla después desde el Reporte de asistencia si corresponde
+  // (ej. trabajó jornada continua sin almuerzo).
 
   // ID único de esta marcación — se conserva en todos los reintentos
   const marcacionId = _generarMarcacionId();
