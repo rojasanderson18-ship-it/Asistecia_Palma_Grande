@@ -397,17 +397,6 @@
       </div>
       <button id="btnBorrarTodosRostros" style="background:var(--rl);border:1px solid #FFCDD2;color:var(--re);border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">Borrar todos</button>
     </div>
-    <div style="background:var(--wh);border-radius:12px;border:1px solid var(--bd);padding:14px 16px;">
-      <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Respaldo de enrolamientos</div>
-      <div style="font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:10px;">
-        Los rostros enrolados solo viven en este dispositivo — si se borra la app o los datos del sitio, se pierden. Descargue un respaldo cifrado para poder restaurarlos en otro dispositivo sin volver a enrolar a nadie.
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button id="btnRespaldarRostros" style="flex:1;background:var(--xl);border:1px solid var(--dg);color:var(--dg);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;">Descargar respaldo</button>
-        <button id="btnRestaurarRostros" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;">Restaurar respaldo</button>
-      </div>
-      <input type="file" id="inputRestaurarRostros" accept="application/json" style="display:none;">
-    </div>
     <div id="listaRostros" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
@@ -590,6 +579,18 @@
       <div class="pers-kpi"><div class="pers-kpi-val muted">—</div><div class="pers-kpi-lbl">Inactivos</div></div>
       <div class="pers-kpi"><div class="pers-kpi-val ok">—</div><div class="pers-kpi-lbl">Enrolados</div></div>
       <div class="pers-kpi"><div class="pers-kpi-val warn">—</div><div class="pers-kpi-lbl">Sin rostro</div></div>
+    </div>
+    <!-- Respaldo de enrolamientos -->
+    <div style="background:var(--wh);border-radius:12px;border:1px solid var(--bd);padding:14px 16px;margin:10px 16px 0;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Respaldo de enrolamientos</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:10px;">
+        Los rostros enrolados solo viven en este dispositivo — si se borra la app o los datos del sitio, se pierden. Descargue un respaldo cifrado para poder restaurarlos en otro dispositivo sin volver a enrolar a nadie.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="btnRespaldarRostros" style="flex:1;background:var(--xl);border:1px solid var(--dg);color:var(--dg);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;">Descargar respaldo</button>
+        <button id="btnRestaurarRostros" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;">Restaurar respaldo</button>
+      </div>
+      <input type="file" id="inputRestaurarRostros" accept="application/json" style="display:none;">
     </div>
     <!-- Búsqueda y filtros -->
     <div class="pers-search-bar">
