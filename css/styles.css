@@ -128,7 +128,7 @@ body {
 ══════════════════════════════════════════════════ */
 .hdr {
   background: var(--k-bg2);
-  padding: 10px 20px 10px;
+  padding: 8px 20px 8px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -136,8 +136,8 @@ body {
   border-bottom: 1px solid var(--k-border);
 }
 .hdr-logo {
-  width: 80px; height: 80px;
-  border-radius: 20px;
+  width: 72px; height: 72px;
+  border-radius: 18px;
   flex-shrink: 0;
   background: var(--g700);
   display: flex;
@@ -273,20 +273,20 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px 16px 6px;
+  padding: 4px 16px 4px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 /* ── RELOJ KIOSCO ── */
 .kiosco-clock {
   text-align: center;
-  padding: 6px 0 4px;
+  padding: 9px 0 6px;
   flex-shrink: 0;
 }
 .kiosco-time {
-  font-size: clamp(42px, 12vw, 64px);
+  font-size: clamp(44px, 12.5vw, 67px);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--k-text);
@@ -309,7 +309,7 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   overflow: hidden;
 }
 .blk-hdr {
-  padding: 7px 18px;
+  padding: 5px 18px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -332,8 +332,8 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 20px;
-  min-height: 50px;
+  padding: 7px 20px;
+  min-height: 46px;
   border-bottom: 1px solid var(--k-border);
   background: rgba(255,255,255,0.03);
 }
@@ -395,12 +395,12 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
-  padding: 8px 14px 10px;
+  gap: 9px;
+  padding: 11px 16px 13px;
   flex-shrink: 0;
 }
 .key {
-  aspect-ratio: 1.85 / 1;
+  aspect-ratio: 1.68 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1153,7 +1153,7 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
+  padding: 5px 14px;
   border-radius: var(--r-md);
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
