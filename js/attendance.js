@@ -475,7 +475,14 @@ setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
     if (now - _lastMarked[k] >= DUPLICATE_WINDOW_MS) delete _lastMarked[k];
   }
   const _claveDup = nombre + '|' + (WORKER.tipo || '?');
-  if (_lastMarked[_claveDup] && now - _lastMarked[_claveDup] < DUPLICATE_WINDOW_MS) return;
+  if (_lastMarked[_claveDup] && now - _lastMarked[_claveDup] < DUPLICATE_WINDOW_MS) {
+    setWorkerState('IDLE');
+    const restanteMin = Math.max(1, Math.ceil((DUPLICATE_WINDOW_MS - (now - _lastMarked[_claveDup])) / 60000));
+    showRes('warn', 'Espera un momento',
+      `<b>${xh(nombre)}</b> ya registró ${xh(WORKER.tipo || 'esta marcación')} hace muy poco. Vuelve a intentar en ${restanteMin} minuto${restanteMin === 1 ? '' : 's'}.`,
+      []);
+    return;
+  }
 
   // Filtrar si hay doc ingresado y no coincide con el reconocido
   if (WORKER.nombre && WORKER.nombre !== nombre) return;
