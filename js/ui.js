@@ -76,7 +76,11 @@ function showConf(d) {
     _cdInterval = null;
     const camWrap = document.getElementById('camWrap');
     if (camWrap) camWrap.classList.remove('scanning', 'face-ok');
-    if (typeof resetWorker === 'function') resetWorker();
+    // resetDocumentoInicio() limpia también el valor real de #documentoInput
+    // (resetWorker() por sí solo solo restaura el texto visible, dejando los
+    // dígitos viejos pegados por debajo para la siguiente cédula digitada).
+    if (typeof resetDocumentoInicio === 'function') resetDocumentoInicio();
+    else if (typeof resetWorker === 'function') resetWorker();
     mostrarPantalla('pantallaMarcacion');
   }
 
@@ -102,7 +106,11 @@ function showRes(tipo, tit, det, causas) {
   function goBack() {
     const camWrap = document.getElementById('camWrap');
     if (camWrap) camWrap.classList.remove('scanning', 'face-ok');
-    if (typeof resetWorker === 'function') resetWorker();
+    // resetDocumentoInicio() limpia también el valor real de #documentoInput
+    // (resetWorker() por sí solo solo restaura el texto visible, dejando los
+    // dígitos viejos pegados por debajo para la siguiente cédula digitada).
+    if (typeof resetDocumentoInicio === 'function') resetDocumentoInicio();
+    else if (typeof resetWorker === 'function') resetWorker();
     mostrarPantalla('pantallaMarcacion');
   }
 
