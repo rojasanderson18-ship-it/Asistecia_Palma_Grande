@@ -353,7 +353,7 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
     _encolarOfflineConMeta(payload);
     updColaBadge();
     _agregarMarcaLocal(doc, tipo);
-    _lastMarked[nombre] = Date.now();  // bloquear solo tras almacenamiento confirmado
+    _lastMarked[nombre + '|' + tipo] = Date.now();  // bloquear solo tras almacenamiento confirmado
     saveUltima(nombre, tipo, horaStr, gpsOk, Date.now());
     setWorkerState('CONFIRMED');
     showConf({ nombre, tipo, hora: horaStr, gpsOk, sinBiometria, punt: puntLocal, offline: true });
@@ -380,7 +380,7 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
     _encolarOfflineConMeta(payload);
     updColaBadge();
     _agregarMarcaLocal(doc, tipo);
-    _lastMarked[nombre] = Date.now();
+    _lastMarked[nombre + '|' + tipo] = Date.now();
     saveUltima(nombre, tipo, horaStr, gpsOk, Date.now());
     setWorkerState('CONFIRMED');
     showConf({ nombre, tipo, hora: horaStr, gpsOk, sinBiometria, punt: puntLocal, offline: true });
@@ -391,7 +391,7 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
   if (r.idempotente) {
     const horaServidor = r.horaServidor || horaStr;
     _agregarMarcaLocal(doc, tipo);
-    _lastMarked[nombre] = Date.now();
+    _lastMarked[nombre + '|' + tipo] = Date.now();
     saveUltima(r.nombre || nombre, tipo, horaServidor, r.dentroGeocerca, Date.now());
     const puntFinal = r.estadoPuntualidad
       ? { estado: r.estadoPuntualidad, msg: r.mensajePuntualidad || '', minutos: r.minutosDiferencia || 0 }
@@ -432,7 +432,7 @@ async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, ti
 
   /* ── ÉXITO CONFIRMADO POR SERVIDOR ── */
   _agregarMarcaLocal(doc, tipo);
-  _lastMarked[nombre] = Date.now();  // bloquear solo tras confirmación del servidor
+  _lastMarked[nombre + '|' + tipo] = Date.now();  // bloquear solo tras confirmación del servidor
 
   const horaServidor = r.horaServidor || horaStr;
   saveUltima(r.nombre || nombre, tipo, horaServidor, r.dentroGeocerca, Date.now());
@@ -466,13 +466,16 @@ setFaceMatchCallback(async function onFaceMatch(nombre, dist) {
   if (_autoMarkPending) return;
   if (WORKER.state !== 'SCANNING') return;
 
-  // Ventana anti-duplicado (5 min) — solo si la marcación anterior fue confirmada
+  // Ventana anti-duplicado (5 min) — solo bloquea repetir el MISMO tipo de
+  // marcación (evita doble Entrada por detecciones repetidas de cámara), no
+  // una Salida legítima justo después de la Entrada.
   const now = Date.now();
   // Podar entradas vencidas para evitar crecimiento indefinido
   for (const k of Object.keys(_lastMarked)) {
     if (now - _lastMarked[k] >= DUPLICATE_WINDOW_MS) delete _lastMarked[k];
   }
-  if (_lastMarked[nombre] && now - _lastMarked[nombre] < DUPLICATE_WINDOW_MS) return;
+  const _claveDup = nombre + '|' + (WORKER.tipo || '?');
+  if (_lastMarked[_claveDup] && now - _lastMarked[_claveDup] < DUPLICATE_WINDOW_MS) return;
 
   // Filtrar si hay doc ingresado y no coincide con el reconocido
   if (WORKER.nombre && WORKER.nombre !== nombre) return;
