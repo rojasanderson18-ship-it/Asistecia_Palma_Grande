@@ -89,9 +89,10 @@ if (!isAppConfigured()) {
   setTimeout(sincronizarConfigDesdeBackend, 800);
   setTimeout(cargarPersonalDesdeBackend, 1500);
   // Restaurar sesión y pantalla admin si el refresh fue durante una sesión activa
+  // (sin retraso: se ejecuta antes del primer pintado para evitar parpadeo del teclado)
   const _pantallaGuardada = sessionStorage.getItem('_adm_screen');
   if (_pantallaGuardada && typeof _restaurarSesionAdmin === 'function' && _restaurarSesionAdmin()) {
-    setTimeout(() => mostrarPantalla(_pantallaGuardada), 100);
+    mostrarPantalla(_pantallaGuardada);
   }
 }
 
