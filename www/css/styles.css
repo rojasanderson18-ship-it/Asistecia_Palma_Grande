@@ -2349,17 +2349,21 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
 
 /* ── Tabla horario semanal ── */
 .hor-table-wrap {
-  border: 1px solid var(--bd); border-radius: var(--r-md); overflow: hidden;
+  border: 1px solid var(--bd); border-radius: var(--r-md);
+  /* La tabla no cabe completa en pantallas angostas — permitir scroll
+     horizontal en vez de cortar las columnas Tol.E / Tol.S. */
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .hor-table-head {
-  display: grid; grid-template-columns: 44px 44px 1fr 1fr 48px 48px;
-  gap: 4px; padding: 6px 8px;
+  display: grid; grid-template-columns: 44px 44px 80px 80px 48px 48px;
+  gap: 4px; padding: 6px 8px; min-width: 380px;
   background: var(--bg); font-size: 10px; font-weight: 700;
   color: var(--t2); text-transform: uppercase; letter-spacing: .4px;
 }
 .hor-row {
-  display: grid; grid-template-columns: 44px 44px 1fr 1fr 48px 48px;
-  gap: 4px; align-items: center; padding: 6px 8px;
+  display: grid; grid-template-columns: 44px 44px 80px 80px 48px 48px;
+  gap: 4px; align-items: center; padding: 6px 8px; min-width: 380px;
   border-top: 1px solid var(--bd); transition: background .15s;
 }
 .hor-row-off { opacity: .45; }
