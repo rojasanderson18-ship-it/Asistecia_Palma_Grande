@@ -2356,8 +2356,8 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
   -webkit-overflow-scrolling: touch;
 }
 .hor-table-head {
-  display: grid; grid-template-columns: 44px 44px 80px 80px 48px 48px;
-  gap: 4px; padding: 6px 8px; min-width: 380px;
+  display: grid; grid-template-columns: 44px 44px 98px 98px 48px 48px;
+  gap: 4px; padding: 6px 8px; min-width: 434px;
   background: var(--bg); font-size: 10px; font-weight: 700;
   color: var(--t2); text-transform: uppercase; letter-spacing: .4px;
 }
