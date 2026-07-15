@@ -92,7 +92,30 @@ if (!isAppConfigured()) {
   // (sin retraso: se ejecuta antes del primer pintado para evitar parpadeo del teclado)
   const _pantallaGuardada = sessionStorage.getItem('_adm_screen');
   if (_pantallaGuardada && typeof _restaurarSesionAdmin === 'function' && _restaurarSesionAdmin()) {
-    mostrarPantalla(_pantallaGuardada);
+    // mostrarPantalla() sola NO ejecuta la lógica de carga de cada pantalla
+    // (poner la fecha de hoy en Reporte, cargar la lista de Personal, etc.).
+    // Sin esto, tras un refresh la pantalla restaurada se veía vacía hasta
+    // que algo más disparaba la carga por casualidad (se sentía "lento").
+    const _abrirPantallaAdmin = {
+      pantallaConfig:          () => { if (typeof abrirConfig === 'function') abrirConfig(); },
+      pantallaReporte:         () => {
+        mostrarPantalla('pantallaReporte');
+        const repFecha = document.getElementById('repFecha');
+        if (repFecha && !repFecha.value && typeof fechaLocalISO === 'function') repFecha.value = fechaLocalISO();
+        if (typeof cargarReporte === 'function') cargarReporte();
+      },
+      pantallaEnrolar:         () => { if (typeof _abrirEnrolar === 'function') _abrirEnrolar(); },
+      pantallaRostros:         () => { if (typeof abrirGestionRostros === 'function') abrirGestionRostros(); },
+      pantallaPersonal:        () => { if (typeof abrirPersonal === 'function') abrirPersonal(); },
+      pantallaResetDia:        () => { if (typeof abrirResetDia === 'function') abrirResetDia(); },
+      pantallaAgregar:         () => { if (typeof _abrirAgregarPersonal === 'function') _abrirAgregarPersonal(); },
+      // Dependen de una persona seleccionada que no se persiste — volver a la lista.
+      pantallaFichaPersonal:   () => { if (typeof abrirPersonal === 'function') abrirPersonal(); },
+      pantallaFormPersonal:    () => { if (typeof abrirPersonal === 'function') abrirPersonal(); },
+      pantallaImportarPersonal:() => { if (typeof abrirPersonal === 'function') abrirPersonal(); },
+    };
+    const _abrir = _abrirPantallaAdmin[_pantallaGuardada];
+    if (_abrir) _abrir(); else mostrarPantalla(_pantallaGuardada);
   }
 }
 // El atributo data-boot-screen (ver index.html) solo cubre el primer pintado;
