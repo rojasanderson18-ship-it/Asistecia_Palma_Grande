@@ -91,6 +91,12 @@ document.getElementById('menuReporte').onclick = () => {
 
 document.getElementById('menuConfig').onclick = () => abrirConfig();
 
+document.getElementById('menuDispositivos').onclick = () => {
+  abrirConfig();
+  const sec = document.getElementById('dispositivoInfo');
+  if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
 document.getElementById('menuColaPendientes').onclick = () => {
   const cola = JSON.parse(localStorage.getItem('cola') || '[]');
   if (!cola.length) { showToast('No hay marcaciones pendientes de sincronizar'); return; }
