@@ -180,6 +180,14 @@ async function cargarPersonalDesdeBackend() {
     }
     if (d && Array.isArray(d.personal) && d.personal.length) {
       savePersonalCache(d.personal);
+      // Si la pantalla de Gestión de Personal ya estaba abierta cuando terminó
+      // la sincronización, refrescar la lista — si no, se queda vacía/vieja
+      // hasta que el usuario salga y vuelva a entrar manualmente.
+      const pantallaPersonal = document.getElementById('pantallaPersonal');
+      if (pantallaPersonal && pantallaPersonal.classList.contains('show') && typeof renderPersonalList === 'function') {
+        renderPersonalList();
+      }
+      if (typeof actualizarMenuAdmin === 'function') actualizarMenuAdmin();
     }
   } catch {
     // Sin conexión o timeout: usa caché existente silenciosamente
