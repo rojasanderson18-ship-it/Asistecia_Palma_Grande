@@ -550,6 +550,10 @@ async function procesarDoc(docVal, requestId) {
   const gen = (requestId != null) ? requestId : ++_procesarDocGen;
   const getActiveId = () => (typeof _docRequestId !== 'undefined') ? _docRequestId : gen;
 
+  // No procesar marcaciones de asistencia mientras hay un enrolamiento activo
+  // (misma cámara, no pueden correr los dos flujos a la vez).
+  if (typeof modoActual !== 'undefined' && modoActual === 'enrolar') return;
+
   const docNum  = String(docVal).replace(/\D/g, '');
   const docSubEl = document.getElementById('docSub');
   const docChkEl = document.getElementById('docChk');

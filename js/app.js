@@ -162,6 +162,9 @@ function resetDocumentoInicio() {
 
 document.getElementById('teclado').addEventListener('click', e => {
   const t = e.target.closest('.key'); if (!t) return;
+  // El kiosco no puede estar enrolando a una persona Y escaneando asistencia
+  // de otra al mismo tiempo — ambos flujos compiten por la misma cámara.
+  if (typeof modoActual !== 'undefined' && modoActual === 'enrolar') return;
   resetIdleTimer();
   const k = t.dataset.k;
   const docInput = document.getElementById('documentoInput');

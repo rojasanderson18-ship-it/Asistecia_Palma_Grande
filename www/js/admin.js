@@ -29,6 +29,10 @@ function abrirPinScreen(dest) {
   _pinDest = dest || 'menu';
   const pinInput = document.getElementById('pinInput');
   if (pinInput) pinInput.value = '';
+  // Si había un escaneo de asistencia en curso, detenerlo del todo (cámara +
+  // estado) antes de entrar a modo admin — si no, sigue corriendo en segundo
+  // plano y compite por la cámara con un enrolamiento que se inicie después.
+  if (typeof resetDocumentoInicio === 'function') resetDocumentoInicio();
   mostrarPantalla('pantallaPin');
 }
 
