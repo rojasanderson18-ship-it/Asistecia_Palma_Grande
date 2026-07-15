@@ -273,16 +273,16 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px 16px 10px;
+  padding: 8px 16px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* ── RELOJ KIOSCO ── */
 .kiosco-clock {
   text-align: center;
-  padding: 10px 0 6px;
+  padding: 6px 0 4px;
   flex-shrink: 0;
 }
 .kiosco-time {
@@ -364,14 +364,14 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
 }
 .doc-chk svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2.5; }
 .doc-info {
-  padding: 10px 18px;
+  padding: 7px 18px;
   font-size: 12px;
   color: var(--g500);
   font-weight: 600;
   border-top: 1px solid var(--k-border);
   background: rgba(46,173,110,0.06);
   box-sizing: border-box;
-  min-height: 36px;
+  min-height: 28px;
   transition: opacity 0.12s;
 }
 /* En reposo (sin dígitos) el espacio se colapsa del todo, para no robarle
@@ -395,12 +395,12 @@ html[data-boot-screen="pantallaImportarPersonal"]   #pantallaImportarPersonal {
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  padding: 10px 14px 12px;
+  gap: 7px;
+  padding: 8px 14px 10px;
   flex-shrink: 0;
 }
 .key {
-  aspect-ratio: 1.6 / 1;
+  aspect-ratio: 2.35 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1153,7 +1153,7 @@ input[type="range"].fi { padding: 0; border: none; background: transparent; box-
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 7px 14px;
   border-radius: var(--r-md);
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
