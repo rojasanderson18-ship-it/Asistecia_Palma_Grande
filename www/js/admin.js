@@ -604,7 +604,12 @@ function renderPersonalList() {
   const listaEl = document.getElementById('persLista');
   if (!listaEl) return;
   if (!lista.length) {
-    listaEl.innerHTML = '<div class="pers-empty">No hay trabajadores que coincidan</div>';
+    // Distinguir "todavía sincronizando con el servidor" de "de verdad no hay
+    // resultados" — si no, la demora normal de red se ve como un error.
+    const sincronizando = !todos.length && !query && typeof _personalCargando !== 'undefined' && _personalCargando;
+    listaEl.innerHTML = sincronizando
+      ? '<div class="pers-empty"><span class="btn-loading" style="display:inline-block;width:16px;height:16px;border-radius:50%;position:relative;margin-right:6px;vertical-align:-3px;"></span>Cargando personal…</div>'
+      : '<div class="pers-empty">No hay trabajadores que coincidan</div>';
     return;
   }
   listaEl.innerHTML = lista.map(p => {
