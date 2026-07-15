@@ -460,6 +460,12 @@ function _renderResetDia() {
       const qFiltrada = q.filter(i => String(i.documento) !== String(doc));
       localStorage.setItem('cola', JSON.stringify(qFiltrada));
       if (typeof updColaBadge === 'function') updColaBadge();
+      // 4. Si la "última marcación" del kiosco era justo la de esta persona, limpiarla también.
+      try {
+        const ultima = JSON.parse(localStorage.getItem('ultima_marc') || 'null');
+        if (ultima && ultima.nombre === nombre) localStorage.removeItem('ultima_marc');
+      } catch {}
+      if (typeof showUltima === 'function') showUltima();
       showToast(`Registro de ${nombre} borrado (${r.borradas || 0} fila(s) en el servidor)`);
       _renderResetDia();
     };
