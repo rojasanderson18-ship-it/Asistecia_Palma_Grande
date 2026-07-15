@@ -236,6 +236,10 @@ function showUltima() {
   const d = JSON.parse(localStorage.getItem('ultima_marc') || 'null');
   const s = document.getElementById('ultimaSection');
   if (!d || !s) return;
+  // Si la persona ya no existe en el personal activo (eliminada o inactivada),
+  // no dejar su última marcación pegada indefinidamente en la pantalla.
+  const existe = (typeof getPC === 'function') ? getPC().some(p => p.nombre === d.nombre) : true;
+  if (!existe) { s.style.display = 'none'; return; }
   s.style.display = 'block';
   document.getElementById('ulNombre').textContent = d.nombre || '—';
   document.getElementById('ulInic').textContent = inic(d.nombre || '');

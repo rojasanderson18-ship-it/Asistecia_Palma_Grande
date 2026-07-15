@@ -206,9 +206,15 @@ function updColaBadge() {
   const c = JSON.parse(localStorage.getItem('cola') || '[]');
   const badge = document.getElementById('colaBadge');
   const cnt = document.getElementById('colaCnt');
+  const footer = document.querySelector('.app-footer');
   if (!badge) return;
-  if (c.length > 0) { badge.style.display = 'block'; if (cnt) cnt.textContent = c.length; }
-  else { badge.style.display = 'none'; }
+  if (c.length > 0) {
+    badge.style.display = 'block'; if (cnt) cnt.textContent = c.length;
+    if (footer) footer.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+  }
 }
 
 window.addEventListener('online', reintentarCola);
