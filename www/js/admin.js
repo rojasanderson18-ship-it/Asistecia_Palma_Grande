@@ -928,6 +928,10 @@ function _parsearCSV(texto) {
   const sep = lineas[0].includes(';') ? ';' : ',';
   const headers = lineas[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
   const existentes = getPC();
+  // Rastrear documentos/nombres ya vistos DENTRO del propio archivo, para
+  // detectar filas repetidas entre sí (no solo contra lo ya registrado).
+  const docsVistos = new Set();
+  const nomsVistos = new Set();
   return lineas.slice(1).map((linea, idx) => {
     const cols = linea.split(sep).map(c => c.trim().replace(/^["']|["']$/g, ''));
     const row = {};
@@ -936,11 +940,16 @@ function _parsearCSV(texto) {
     const nom = row['nombre'] || row['name'] || '';
     const car = row['cargo'] || row['position'] || '';
     const errores = [];
+    const nomKey = nom.toLowerCase();
     if (!doc) errores.push('Sin documento');
     else if (!/^\d+$/.test(doc)) errores.push('Doc. inválido');
     else if (existentes.find(p => p.documento === doc)) errores.push('Doc. duplicado');
+    else if (docsVistos.has(doc)) errores.push('Doc. repetido en el archivo');
     if (!nom) errores.push('Sin nombre');
-    else if (existentes.find(p => p.nombre.toLowerCase() === nom.toLowerCase())) errores.push('Nombre duplicado');
+    else if (existentes.find(p => p.nombre.toLowerCase() === nomKey)) errores.push('Nombre duplicado');
+    else if (nomsVistos.has(nomKey)) errores.push('Nombre repetido en el archivo');
+    if (doc) docsVistos.add(doc);
+    if (nom) nomsVistos.add(nomKey);
     return { fila: idx + 2, doc, nom, car, errores };
   });
 }
