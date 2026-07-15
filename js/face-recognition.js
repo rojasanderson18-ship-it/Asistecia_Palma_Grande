@@ -262,16 +262,24 @@ function pintarGrilla(id, cb) {
   });
 }
 
+/* Token de sesión de enrolamiento: se incrementa en cada intento NUEVO (no en
+   reintentos internos de carga de modelos). Permite detectar que una ejecución
+   asíncrona vieja quedó "cancelada" aunque modoActual vuelva a valer 'enrolar'
+   por haberse iniciado un enrolamiento distinto mientras la anterior seguía
+   resolviendo una promesa pendiente (evita que revivan enrolamientos ya
+   cancelados y muestren un mensaje de éxito fantasma más tarde). */
+let _enrolGen = 0;
+
 /* Intenta capturar un único paso del enrolamiento.
    Retorna { descriptor, foto } en éxito o { descriptor: null, motivo } si falla. */
-async function _capturarPasoEnrol(paso) {
+async function _capturarPasoEnrol(paso, miGen) {
   const instruccion = PASOS_ENROL[paso];
   _setCamEstado(`${instruccion.ico} ${instruccion.txt}`);
 
   const tInicio = Date.now();
   let intentos  = 0;
 
-  while (modoActual === 'enrolar') {
+  while (modoActual === 'enrolar' && miGen === _enrolGen) {
     if (intentos > 0) await new Promise(r => setTimeout(r, 350));
     intentos++;
 
@@ -307,11 +315,13 @@ async function _capturarPasoEnrol(paso) {
   return { descriptor: null, foto: null, motivo: 'cancelado' };
 }
 
-async function procesarEnrolar() {
+async function procesarEnrolar(_esReintentoModelos) {
   if (modoActual !== 'enrolar') return;
+  if (!_esReintentoModelos) _enrolGen++;
+  const miGen = _enrolGen;
   if (!modOk) {
     if (modErr) { modErr = null; loadModels(); }
-    setTimeout(procesarEnrolar, 800);
+    setTimeout(() => procesarEnrolar(true), 800);
     return;
   }
   const _wkDoc  = document.getElementById('wkDocBlock');
@@ -330,7 +340,7 @@ async function procesarEnrolar() {
     const video = document.getElementById('video');
     const tCam  = Date.now();
     while (Date.now() - tCam < 10000) {
-      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+      if (modoActual !== 'enrolar' || miGen !== _enrolGen) { ocultarBannerEnrolar(); detenerCamara(); return; }
       if (stream && video && video.readyState >= 2) break;
       await new Promise(r => setTimeout(r, 150));
     }
@@ -354,14 +364,14 @@ async function procesarEnrolar() {
 
   let paso = 0;
   while (paso < CAPTURAS_ENROLAR) {
-    if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+    if (modoActual !== 'enrolar' || miGen !== _enrolGen) { ocultarBannerEnrolar(); detenerCamara(); return; }
 
     if (paso > 0) {
       await new Promise(r => setTimeout(r, MIN_DELAY_CAPTURAS));
-      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+      if (modoActual !== 'enrolar' || miGen !== _enrolGen) { ocultarBannerEnrolar(); detenerCamara(); return; }
     }
 
-    const resultado = await _capturarPasoEnrol(paso);
+    const resultado = await _capturarPasoEnrol(paso, miGen);
 
     if (!resultado.descriptor) {
       if (resultado.motivo === 'cancelado') { ocultarBannerEnrolar(); detenerCamara(); return; }
@@ -372,7 +382,7 @@ async function procesarEnrolar() {
         : 'No se pudo capturar este ángulo.';
       _setCamEstado(`⚠ ${motivo} Reintentando…`);
       await new Promise(r => setTimeout(r, 3000));
-      if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+      if (modoActual !== 'enrolar' || miGen !== _enrolGen) { ocultarBannerEnrolar(); detenerCamara(); return; }
       // Reintentar el mismo paso
       continue;
     }
@@ -383,7 +393,7 @@ async function procesarEnrolar() {
     paso++;
   }
 
-  if (modoActual !== 'enrolar') { ocultarBannerEnrolar(); detenerCamara(); return; }
+  if (modoActual !== 'enrolar' || miGen !== _enrolGen) { ocultarBannerEnrolar(); detenerCamara(); return; }
 
   _setCamEstado('Guardando biometría…');
   saveRostroV2(nombreEnrolando, descriptores);
