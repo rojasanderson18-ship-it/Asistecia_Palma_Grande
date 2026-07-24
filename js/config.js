@@ -40,13 +40,13 @@ const CONFIG = {
 
   // horarios por día (0=Dom…6=Sáb). Cargado desde backend.
   HORARIOS: [
-    { dia: 0, nombre: 'Domingo',    activo: false, entrada: '',      salida: '',      tolEntrada: 10, tolSalida: 5 },
-    { dia: 1, nombre: 'Lunes',      activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
-    { dia: 2, nombre: 'Martes',     activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
-    { dia: 3, nombre: 'Miércoles',  activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
-    { dia: 4, nombre: 'Jueves',     activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5 },
-    { dia: 5, nombre: 'Viernes',    activo: true,  entrada: '06:30', salida: '15:00', tolEntrada: 10, tolSalida: 5 },
-    { dia: 6, nombre: 'Sábado',     activo: true,  entrada: '06:30', salida: '12:00', tolEntrada: 10, tolSalida: 5 },
+    { dia: 0, nombre: 'Domingo',    activo: false, entrada: '',      salida: '',      tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 0 },
+    { dia: 1, nombre: 'Lunes',      activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 60 },
+    { dia: 2, nombre: 'Martes',     activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 60 },
+    { dia: 3, nombre: 'Miércoles',  activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 60 },
+    { dia: 4, nombre: 'Jueves',     activo: true,  entrada: '06:30', salida: '14:45', tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 60 },
+    { dia: 5, nombre: 'Viernes',    activo: true,  entrada: '06:30', salida: '15:00', tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 60 },
+    { dia: 6, nombre: 'Sábado',     activo: true,  entrada: '06:30', salida: '12:00', tolEntrada: 10, tolSalida: 5, minutosAlmuerzo: 60 },
   ],
 
   UMBRAL_FACIAL: 0.56,

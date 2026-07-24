@@ -1328,9 +1328,12 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - (horarioDelDia.tolSalida || 5) / 60)
     : -999;
 
-  // Duración real de la jornada configurada para este día (no un valor fijo).
+  // Duración real de la jornada configurada para este día (no un valor fijo),
+  // descontando el almuerzo — el tiempo entre entrada y salida no es todo
+  // tiempo trabajado.
+  const HORAS_ALMUERZO = (horarioDelDia.minutosAlmuerzo || 0) / 60;
   const JORNADA_HORAS = horarioDelDia.activo
-    ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - _horaStrADecimal(horarioDelDia.entrada || '06:00'))
+    ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - _horaStrADecimal(horarioDelDia.entrada || '06:00') - HORAS_ALMUERZO)
     : null;
 
   Object.keys(porPersona).forEach(function(documento) {
@@ -1366,7 +1369,7 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     let minutosExtra = 0;
     if (p.Entrada && p.Salida) {
       jornadasCompletas++;
-      const hd = horaADecimal(p.Salida) - horaADecimal(p.Entrada);
+      const hd = Math.max(0, horaADecimal(p.Salida) - horaADecimal(p.Entrada) - HORAS_ALMUERZO);
       totalHoras += hd;
       horasLaboradas = Math.floor(hd) + 'h ' + Math.round((hd - Math.floor(hd)) * 60) + 'm';
       // Solo cuenta como extra lo que exceda la jornada real configurada ese día,

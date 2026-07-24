@@ -317,6 +317,7 @@ function _renderHorTabla(horarios) {
       <span><input type="time" class="hor-time hor-salida" value="${h.salida || ''}" ${!h.activo ? 'disabled' : ''}></span>
       <span><input type="number" class="hor-tol" value="${h.tolEntrada ?? 10}" min="0" max="60" ${!h.activo ? 'disabled' : ''}></span>
       <span><input type="number" class="hor-tol" value="${h.tolSalida ?? 5}" min="0" max="60" ${!h.activo ? 'disabled' : ''}></span>
+      <span><input type="number" class="hor-tol" value="${h.minutosAlmuerzo ?? 60}" min="0" max="180" ${!h.activo ? 'disabled' : ''}></span>
     `;
     row.querySelector('.hor-activo').addEventListener('change', function() {
       const on = this.checked;
@@ -340,6 +341,7 @@ function _leerHorTabla() {
       salida:     activo ? inputs[2].value : '',
       tolEntrada: activo ? parseInt(inputs[3].value) || 0 : 0,
       tolSalida:  activo ? parseInt(inputs[4].value) || 0 : 0,
+      minutosAlmuerzo: activo ? parseInt(inputs[5].value) || 0 : 0,
     };
   });
 }
