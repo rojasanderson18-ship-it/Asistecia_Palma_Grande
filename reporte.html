@@ -562,7 +562,8 @@ async function consultar(){
     filas.forEach(f=>{
       if(f.entrada)dP++;
       const h=parseFloat(f.horasLaboradas)||0;dH+=h;
-      if(h>0){const j=8.75;dE+=Math.max(0,h-j);dD+=Math.max(0,j-h);}
+      dE+=(f.minutosExtra||0)/60;
+      dD+=(f.minutosDeuda||0)/60;
       if(f.finca){
         if(!porFinca[f.finca])porFinca[f.finca]={p:0,t:0};
         porFinca[f.finca].t++;

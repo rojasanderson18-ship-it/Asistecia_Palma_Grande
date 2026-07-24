@@ -1328,6 +1328,11 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - (horarioDelDia.tolSalida || 5) / 60)
     : -999;
 
+  // Duración real de la jornada configurada para este día (no un valor fijo).
+  const JORNADA_HORAS = horarioDelDia.activo
+    ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - _horaStrADecimal(horarioDelDia.entrada || '06:00'))
+    : null;
+
   Object.keys(porPersona).forEach(function(documento) {
     const p = porPersona[documento];
     porFinca[p.finca] = (porFinca[p.finca] || 0) + 1;
@@ -1358,15 +1363,21 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
       }
     }
     let horasLaboradas = '';
+    let minutosExtra = 0;
     if (p.Entrada && p.Salida) {
       jornadasCompletas++;
       const hd = horaADecimal(p.Salida) - horaADecimal(p.Entrada);
       totalHoras += hd;
       horasLaboradas = Math.floor(hd) + 'h ' + Math.round((hd - Math.floor(hd)) * 60) + 'm';
+      // Solo cuenta como extra lo que exceda la jornada real configurada ese día,
+      // y solo si la salida no fue anticipada (ya cubierta arriba como déficit/autorizada).
+      if (JORNADA_HORAS != null && p.excepcionSalida !== 'SALIDA_ANTICIPADA_AUTORIZADA' && hd > JORNADA_HORAS) {
+        minutosExtra = Math.round((hd - JORNADA_HORAS) * 60);
+      }
     }
     filas.push({ documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
                  entrada: p.Entrada || '', salida: p.Salida || '', horasLaboradas: horasLaboradas,
-                 marcas: marcas, minutosDeuda: minutosDeuda, puntualidad: puntualidad });
+                 marcas: marcas, minutosDeuda: minutosDeuda, minutosExtra: minutosExtra, puntualidad: puntualidad });
   });
 
   return _respuestaJson({
