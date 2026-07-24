@@ -561,9 +561,10 @@ async function consultar(){
       (!filtFinca||f.finca===filtFinca)&&(!filtCargo||f.cargo===filtCargo)
       &&(!filtPersona||String(f.documento)===filtPersona)
     );
-    let dP=0,dT=data.tardanzas||0,dH=0,dD=0,dE=0;
+    let dP=0,dT=0,dH=0,dD=0,dE=0;
     filas.forEach(f=>{
       if(f.entrada)dP++;
+      if((f.puntualidad||[]).some(x=>x.tipo==='Entrada'&&x.estado==='tarde'))dT++;
       const h=parseFloat(f.horasLaboradas)||0;dH+=h;
       dE+=(f.minutosExtra||0)/60;
       dD+=(f.minutosDeuda||0)/60;
@@ -574,18 +575,20 @@ async function consultar(){
       }
       detalle.push({...f,fechaISO:fecha});
     });
-    const dA=Math.max(0,(data.totalPersonas||0)-dP);
+
+    /* Quiénes no se registraron ese día: activos (según los filtros) que no
+       aparecen en ninguna marcación — sirve tanto para el KPI de Ausentes
+       como para la lista cuando se activa "Solo quienes no se registraron". */
+    const registrados=new Set((data.filas||[]).map(f=>String(f.documento)));
+    const ausentesDia=_personalActivos.filter(p=>!registrados.has(String(p.documento))
+        &&(!filtCargo||p.cargo===filtCargo)
+        &&(!filtPersona||String(p.documento)===filtPersona));
+    ausentesDia.forEach(p=>ausentes.push({...p,fechaISO:fecha}));
+    const dA=ausentesDia.length;
+
     totP+=dP;totT+=dT;totA+=dA;
     totH+=dH;totE+=dE;totD+=dD;
     resumen.push({fecha,p:dP,t:dT,a:dA,h:dH.toFixed(1),d:dD.toFixed(1)});
-
-    /* Quiénes no se registraron ese día: activos que no aparecen en ninguna marcación */
-    const registrados=new Set((data.filas||[]).map(f=>String(f.documento)));
-    _personalActivos
-      .filter(p=>!registrados.has(String(p.documento))
-        &&(!filtCargo||p.cargo===filtCargo)
-        &&(!filtPersona||String(p.documento)===filtPersona))
-      .forEach(p=>ausentes.push({...p,fechaISO:fecha}));
   }
 
   /* KPIs */
