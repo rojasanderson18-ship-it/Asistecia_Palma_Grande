@@ -102,6 +102,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);-webkit-font-smoot
 .campo-spinner{justify-content:center;padding-bottom:8px;}
 .spinner-sm{width:20px;height:20px;border-width:2.5px;}
 .filtros-err{font-size:11.5px;color:var(--re);font-weight:600;margin-top:8px;min-height:14px;}
+.kpis-nota{display:none;font-size:11.5px;color:var(--t2);background:var(--bll);border:1px solid #BBDEFB;border-radius:8px;padding:8px 12px;margin-bottom:11px;}
 
 /* KPIs */
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:22px;}
@@ -334,6 +335,7 @@ tr.fila-tarde:hover td{background:#FFE0E0;}
     </div>
 
     <!-- KPIs -->
+    <div class="kpis-nota" id="kpisNota">Las tarjetas de abajo siempre resumen el período completo, sin importar el filtro de "Solo quienes no se registraron" — ese filtro solo cambia la tabla de Detalle de empleados.</div>
     <div class="kpis" id="seccionKpis">
       <div class="kpi">
         <div class="kpi-ico vd"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
@@ -404,7 +406,7 @@ tr.fila-tarde:hover td{background:#FFE0E0;}
     <div class="card" id="seccionEmpleados">
       <div class="card-hdr">
         <div>
-          <div class="card-tit">Detalle de empleados</div>
+          <div class="card-tit" id="detalleTit">Detalle de empleados</div>
           <div class="card-sub" id="detalleSub">Todas las marcaciones del período</div>
         </div>
       </div>
@@ -550,6 +552,7 @@ async function consultar(){
   spinner.style.display='none';
 
   const soloAusentes=document.getElementById('filtroSoloAusentes').checked;
+  document.getElementById('kpisNota').style.display=soloAusentes?'':'none';
   let totP=0,totT=0,totA=0,totH=0,totE=0,totD=0;
   const porFinca={};
   const resumen=[];
@@ -631,6 +634,7 @@ async function consultar(){
   /* Detalle */
   const tbD=document.getElementById('tbodyDetalle');
   if(soloAusentes){
+    document.getElementById('detalleTit').textContent='Empleados sin registro';
     document.getElementById('detalleSub').textContent=
       `${ausentes.length} sin registro · ${isoA(ini)} al ${isoA(fin)}`;
     if(!ausentes.length){tbD.innerHTML='<tr><td colspan="9" class="vacio">Todos se registraron en el período consultado</td></tr>';}
@@ -647,6 +651,7 @@ async function consultar(){
     </tr>`).join('');
     return;
   }
+  document.getElementById('detalleTit').textContent='Detalle de empleados';
   document.getElementById('detalleSub').textContent=
     `${detalle.length} registros · ${isoA(ini)} al ${isoA(fin)}`;
   if(!detalle.length){tbD.innerHTML='<tr><td colspan="9" class="vacio">Sin marcaciones</td></tr>';}
