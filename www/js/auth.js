@@ -180,6 +180,32 @@ async function autorizarDispositivo(nombre) {
   }
 }
 
+/* ── Listar dispositivos autorizados (requiere sesión admin activa) ── */
+async function listarDispositivos() {
+  if (!CONFIG.GS_URL) return { ok: false, error: 'Sin URL de servidor' };
+  if (!_adminToken) return { ok: false, error: 'Sesión expirada, vuelve a ingresar el PIN' };
+  try {
+    const d = await _postGs({ accion: 'listarDispositivos', token: _adminToken });
+    if (d.ok) return { ok: true, dispositivos: d.dispositivos || [] };
+    return { ok: false, error: d.error || 'No se pudo obtener la lista' };
+  } catch {
+    return { ok: false, error: 'Sin conexión al servidor' };
+  }
+}
+
+/* ── Revocar un dispositivo autorizado (requiere sesión admin activa) ── */
+async function revocarDispositivo(deviceId) {
+  if (!CONFIG.GS_URL) return { ok: false, error: 'Sin URL de servidor' };
+  if (!_adminToken) return { ok: false, error: 'Sesión expirada, vuelve a ingresar el PIN' };
+  try {
+    const d = await _postGs({ accion: 'revocarDispositivo', token: _adminToken, deviceId });
+    if (d.ok) return { ok: true };
+    return { ok: false, error: d.error || 'No se pudo revocar el dispositivo' };
+  } catch {
+    return { ok: false, error: 'Sin conexión al servidor' };
+  }
+}
+
 /* ── Cambiar PIN en backend (requiere token de sesión activo + PIN actual) ── */
 async function cambiarPin(pinActual, pinNuevo) {
   if (!pinActual || !pinNuevo) return { ok: false, error: 'Ingresa todos los campos' };

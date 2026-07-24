@@ -368,7 +368,39 @@ function abrirConfig() {
     const tok = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
     infoEl.textContent = tok ? '✓ Este dispositivo ya está autorizado' : 'Sin autorizar — usa el botón para autorizar';
   }
+  _cargarListaDispositivos();
   mostrarPantalla('pantallaConfig');
+}
+
+async function _cargarListaDispositivos() {
+  const cont = document.getElementById('listaDispositivos');
+  if (!cont) return;
+  cont.innerHTML = '<div style="font-size:11.5px;color:var(--t2);">Cargando…</div>';
+  const r = await listarDispositivos();
+  if (!r.ok) { cont.innerHTML = `<div style="font-size:11.5px;color:var(--re);">${xh(r.error || 'No se pudo cargar la lista')}</div>`; return; }
+  const esteId = (typeof _getDeviceId === 'function') ? _getDeviceId() : null;
+  const activos = r.dispositivos.filter(d => d.estado === 'activo');
+  if (!activos.length) { cont.innerHTML = '<div style="font-size:11.5px;color:var(--t2);">Ningún dispositivo autorizado todavía.</div>'; return; }
+  cont.innerHTML = activos.map(d => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 12px;">
+      <div style="min-width:0;">
+        <div style="font-size:12px;font-weight:700;">${xh(d.nombre || 'Kiosco')}${d.deviceId === esteId ? ' <span style="color:var(--dg);">(este)</span>' : ''}</div>
+        <div style="font-size:10.5px;color:var(--t2);margin-top:1px;">Autorizado: ${xh(d.fechaRegistro || '—')}</div>
+      </div>
+      <button data-device-id="${xh(d.deviceId)}" class="btn-revocar-disp" style="flex-shrink:0;background:var(--rl);border:1px solid #FFCDD2;color:var(--re);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">Revocar</button>
+    </div>
+  `).join('');
+  cont.querySelectorAll('.btn-revocar-disp').forEach(btn => {
+    btn.onclick = async () => {
+      const deviceId = btn.dataset.deviceId;
+      const ok = await showConfirm('¿Revocar el acceso de este dispositivo? Dejará de poder registrar asistencia hasta autorizarlo de nuevo.');
+      if (!ok) return;
+      btn.disabled = true; btn.textContent = 'Revocando…';
+      const r2 = await revocarDispositivo(deviceId);
+      if (r2.ok) { showToast('✓ Dispositivo revocado'); _cargarListaDispositivos(); }
+      else { showToast('Error: ' + (r2.error || 'No se pudo revocar')); btn.disabled = false; btn.textContent = 'Revocar'; }
+    };
+  });
 }
 
 document.getElementById('cfgUmbral').addEventListener('input', function() {
@@ -400,6 +432,7 @@ document.getElementById('btnAutorizarDispositivo').addEventListener('click', asy
   if (r.ok) {
     if (infoEl) infoEl.textContent = r.nuevo ? '✓ Dispositivo autorizado correctamente' : '✓ Dispositivo ya estaba autorizado (token actualizado)';
     showToast('✓ Dispositivo autorizado');
+    _cargarListaDispositivos();
   } else {
     if (infoEl) infoEl.textContent = '✗ ' + (r.error || 'Error al autorizar');
     showToast('Error: ' + (r.error || 'No se pudo autorizar'));
@@ -802,6 +835,14 @@ function renderPersonalList() {
   };
 }
 
+async function _cargarFotoFicha(documento) {
+  const r = await enviarConResp({ accion: 'obtenerFoto', token: getAdminToken(), documento });
+  if (!r || !r.ok || !r.b64) return;
+  const av = document.getElementById('fichaAv');
+  if (!av) return;
+  av.innerHTML = `<img src="data:${r.mimeType || 'image/jpeg'};base64,${r.b64}" style="width:100%;height:100%;object-fit:cover;">`;
+}
+
 /* ── Ficha ── */
 function abrirFichaPersonal(nombre) {
   _persNombreActual = nombre;
@@ -817,7 +858,7 @@ function abrirFichaPersonal(nombre) {
   if (!fichaEl) return;
   fichaEl.innerHTML = `
     <div class="ficha-hero">
-      <div class="ficha-av" style="background:${activo ? 'var(--xl)' : 'rgba(255,255,255,0.08)'};">
+      <div class="ficha-av" id="fichaAv" style="background:${activo ? 'var(--xl)' : 'rgba(255,255,255,0.08)'};overflow:hidden;">
         <span style="color:${activo ? 'var(--dg)' : 'var(--t2)'};">${xh(inic(nombre))}</span>
       </div>
       <div class="ficha-hero-info">
@@ -879,6 +920,7 @@ function abrirFichaPersonal(nombre) {
       </div>
     </div>
   `;
+  if (p.documento) _cargarFotoFicha(p.documento);
   const enrolBtn = fichaEl.querySelector('#fichaBtnEnrolar') || fichaEl.querySelector('#fichaBtnReenrolar');
   if (enrolBtn) enrolBtn.onclick = () => _iniciarEnrolDesdePersonal(nombre);
   const borrarRostroBtn = fichaEl.querySelector('#fichaBtnBorrarRostro');
