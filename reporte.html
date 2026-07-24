@@ -312,12 +312,12 @@ tr:hover td{background:#FAFBFA;}
           <label>Cargo</label>
           <select id="filtroCargo">
             <option value="">Todos</option>
-            <option>Operario de campo / cosechero</option>
-            <option>Supervisor</option>
-            <option>Conductor</option>
-            <option>Mecánico / taller</option>
-            <option>Administrativo</option>
-            <option>Aplicador (fertilización/sanidad)</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Persona</label>
+          <select id="filtroPersona">
+            <option value="">Todas</option>
           </select>
         </div>
         <button class="btn-filtrar" id="btnFiltrar">FILTRAR</button>
@@ -427,7 +427,7 @@ function isoA(iso){const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
 
 /* Init */
 const hoy=hoyISO();
-document.getElementById('fechaInicio').value=addDays(hoy,-6);
+document.getElementById('fechaInicio').value=hoy;
 document.getElementById('fechaFin').value=hoy;
 document.getElementById('fechaGen').textContent=new Date().toLocaleString('es-CO');
 document.getElementById('sbFecha').textContent=new Date().toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long'});
@@ -462,6 +462,7 @@ async function intentarLogin(){
       sessionStorage.setItem('_rep_tok',_token);
       document.getElementById('loginOverlay').style.display='none';
       document.getElementById('layoutApp').style.display='';
+      cargarFiltros();
       consultar();
     }else{
       err.textContent=d.error||'PIN incorrecto';
@@ -474,6 +475,21 @@ async function intentarLogin(){
 
 document.getElementById('btnLogin').onclick=intentarLogin;
 document.getElementById('loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')intentarLogin();});
+
+/* Cargos y personas reales de la app (no una lista fija) */
+async function cargarFiltros(){
+  const d=await _postGs({accion:'listarPersonal',token:_token});
+  if(!d||!d.ok)return;
+  const activos=(d.personal||[]).filter(p=>(p.estado||'ACTIVO').toUpperCase()!=='INACTIVO');
+
+  const cargos=[...new Set(activos.map(p=>p.cargo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  const selCargo=document.getElementById('filtroCargo');
+  selCargo.innerHTML='<option value="">Todos</option>'+cargos.map(c=>`<option>${esc(c)}</option>`).join('');
+
+  const personas=activos.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  const selPersona=document.getElementById('filtroPersona');
+  selPersona.innerHTML='<option value="">Todas</option>'+personas.map(p=>`<option value="${esc(p.documento)}">${esc(p.nombre)}</option>`).join('');
+}
 
 async function fetchDia(ddmmyyyy){
   const d=await _postGs({accion:'resumenDashboard',fecha:ddmmyyyy,token:_token});
@@ -506,6 +522,7 @@ async function consultar(){
 
   const filtFinca=document.getElementById('filtroFinca').value;
   const filtCargo=document.getElementById('filtroCargo').value;
+  const filtPersona=document.getElementById('filtroPersona').value;
 
   const fechas=[];
   for(let i=0;i<dias;i++)fechas.push(addDays(ini,i));
@@ -528,6 +545,7 @@ async function consultar(){
     if(!data||!data.ok)continue;
     const filas=(data.filas||[]).filter(f=>
       (!filtFinca||f.finca===filtFinca)&&(!filtCargo||f.cargo===filtCargo)
+      &&(!filtPersona||String(f.documento)===filtPersona)
     );
     let dP=0,dT=data.tardanzas||0,dH=0,dD=0,dE=0;
     filas.forEach(f=>{
@@ -624,6 +642,7 @@ document.getElementById('sbPdf').onclick=()=>window.print();
 if(_token){
   document.getElementById('loginOverlay').style.display='none';
   document.getElementById('layoutApp').style.display='';
+  cargarFiltros();
   consultar();
 }
 </script>
