@@ -173,6 +173,18 @@ tr:hover td{background:#FAFBFA;}
 /* PIE */
 .pie{text-align:center;font-size:11px;color:var(--t2);padding:16px;border-top:1px solid var(--bd);background:var(--wh);}
 
+/* LOGIN OVERLAY */
+.login-overlay{position:fixed;inset:0;background:var(--dk);display:flex;align-items:center;justify-content:center;z-index:100;}
+.login-box{background:var(--wh);border-radius:16px;padding:28px 26px;width:min(320px,90vw);box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;}
+.login-box .sb-logo{width:52px;height:52px;margin:0 auto 14px;background:var(--xl);border:1px solid var(--xb);}
+.login-box h2{font-size:16px;font-weight:800;margin-bottom:4px;}
+.login-box p{font-size:12px;color:var(--t2);margin-bottom:16px;}
+#loginPin{width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--bd);text-align:center;letter-spacing:8px;font-size:20px;font-family:'Inter',sans-serif;outline:none;margin-bottom:12px;}
+#loginPin:focus{border-color:var(--dg);}
+.btn-login{width:100%;padding:11px;border-radius:9px;border:none;background:var(--dg);color:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-login:disabled{background:var(--t2);cursor:not-allowed;}
+.login-err{font-size:12px;color:var(--re);margin-top:10px;min-height:16px;}
+
 @media(max-width:768px){
   .sidebar{display:none;}
   .main{margin-left:0;}
@@ -190,7 +202,27 @@ tr:hover td{background:#FAFBFA;}
 </style>
 </head>
 <body>
-<div class="layout">
+
+<!-- ══════ LOGIN (PIN admin) ══════ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="sb-logo" style="border-radius:14px;">
+      <svg viewBox="0 0 48 48" width="30" height="30">
+        <rect x="21" y="28" width="5" height="13" rx="2.5" fill="#2E7D32"/>
+        <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#2E7D32" transform="rotate(-30 24 21)"/>
+        <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#2E7D32" transform="rotate(30 24 21)"/>
+        <ellipse cx="24" cy="18" rx="2.8" ry="10" fill="#2E7D32"/>
+      </svg>
+    </div>
+    <h2>Reporte de asistencia</h2>
+    <p>Ingresa el PIN de administrador para ver los datos</p>
+    <input type="password" id="loginPin" maxlength="8" inputmode="numeric" placeholder="••••" autocomplete="off">
+    <button class="btn-login" id="btnLogin">Ingresar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="layout" id="layoutApp" style="display:none;">
 
 <!-- ══════ SIDEBAR ══════ -->
 <aside class="sidebar">
@@ -417,13 +449,64 @@ document.getElementById('fechaFin').value=hoy;
 document.getElementById('fechaGen').textContent=new Date().toLocaleString('es-CO');
 document.getElementById('sbFecha').textContent=new Date().toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long'});
 
-async function fetchDia(ddmmyyyy){
-  const r=await fetch(`${GS_URL}?accion=resumenDashboard&fecha=${encodeURIComponent(ddmmyyyy)}&_=${Date.now()}`,{cache:'no-store'});
+/* ── Sesión admin (PIN → token, igual que la app) ── */
+let _token=sessionStorage.getItem('_rep_tok')||null;
+
+async function _sha256(texto){
+  const enc=new TextEncoder();
+  const buf=await crypto.subtle.digest('SHA-256',enc.encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function _postGs(payload){
+  const r=await fetch(GS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
   if(!r.ok)throw new Error(r.status);
   return r.json();
 }
 
+async function intentarLogin(){
+  const pin=document.getElementById('loginPin').value;
+  const btn=document.getElementById('btnLogin');
+  const err=document.getElementById('loginErr');
+  err.textContent='';
+  if(!pin){err.textContent='Ingresa el PIN';return;}
+  btn.disabled=true;btn.textContent='Verificando…';
+  try{
+    const hash=await _sha256(pin);
+    const d=await _postGs({accion:'login',hash,deviceId:'reporte-web'});
+    if(d.ok&&d.token){
+      _token=d.token;
+      sessionStorage.setItem('_rep_tok',_token);
+      document.getElementById('loginOverlay').style.display='none';
+      document.getElementById('layoutApp').style.display='';
+      consultar();
+    }else{
+      err.textContent=d.error||'PIN incorrecto';
+    }
+  }catch{
+    err.textContent='Sin conexión al servidor';
+  }
+  btn.disabled=false;btn.textContent='Ingresar';
+}
+
+document.getElementById('btnLogin').onclick=intentarLogin;
+document.getElementById('loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')intentarLogin();});
+
+async function fetchDia(ddmmyyyy){
+  const d=await _postGs({accion:'resumenDashboard',fecha:ddmmyyyy,token:_token});
+  if(d&&d.ok===false&&/sesión|sesion|token/i.test(d.error||'')){
+    _token=null;
+    sessionStorage.removeItem('_rep_tok');
+    document.getElementById('layoutApp').style.display='none';
+    document.getElementById('loginOverlay').style.display='flex';
+    document.getElementById('loginErr').textContent='Sesión expirada — ingresa el PIN de nuevo';
+    throw new Error('sesión expirada');
+  }
+  return d;
+}
+
 async function consultar(){
+  if(!_token)return;
   const ini=document.getElementById('fechaInicio').value;
   const fin=document.getElementById('fechaFin').value;
   if(!ini||!fin||ini>fin){alert('Verifica las fechas');return;}
@@ -542,7 +625,11 @@ document.getElementById('btnFiltrar').onclick=consultar;
 document.getElementById('btnPdf').onclick=()=>window.print();
 document.getElementById('sbPdf').onclick=()=>window.print();
 
-consultar();
+if(_token){
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('layoutApp').style.display='';
+  consultar();
+}
 </script>
 </body>
 </html>
