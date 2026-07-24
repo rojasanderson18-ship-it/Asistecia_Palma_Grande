@@ -162,6 +162,9 @@ tr:hover td{background:#FAFBFA;}
 .badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;}
 .badge.completa{background:var(--xl);color:var(--dg);}
 .badge.incompleta{background:var(--orl);color:var(--or);}
+.badge.tarde{background:var(--rl);color:var(--re);margin-left:4px;font-size:9.5px;padding:1px 6px;vertical-align:middle;}
+tr.fila-tarde td{background:var(--rl);}
+tr.fila-tarde:hover td{background:#FFE0E0;}
 .tn{font-variant-numeric:tabular-nums;font-weight:600;}
 .tb{font-weight:700;}
 .tc-am{color:var(--or);font-weight:700;}
@@ -643,7 +646,10 @@ async function consultar(){
   document.getElementById('detalleSub').textContent=
     `${detalle.length} registros · ${isoA(ini)} al ${isoA(fin)}`;
   if(!detalle.length){tbD.innerHTML='<tr><td colspan="9" class="vacio">Sin marcaciones</td></tr>';}
-  else tbD.innerHTML=detalle.map(f=>`<tr>
+  else tbD.innerHTML=detalle.map(f=>{
+    const pTarde=(f.puntualidad||[]).find(x=>x.tipo==='Entrada'&&x.estado==='tarde');
+    const pTemprano=(f.puntualidad||[]).find(x=>x.tipo==='Salida'&&x.estado==='temprano');
+    return `<tr class="${pTarde?'fila-tarde':''}">
     <td>${f.fotoURL
       ?`<img class="foto-mini" src="${esc(f.fotoURL)}" alt="" loading="lazy">`
       :`<div class="foto-mini" style="background:var(--xl)">${esc((f.nombre||'?').split(' ').map(p=>p[0]).join('').slice(0,2))}</div>`
@@ -652,11 +658,12 @@ async function consultar(){
     <td class="tn">${esc(f.documento||'—')}</td>
     <td>${esc(f.cargo||'—')}</td>
     <td>${esc(f.finca||'—')}</td>
-    <td class="tn">${esc(f.entrada||'—')}</td>
-    <td class="tn">${esc(f.salida||'—')}</td>
+    <td class="tn">${esc(f.entrada||'—')}${pTarde?` <span class="badge tarde" title="${pTarde.minutos} min tarde">Tarde</span>`:''}</td>
+    <td class="tn">${esc(f.salida||'—')}${pTemprano?` <span class="badge tarde" title="${pTemprano.minutos} min antes">Anticipada</span>`:''}</td>
     <td class="tn">${esc(f.horasLaboradas||'—')}</td>
     <td>${f.entrada&&f.salida?'<span class="badge completa">Completa</span>':'<span class="badge incompleta">Incompleta</span>'}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 /* Navegación del menú lateral: todo vive en una sola página, cada ítem
