@@ -103,6 +103,9 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);-webkit-font-smoot
 }
 .btn-filtrar:hover{opacity:.88;}
 .btn-filtrar:disabled{background:var(--t2);cursor:not-allowed;}
+.campo-check{justify-content:flex-end;}
+.chk-lbl{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap;padding:8px 2px;cursor:pointer;}
+.chk-lbl input{width:15px;height:15px;accent-color:var(--dg);cursor:pointer;}
 
 /* KPIs */
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:22px;}
@@ -320,6 +323,10 @@ tr:hover td{background:#FAFBFA;}
             <option value="">Todas</option>
           </select>
         </div>
+        <div class="campo campo-check">
+          <label>&nbsp;</label>
+          <label class="chk-lbl"><input type="checkbox" id="filtroSoloAusentes"> Solo quienes no se registraron</label>
+        </div>
         <button class="btn-filtrar" id="btnFiltrar">FILTRAR</button>
       </div>
     </div>
@@ -477,10 +484,12 @@ document.getElementById('btnLogin').onclick=intentarLogin;
 document.getElementById('loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')intentarLogin();});
 
 /* Cargos y personas reales de la app (no una lista fija) */
+let _personalActivos=[];
 async function cargarFiltros(){
   const d=await _postGs({accion:'listarPersonal',token:_token});
   if(!d||!d.ok)return;
   const activos=(d.personal||[]).filter(p=>(p.estado||'ACTIVO').toUpperCase()!=='INACTIVO');
+  _personalActivos=activos;
 
   const cargos=[...new Set(activos.map(p=>p.cargo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
   const selCargo=document.getElementById('filtroCargo');
@@ -536,10 +545,12 @@ async function consultar(){
 
   btn.disabled=false;btn.textContent='FILTRAR';
 
+  const soloAusentes=document.getElementById('filtroSoloAusentes').checked;
   let totP=0,totT=0,totA=0,totH=0,totE=0,totD=0;
   const porFinca={};
   const resumen=[];
   const detalle=[];
+  const ausentes=[];
 
   for(const {fecha,data} of resultados){
     if(!data||!data.ok)continue;
@@ -563,6 +574,14 @@ async function consultar(){
     totP+=dP;totT+=dT;totA+=dA;
     totH+=dH;totE+=dE;totD+=dD;
     resumen.push({fecha,p:dP,t:dT,a:dA,h:dH.toFixed(1),d:dD.toFixed(1)});
+
+    /* Quiénes no se registraron ese día: activos que no aparecen en ninguna marcación */
+    const registrados=new Set((data.filas||[]).map(f=>String(f.documento)));
+    _personalActivos
+      .filter(p=>!registrados.has(String(p.documento))
+        &&(!filtCargo||p.cargo===filtCargo)
+        &&(!filtPersona||String(p.documento)===filtPersona))
+      .forEach(p=>ausentes.push({...p,fechaISO:fecha}));
   }
 
   /* KPIs */
@@ -602,9 +621,26 @@ async function consultar(){
   </tr>`).join('');
 
   /* Detalle */
+  const tbD=document.getElementById('tbodyDetalle');
+  if(soloAusentes){
+    document.getElementById('detalleSub').textContent=
+      `${ausentes.length} sin registro · ${isoA(ini)} al ${isoA(fin)}`;
+    if(!ausentes.length){tbD.innerHTML='<tr><td colspan="9" class="vacio">Todos se registraron en el período consultado</td></tr>';}
+    else tbD.innerHTML=ausentes.map(p=>`<tr>
+      <td><div class="foto-mini" style="background:var(--rl);color:var(--re);">${esc((p.nombre||'?').split(' ').map(x=>x[0]).join('').slice(0,2))}</div></td>
+      <td class="tb">${esc(p.nombre||'—')}</td>
+      <td class="tn">${esc(p.documento||'—')}</td>
+      <td>${esc(p.cargo||'—')}</td>
+      <td>—</td>
+      <td class="tn">—</td>
+      <td class="tn">—</td>
+      <td class="tn">—</td>
+      <td><span class="badge incompleta">Sin registro · ${isoA(p.fechaISO)}</span></td>
+    </tr>`).join('');
+    return;
+  }
   document.getElementById('detalleSub').textContent=
     `${detalle.length} registros · ${isoA(ini)} al ${isoA(fin)}`;
-  const tbD=document.getElementById('tbodyDetalle');
   if(!detalle.length){tbD.innerHTML='<tr><td colspan="9" class="vacio">Sin marcaciones</td></tr>';}
   else tbD.innerHTML=detalle.map(f=>`<tr>
     <td>${f.fotoURL
