@@ -197,8 +197,10 @@ tr.fila-tarde:hover td{background:#FFE0E0;}
   .topbar,.content{padding-left:14px;padding-right:14px;}
   .kpis{grid-template-columns:repeat(2,1fr);}
 }
+.print-only{display:none;}
 @media print{
-  .sidebar,.topbar,.filtros-card,.no-print{display:none!important;}
+  .sidebar,.topbar,.filtros-card,.no-print,.pant-only{display:none!important;}
+  .print-only{display:inline!important;}
   .main{margin-left:0;}
   .content{padding:0;}
   body{background:#fff;}
@@ -654,6 +656,15 @@ async function consultar(){
     </tr>`).join('');
     return;
   }
+  /* Si hay horas extra sin autorizar, no deben contarse ni imprimirse en el
+     PDF — se resta ese tiempo del total mostrado hasta que se autorice. */
+  function _horasParaImprimir(f){
+    if(!f.horasLaboradas || f.extraAutorizada || !(f.minutosExtra>0)) return f.horasLaboradas||'—';
+    const m=f.horasLaboradas.match(/(\d+)h\s*(\d+)m/);
+    if(!m) return f.horasLaboradas;
+    const totalMin=Math.max(0,parseInt(m[1])*60+parseInt(m[2])-f.minutosExtra);
+    return Math.floor(totalMin/60)+'h '+(totalMin%60)+'m';
+  }
   document.getElementById('detalleTit').textContent='Detalle de empleados';
   document.getElementById('detalleSub').textContent=
     `${detalle.length} registros · ${isoA(ini)} al ${isoA(fin)}`;
@@ -672,11 +683,13 @@ async function consultar(){
     <td>${esc(f.finca||'—')}</td>
     <td class="tn">${esc(f.entrada||'—')}${pTarde?` <span class="badge tarde" title="${pTarde.minutos} min tarde">Tarde</span>`:''}</td>
     <td class="tn">${esc(f.salida||'—')}${pTemprano?` <span class="badge tarde" title="${pTemprano.minutos} min antes">Anticipada</span>`:''}</td>
-    <td class="tn">${esc(f.horasLaboradas||'—')}${f.minutosExtra>0
+    <td class="tn">
+      <span class="pant-only">${esc(f.horasLaboradas||'—')}</span><span class="print-only">${esc(_horasParaImprimir(f))}</span>${f.minutosExtra>0
       ?(f.extraAutorizada
         ?` <span class="badge completa" title="${f.minutosExtra} min extra">Extra ✓</span>`
-        :` <button class="btn-autorizar-extra" data-doc="${esc(f.documento)}" data-fecha="${esc(f.fechaISO)}" title="${f.minutosExtra} min extra sin autorizar">Autorizar extra</button>`)
-      :''}</td>
+        :` <button class="btn-autorizar-extra no-print" data-doc="${esc(f.documento)}" data-fecha="${esc(f.fechaISO)}" title="${f.minutosExtra} min extra sin autorizar">Autorizar extra</button>`)
+      :''}
+    </td>
     <td>${f.entrada&&f.salida?'<span class="badge completa">Completa</span>':'<span class="badge incompleta">Incompleta</span>'}</td>
   </tr>`;
   }).join('');
