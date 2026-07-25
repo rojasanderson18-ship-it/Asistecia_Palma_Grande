@@ -30,6 +30,7 @@
  *   POST accion=resumenDashboard        — resumen del día
  *   POST accion=borrarMarcacionesDelDia — borrar marcaciones de una persona en una fecha (admin)
  *   POST accion=autorizarSalidaAnticipada — autorizar salida anticipada ya registrada (admin)
+ *   POST accion=autorizarHorasExtra     — autorizar horas extra ya registradas (admin)
  *   POST accion=obtenerFoto             — foto privada de empleado (base64)
  *   POST accion=autorizarDispositivo    — registrar y autorizar kiosco
  *   POST accion=listarDispositivos      — ver dispositivos autorizados
@@ -280,7 +281,8 @@ var COLUMNAS_MARCACIONES_V4 = [
   'Latitud','Longitud','PrecisionGPS','EstadoGPS','DistanciaGeocerca','DentroGeocerca',
   'DistanciaFacial','SinBiometria',
   'SupervisorID','TipoExcepcion','MotivoSupervisor','FechaHoraAutorizacion',
-  'DeviceID','AppVersion','SinConexion','FechaSincronizacion','ResultadoFacial'
+  'DeviceID','AppVersion','SinConexion','FechaSincronizacion','ResultadoFacial',
+  'ExtraAutorizada'
 ];
 
 // Mapa de alias: cabecera antigua → nombre canónico en COLUMNAS_MARCACIONES_V4
@@ -870,6 +872,35 @@ function doPost(e) {
       return _respuestaJson({ ok: false, error: 'No se encontró una Salida registrada ese día para esta persona' });
     }
 
+    /* ── Autorizar horas extra ya registradas (requiere sesión admin) ── */
+    if (accion === 'autorizarHorasExtra') {
+      const sv = _validarSesion(datos.token, ['admin']);
+      if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
+      const documento = String(datos.documento || '').trim();
+      if (!documento) return _respuestaJson({ ok: false, error: 'documento requerido' });
+      const fecha = _isoADdMmYyyy(datos.fecha) || String(datos.fecha || '').trim();
+      if (!fecha) return _respuestaJson({ ok: false, error: 'fecha requerida' });
+
+      const hoja   = obtenerOhCrearHoja();
+      const datosH = hoja.getDataRange().getValues();
+      const colMap = _getColMarcaciones(hoja);
+      const iDoc   = colMap['Documento'] != null ? colMap['Documento'] : 3;
+      const iFech  = colMap['Fecha']     != null ? colMap['Fecha']     : 1;
+      const iTipo  = colMap['Tipo']      != null ? colMap['Tipo']      : 7;
+
+      for (let i = 1; i < datosH.length; i++) {
+        const fila = datosH[i];
+        if (normalizarFecha(fila[iFech]) === fecha && String(fila[iDoc]).trim() === documento && fila[iTipo] === 'Salida') {
+          if (colMap['ExtraAutorizada'] != null)   hoja.getRange(i + 1, colMap['ExtraAutorizada'] + 1).setValue('SI');
+          if (colMap['MotivoSupervisor'] != null)  hoja.getRange(i + 1, colMap['MotivoSupervisor'] + 1).setValue('Horas extra autorizadas desde Reporte');
+          SpreadsheetApp.flush();
+          _auditarIntento(documento, 'AUTORIZAR-HORAS-EXTRA', 'admin:' + fecha);
+          return _respuestaJson({ ok: true });
+        }
+      }
+      return _respuestaJson({ ok: false, error: 'No se encontró una Salida registrada ese día para esta persona' });
+    }
+
     /* ── Resumen dashboard (requiere sesión admin) ── */
     if (accion === 'resumenDashboard') {
       const sv = _validarSesion(datos.token, ['admin']);
@@ -1305,6 +1336,7 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
   const iFinca  = colMap['Finca']       != null ? colMap['Finca']       : 6;
   const iTipo   = colMap['Tipo']        != null ? colMap['Tipo']        : 7;
   const iExcep  = colMap['TipoExcepcion'];
+  const iExtraAut = colMap['ExtraAutorizada'];
 
   for (let i = 1; i < datos.length; i++) {
     const fila = datos[i];
@@ -1317,6 +1349,7 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     if (!porPersona[clave]) porPersona[clave] = { nombre: nombre, cargo: cargo, finca: finca };
     porPersona[clave][tipo] = normalizarHora(hora);
     if (tipo === 'Salida' && iExcep != null) porPersona[clave].excepcionSalida = String(fila[iExcep] || '');
+    if (tipo === 'Salida' && iExtraAut != null) porPersona[clave].extraAutorizada = String(fila[iExtraAut] || '').trim().toUpperCase() === 'SI';
   }
 
   let tardanzas = 0, jornadasCompletas = 0, totalHoras = 0;
@@ -1398,7 +1431,7 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     filas.push({ documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
                  entrada: p.Entrada || '', salida: p.Salida || '', horasLaboradas: horasLaboradas,
                  marcas: marcas, minutosDeuda: minutosDeuda, minutosExtra: minutosExtra, puntualidad: puntualidad,
-                 jornadaContinua: tieneJornadaContinua });
+                 jornadaContinua: tieneJornadaContinua, extraAutorizada: !!p.extraAutorizada });
   });
 
   return _respuestaJson({

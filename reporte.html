@@ -160,6 +160,9 @@ tr:hover td{background:#FAFBFA;}
 .badge.completa{background:var(--xl);color:var(--dg);}
 .badge.incompleta{background:var(--orl);color:var(--or);}
 .badge.tarde{background:var(--rl);color:var(--re);margin-left:4px;font-size:9.5px;padding:1px 6px;vertical-align:middle;}
+.btn-autorizar-extra{background:var(--orl);border:1px solid #FFE0B2;color:var(--or);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;margin-left:2px;}
+.btn-autorizar-extra:hover{opacity:.85;}
+.btn-autorizar-extra:disabled{opacity:.5;cursor:not-allowed;}
 tr.fila-tarde td{background:var(--rl);}
 tr.fila-tarde:hover td{background:#FFE0E0;}
 .tn{font-variant-numeric:tabular-nums;font-weight:600;}
@@ -360,7 +363,7 @@ tr.fila-tarde:hover td{background:#FFE0E0;}
       <div class="kpi">
         <div class="kpi-ico vd"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
         <div class="kpi-num vd" id="kpiExtra">—</div>
-        <div class="kpi-lbl">Horas extra</div>
+        <div class="kpi-lbl">Horas extra autorizadas</div>
       </div>
       <div class="kpi">
         <div class="kpi-ico ro"><svg viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div>
@@ -570,7 +573,7 @@ async function consultar(){
       if(f.entrada)dP++;
       if((f.puntualidad||[]).some(x=>x.tipo==='Entrada'&&x.estado==='tarde'))dT++;
       const h=parseFloat(f.horasLaboradas)||0;dH+=h;
-      dE+=(f.minutosExtra||0)/60;
+      if(f.extraAutorizada)dE+=(f.minutosExtra||0)/60;
       dD+=(f.minutosDeuda||0)/60;
       if(f.finca){
         if(!porFinca[f.finca])porFinca[f.finca]={p:0,t:0};
@@ -669,11 +672,27 @@ async function consultar(){
     <td>${esc(f.finca||'—')}</td>
     <td class="tn">${esc(f.entrada||'—')}${pTarde?` <span class="badge tarde" title="${pTarde.minutos} min tarde">Tarde</span>`:''}</td>
     <td class="tn">${esc(f.salida||'—')}${pTemprano?` <span class="badge tarde" title="${pTemprano.minutos} min antes">Anticipada</span>`:''}</td>
-    <td class="tn">${esc(f.horasLaboradas||'—')}</td>
+    <td class="tn">${esc(f.horasLaboradas||'—')}${f.minutosExtra>0
+      ?(f.extraAutorizada
+        ?` <span class="badge completa" title="${f.minutosExtra} min extra">Extra ✓</span>`
+        :` <button class="btn-autorizar-extra" data-doc="${esc(f.documento)}" data-fecha="${esc(f.fechaISO)}" title="${f.minutosExtra} min extra sin autorizar">Autorizar extra</button>`)
+      :''}</td>
     <td>${f.entrada&&f.salida?'<span class="badge completa">Completa</span>':'<span class="badge incompleta">Incompleta</span>'}</td>
   </tr>`;
   }).join('');
 }
+
+/* Autorizar horas extra desde la tabla de detalle (delegado, las filas se
+   redibujan en cada consulta). */
+document.getElementById('tbodyDetalle').addEventListener('click',async e=>{
+  const btn=e.target.closest('.btn-autorizar-extra');
+  if(!btn)return;
+  const doc=btn.dataset.doc, fechaISO=btn.dataset.fecha;
+  btn.disabled=true;btn.textContent='Autorizando…';
+  const r=await _postGs({accion:'autorizarHorasExtra',token:_token,documento:doc,fecha:isoA(fechaISO)});
+  if(r&&r.ok){consultar();}
+  else{btn.disabled=false;btn.textContent='Autorizar extra';alert(r&&r.error?r.error:'No se pudo autorizar');}
+});
 
 /* Navegación del menú lateral: todo vive en una sola página, cada ítem
    hace scroll a su sección y marca cuál está activa. */
