@@ -869,6 +869,7 @@ function abrirFichaPersonal(nombre) {
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
           <span class="pers-badge ${activo ? 'bio' : 'inac'}">${activo ? 'Activo' : 'Inactivo'}</span>
           ${enrol ? '<span class="pers-badge bio">✓ Biometría</span>' : '<span class="pers-badge sin-bio">Sin rostro</span>'}
+          ${p.jornadaContinua ? '<span class="pers-badge bio">Jornada continua</span>' : ''}
         </div>
       </div>
     </div>
@@ -979,6 +980,7 @@ function abrirFormPersonal(modo) {
   const nomInput = document.getElementById('fpNombre');
   const carSelect = document.getElementById('fpCargo');
   const activoToggle = document.getElementById('fpActivo');
+  const jornadaToggle = document.getElementById('fpJornadaContinua');
   const dupErr = document.getElementById('fpDupErr');
   if (dupErr) dupErr.style.display = 'none';
   if (modo === 'editar' && _persNombreActual) {
@@ -988,12 +990,14 @@ function abrirFormPersonal(modo) {
       if (nomInput) { nomInput.value = p.nombre || ''; nomInput.readOnly = true; nomInput.style.opacity = '.5'; }
       if (carSelect) carSelect.value = p.cargo || '';
       if (activoToggle) activoToggle.checked = p.activo !== false;
+      if (jornadaToggle) jornadaToggle.checked = !!p.jornadaContinua;
     }
   } else {
     if (docInput) { docInput.value = ''; docInput.readOnly = false; docInput.style.opacity = ''; }
     if (nomInput) { nomInput.value = ''; nomInput.readOnly = false; nomInput.style.opacity = ''; }
     if (carSelect) carSelect.value = '';
     if (activoToggle) activoToggle.checked = true;
+    if (jornadaToggle) jornadaToggle.checked = false;
   }
   mostrarPantalla('pantallaFormPersonal');
 }
@@ -1111,6 +1115,7 @@ document.getElementById('btnGuardarFormPersonal').addEventListener('click', asyn
   const nom = document.getElementById('fpNombre').value.trim();
   const car = document.getElementById('fpCargo').value;
   const activo = document.getElementById('fpActivo').checked;
+  const jornadaContinua = document.getElementById('fpJornadaContinua').checked;
   const dupErr = document.getElementById('fpDupErr');
   if (dupErr) dupErr.style.display = 'none';
   if (!doc || !/^\d+$/.test(doc)) { await showAlert('Escribe un número de documento válido (solo dígitos)'); return; }
@@ -1126,19 +1131,19 @@ document.getElementById('btnGuardarFormPersonal').addEventListener('click', asyn
   }
   const btn = document.getElementById('btnGuardarFormPersonal'); btn.disabled = true;
   if (_persFormModo === 'crear') {
-    const r = await enviarConResp({accion:'registrarPersonal', token:getAdminToken(), documento:doc, nombre:nom, cargo:car, fechaHora:new Date().toISOString()});
+    const r = await enviarConResp({accion:'registrarPersonal', token:getAdminToken(), documento:doc, nombre:nom, cargo:car, jornadaContinua, fechaHora:new Date().toISOString()});
     btn.disabled = false;
     if (!r || !r.ok) { showToast('Error: ' + ((r && r.error) || 'No se pudo guardar en el servidor')); return; }
-    const ex = getPE(); ex.push({documento:doc, nombre:nom, cargo:car, activo:true}); savePE(ex);
+    const ex = getPE(); ex.push({documento:doc, nombre:nom, cargo:car, activo:true, jornadaContinua}); savePE(ex);
     showToast('✓ Trabajador registrado'); _persNombreActual = nom; abrirFichaPersonal(nom);
   } else {
     // El backend identifica al trabajador por documento, no por nombre.
     const persona = getPC().find(t => t.nombre === _persNombreActual);
     const documento = persona ? persona.documento : '';
-    const r = await enviarConResp({accion:'actualizarPersonal', token:getAdminToken(), documento, cargo:car, activo, fechaHora:new Date().toISOString()});
+    const r = await enviarConResp({accion:'actualizarPersonal', token:getAdminToken(), documento, cargo:car, activo, jornadaContinua, fechaHora:new Date().toISOString()});
     btn.disabled = false;
     if (!r || !r.ok) { showToast('Error: ' + ((r && r.error) || 'No se pudo guardar en el servidor')); return; }
-    _actualizarPersonaLocal(_persNombreActual, { cargo: car, activo });
+    _actualizarPersonaLocal(_persNombreActual, { cargo: car, activo, jornadaContinua });
     showToast('✓ Datos actualizados');
     abrirFichaPersonal(_persNombreActual);
   }

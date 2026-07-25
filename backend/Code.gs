@@ -348,7 +348,7 @@ function obtenerOhCrearHojaPersonal() {
   let hoja   = ss.getSheetByName(HOJA_PERSONAL);
   if (!hoja) {
     hoja = ss.insertSheet(HOJA_PERSONAL);
-    hoja.appendRow(['Documento','Nombre','Cargo','Fecha registro','FotoId','Estado']);
+    hoja.appendRow(['Documento','Nombre','Cargo','Fecha registro','FotoId','Estado','JornadaContinua']);
     hoja.setFrozenRows(1);
   }
   return hoja;
@@ -675,7 +675,8 @@ function doPost(e) {
           return _respuestaJson({ ok: false, error: 'Ya existe una persona con ese documento' });
       }
       hojaPersonal.appendRow([sanitizarCelda(docNuevo), sanitizarCelda(datos.nombre),
-                               sanitizarCelda(datos.cargo), new Date(), '', 'ACTIVO']);
+                               sanitizarCelda(datos.cargo), new Date(), '', 'ACTIVO',
+                               datos.jornadaContinua ? 'SI' : '']);
       SpreadsheetApp.flush();
       // Invalidar cache de personal kiosco
       CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
@@ -757,6 +758,7 @@ function doPost(e) {
         if (String(filas[i][0]).trim() === doc) {
           if (datos.cargo) hoja.getRange(i + 1, 3).setValue(datos.cargo);
           if (typeof datos.activo === 'boolean') hoja.getRange(i + 1, 6).setValue(datos.activo ? 'ACTIVO' : 'INACTIVO');
+          if (typeof datos.jornadaContinua === 'boolean') hoja.getRange(i + 1, 7).setValue(datos.jornadaContinua ? 'SI' : '');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
           return _respuestaJson({ ok: true });
@@ -773,10 +775,11 @@ function doPost(e) {
       const filas = hoja.getDataRange().getValues();
       const personal = [];
       for (let i = 1; i < filas.length; i++) {
-        const [doc, nombre, cargo, , , estado] = filas[i];
+        const [doc, nombre, cargo, , , estado, jornadaContinua] = filas[i];
         if (doc && nombre) personal.push({
           documento: String(doc).trim(), nombre: String(nombre).trim(),
-          cargo: String(cargo || '').trim(), estado: String(estado || 'ACTIVO').trim()
+          cargo: String(cargo || '').trim(), estado: String(estado || 'ACTIVO').trim(),
+          jornadaContinua: String(jornadaContinua || '').trim().toUpperCase() === 'SI'
         });
       }
       return _respuestaJson({ ok: true, personal: personal });
@@ -1330,10 +1333,21 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
 
   // Duración real de la jornada configurada para este día (no un valor fijo),
   // descontando el almuerzo — el tiempo entre entrada y salida no es todo
-  // tiempo trabajado.
-  const HORAS_ALMUERZO = (horarioDelDia.minutosAlmuerzo || 0) / 60;
-  const JORNADA_HORAS = horarioDelDia.activo
-    ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - _horaStrADecimal(horarioDelDia.entrada || '06:00') - HORAS_ALMUERZO)
+  // tiempo trabajado. Quienes tienen "jornada continua" no tienen ese
+  // descuento porque no salen a almorzar.
+  const HORAS_ALMUERZO_DEFECTO = (horarioDelDia.minutosAlmuerzo || 0) / 60;
+  const jornadaContinuaPorDoc = {};
+  (function() {
+    const hojaPersonal = obtenerOhCrearHojaPersonal();
+    const filasPersonal = hojaPersonal.getDataRange().getValues();
+    for (let i = 1; i < filasPersonal.length; i++) {
+      const doc = filasPersonal[i][0];
+      const jc  = String(filasPersonal[i][6] || '').trim().toUpperCase() === 'SI';
+      if (doc) jornadaContinuaPorDoc[String(doc).trim()] = jc;
+    }
+  })();
+  const duracionJornada = horarioDelDia.activo
+    ? (_horaStrADecimal(horarioDelDia.salida || '15:00') - _horaStrADecimal(horarioDelDia.entrada || '06:00'))
     : null;
 
   Object.keys(porPersona).forEach(function(documento) {
@@ -1367,20 +1381,24 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     }
     let horasLaboradas = '';
     let minutosExtra = 0;
+    const tieneJornadaContinua = !!jornadaContinuaPorDoc[documento];
+    const horasAlmuerzoPersona = tieneJornadaContinua ? 0 : HORAS_ALMUERZO_DEFECTO;
+    const jornadaHorasPersona  = duracionJornada != null ? (duracionJornada - horasAlmuerzoPersona) : null;
     if (p.Entrada && p.Salida) {
       jornadasCompletas++;
-      const hd = Math.max(0, horaADecimal(p.Salida) - horaADecimal(p.Entrada) - HORAS_ALMUERZO);
+      const hd = Math.max(0, horaADecimal(p.Salida) - horaADecimal(p.Entrada) - horasAlmuerzoPersona);
       totalHoras += hd;
       horasLaboradas = Math.floor(hd) + 'h ' + Math.round((hd - Math.floor(hd)) * 60) + 'm';
       // Solo cuenta como extra lo que exceda la jornada real configurada ese día,
       // y solo si la salida no fue anticipada (ya cubierta arriba como déficit/autorizada).
-      if (JORNADA_HORAS != null && p.excepcionSalida !== 'SALIDA_ANTICIPADA_AUTORIZADA' && hd > JORNADA_HORAS) {
-        minutosExtra = Math.round((hd - JORNADA_HORAS) * 60);
+      if (jornadaHorasPersona != null && p.excepcionSalida !== 'SALIDA_ANTICIPADA_AUTORIZADA' && hd > jornadaHorasPersona) {
+        minutosExtra = Math.round((hd - jornadaHorasPersona) * 60);
       }
     }
     filas.push({ documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
                  entrada: p.Entrada || '', salida: p.Salida || '', horasLaboradas: horasLaboradas,
-                 marcas: marcas, minutosDeuda: minutosDeuda, minutosExtra: minutosExtra, puntualidad: puntualidad });
+                 marcas: marcas, minutosDeuda: minutosDeuda, minutosExtra: minutosExtra, puntualidad: puntualidad,
+                 jornadaContinua: tieneJornadaContinua });
   });
 
   return _respuestaJson({
