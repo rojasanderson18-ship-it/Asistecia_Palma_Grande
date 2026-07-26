@@ -1,10 +1,11 @@
 {
-  "name": "Control de Asistencia Biométrica",
+  "name": "Asistencia Palma Grande",
   "short_name": "Asistencia",
+  "description": "Control de asistencia biométrica por reconocimiento facial para Palma Grande S.A.S.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2e7d32",
+  "background_color": "#0C1410",
+  "theme_color": "#0C1410",
   "orientation": "portrait",
   "icons": [
     {

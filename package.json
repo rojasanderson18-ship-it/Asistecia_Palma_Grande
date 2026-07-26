@@ -1,21 +1,35 @@
 {
-  "name": "asistecia_palma_grande",
-  "version": "1.0.0",
-  "description": "",
+  "name": "asistencia-palma-grande",
+  "version": "4.0.0",
+  "description": "Sistema de asistencia biométrica (reconocimiento facial) para Palma Grande S.A.S. — PWA offline-first con backend en Google Apps Script y empaquetado Android vía Capacitor.",
   "main": "index.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
+    "start": "python3 -m http.server 8080 --directory www",
+    "build:www": "bash sync.sh",
+    "cap:sync": "npx cap sync android",
+    "cap:android": "npx cap open android",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "http://local_proxy@127.0.0.1:41593/git/rojasanderson18-ship-it/Asistecia_Palma_Grande"
+    "url": "git+https://github.com/rojasanderson18-ship-it/Asistecia_Palma_Grande.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "asistencia-biometrica",
+    "reconocimiento-facial",
+    "face-recognition",
+    "pwa",
+    "offline-first",
+    "capacitor",
+    "google-apps-script",
+    "control-horario",
+    "recursos-humanos"
+  ],
+  "author": "Rojas Anderson",
+  "license": "MIT",
   "dependencies": {
     "@capacitor/android": "^8.4.1",
     "@capacitor/cli": "^8.4.1",
