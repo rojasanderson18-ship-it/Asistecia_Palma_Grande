@@ -2,7 +2,7 @@
 
 Sistema de asistencia biométrica por **reconocimiento facial** para plantaciones y operaciones de campo. PWA offline-first + backend serverless en Google Apps Script, sin costos de infraestructura recurrentes.
 
-[![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-2E7D32?style=flat-square)](https://rojasanderson18-ship-it.github.io/Asistecia_Palma_Grande/)
+[![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-2E7D32?style=flat-square)](https://rojasanderson18-ship-it.github.io/Asistencia_Palma_Grande/)
 [![Capacitor](https://img.shields.io/badge/Capacitor-8.4-119EFF?style=flat-square&logo=capacitor&logoColor=white)](https://capacitorjs.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
@@ -69,8 +69,8 @@ Sistema de asistencia biométrica por **reconocimiento facial** para plantacione
 ### 2. Frontend
 
 ```bash
-git clone https://github.com/rojasanderson18-ship-it/Asistecia_Palma_Grande.git
-cd Asistecia_Palma_Grande
+git clone https://github.com/rojasanderson18-ship-it/Asistencia_Palma_Grande.git
+cd Asistencia_Palma_Grande
 npm start          # sirve www/ en http://localhost:8080
 ```
 
@@ -89,7 +89,7 @@ La CI (`.github/workflows/build-apk.yml`) compila un APK debug en cada push rele
 ## Estructura del proyecto
 
 ```
-Asistecia_Palma_Grande/
+Asistencia_Palma_Grande/
 ├── www/                    # ← fuente única de verdad del frontend
 │   ├── index.html
 │   ├── manifest.json
@@ -156,4 +156,4 @@ Distribuido bajo licencia [MIT](LICENSE).
 ## Contacto
 
 **Rojas Anderson** — [rojasanderson18@gmail.com](mailto:rojasanderson18@gmail.com)
-Repositorio: [github.com/rojasanderson18-ship-it/Asistecia_Palma_Grande](https://github.com/rojasanderson18-ship-it/Asistecia_Palma_Grande)
+Repositorio: [github.com/rojasanderson18-ship-it/Asistencia_Palma_Grande](https://github.com/rojasanderson18-ship-it/Asistencia_Palma_Grande)
