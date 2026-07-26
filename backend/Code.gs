@@ -486,19 +486,37 @@ function obtenerFotosPorDocumento() {
 ══════════════════════════════════════════════════════ */
 
 // Busca un empleado activo por documento. Devuelve {ok, nombre, cargo} o {ok:false}
-function _buscarEmpleado(documento) {
-  const doc   = String(documento || '').trim();
-  if (!doc) return { ok: false, error: 'Documento requerido' };
+// Cachea el catálogo completo de Personal (documento → nombre/cargo/estado)
+// por 5 min, igual que PERSONAL_KIOSCO — se invalida en los mismos puntos
+// donde cambia el personal (alta, edición, activar/inactivar, eliminar).
+// Antes esta función leía toda la hoja Personal en cada marcación.
+function _obtenerCatalogoPersonal() {
+  const cacheKey = 'PERSONAL_LOOKUP';
+  const cached = CacheService.getScriptCache().get(cacheKey);
+  if (cached) return JSON.parse(cached);
   const hoja  = obtenerOhCrearHojaPersonal();
   const datos = hoja.getDataRange().getValues();
+  const catalogo = {};
   for (let i = 1; i < datos.length; i++) {
-    if (String(datos[i][0]).trim() === doc) {
-      const estado = String(datos[i][5] || 'ACTIVO').trim().toUpperCase();
-      if (estado === 'INACTIVO') return { ok: false, error: 'Empleado inactivo. Contacta al administrador.' };
-      return { ok: true, nombre: String(datos[i][1]).trim(), cargo: String(datos[i][2]).trim() };
-    }
+    const doc = String(datos[i][0] || '').trim();
+    if (!doc) continue;
+    catalogo[doc] = {
+      nombre: String(datos[i][1] || '').trim(),
+      cargo:  String(datos[i][2] || '').trim(),
+      estado: String(datos[i][5] || 'ACTIVO').trim().toUpperCase()
+    };
   }
-  return { ok: false, error: 'Empleado no registrado' };
+  try { CacheService.getScriptCache().put(cacheKey, JSON.stringify(catalogo), 300); } catch (e) {}
+  return catalogo;
+}
+
+function _buscarEmpleado(documento) {
+  const doc = String(documento || '').trim();
+  if (!doc) return { ok: false, error: 'Documento requerido' };
+  const p = _obtenerCatalogoPersonal()[doc];
+  if (!p) return { ok: false, error: 'Empleado no registrado' };
+  if (p.estado === 'INACTIVO') return { ok: false, error: 'Empleado inactivo. Contacta al administrador.' };
+  return { ok: true, nombre: p.nombre, cargo: p.cargo };
 }
 
 // Convierte "YYYY-MM-DD" (formato de <input type="date">) a "dd/MM/yyyy". Devuelve null si no aplica.
@@ -521,11 +539,20 @@ function normalizarHora(valor) {
 }
 
 // Devuelve array de tipos de marcación para el documento en la fecha dada (dd/MM/yyyy)
-function _obtenerMarcasDelDia(documento, fechaStr) {
+// datosPrecargados/colMapPrecargado: opcionales — si quien llama ya leyó la
+// hoja en la misma solicitud (ej. accion=marcar), se reutilizan en vez de
+// volver a leer toda la hoja de Marcaciones otra vez.
+function _obtenerMarcasDelDia(documento, fechaStr, datosPrecargados, colMapPrecargado) {
   const doc  = String(documento || '').trim();
-  const hoja = obtenerOhCrearHoja();
-  const datos = hoja.getDataRange().getValues();
-  const colMap = _getColMarcaciones(hoja);
+  let datos, colMap;
+  if (datosPrecargados && colMapPrecargado) {
+    datos = datosPrecargados;
+    colMap = colMapPrecargado;
+  } else {
+    const hoja = obtenerOhCrearHoja();
+    datos = hoja.getDataRange().getValues();
+    colMap = _getColMarcaciones(hoja);
+  }
   const iDoc  = colMap['Documento']  != null ? colMap['Documento']  : 3;
   const iFech = colMap['Fecha']      != null ? colMap['Fecha']      : 1;
   const iTipo = colMap['Tipo']       != null ? colMap['Tipo']       : 7;
@@ -538,10 +565,11 @@ function _obtenerMarcasDelDia(documento, fechaStr) {
   return marcas;
 }
 
-// Busca una fila por MarcacionID. Devuelve { encontrado, fila, rowIndex } o { encontrado: false }
-function _buscarPorMarcacionId(hoja, marcacionId, colMap) {
+// Busca una fila por MarcacionID dentro de `datos` ya leídos (evita releer
+// toda la hoja si quien llama ya la tiene en memoria). Devuelve
+// { encontrado, fila, rowIndex } o { encontrado: false }
+function _buscarPorMarcacionId(datos, marcacionId, colMap) {
   if (!marcacionId) return { encontrado: false };
-  const datos = hoja.getDataRange().getValues();
   const iMid = colMap['MarcacionID'] != null ? colMap['MarcacionID'] : 0;
   for (let i = 1; i < datos.length; i++) {
     if (String(datos[i][iMid]).trim() === String(marcacionId).trim()) {
@@ -715,6 +743,7 @@ function doPost(e) {
       SpreadsheetApp.flush();
       // Invalidar cache de personal kiosco
       CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+      CacheService.getScriptCache().remove('PERSONAL_LOOKUP');
       _auditarIntento(docNuevo, 'REGISTRAR-PERSONAL', 'admin');
       return _respuestaJson({ ok: true });
     }
@@ -741,6 +770,7 @@ function doPost(e) {
           hoja.deleteRow(i + 1);
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          CacheService.getScriptCache().remove('PERSONAL_LOOKUP');
           _auditarIntento(doc, 'ELIMINAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
@@ -760,6 +790,7 @@ function doPost(e) {
           hoja.getRange(i + 1, 6).setValue('ACTIVO');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          CacheService.getScriptCache().remove('PERSONAL_LOOKUP');
           _auditarIntento(doc, 'ACTIVAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
@@ -779,6 +810,7 @@ function doPost(e) {
           hoja.getRange(i + 1, 6).setValue('INACTIVO');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          CacheService.getScriptCache().remove('PERSONAL_LOOKUP');
           _auditarIntento(doc, 'INACTIVAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
@@ -801,6 +833,7 @@ function doPost(e) {
           if (typeof datos.jornadaContinua === 'boolean') hoja.getRange(i + 1, 7).setValue(datos.jornadaContinua ? 'SI' : '');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          CacheService.getScriptCache().remove('PERSONAL_LOOKUP');
           _auditarIntento(doc, 'ACTUALIZAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
@@ -1096,10 +1129,14 @@ function doPost(e) {
       try {
         const hoja   = obtenerOhCrearHoja();
         const colMap = _getColMarcaciones(hoja);
+        // Una sola lectura completa de la hoja para esta solicitud — se
+        // reutiliza tanto para la verificación de idempotencia como para
+        // buscar las marcas del día, en vez de leer la hoja dos veces más.
+        const datosHoja = hoja.getDataRange().getValues();
 
         // ── IDEMPOTENCIA: si ya existe este marcacionId, devolver la fila original ──
         if (marcacionId) {
-          const existente = _buscarPorMarcacionId(hoja, marcacionId, colMap);
+          const existente = _buscarPorMarcacionId(datosHoja, marcacionId, colMap);
           if (existente.encontrado) {
             const f = existente.fila;
             const iHora   = colMap['HoraServidor']      != null ? colMap['HoraServidor']      : 2;
@@ -1129,7 +1166,7 @@ function doPost(e) {
         const hoyStr  = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'dd/MM/yyyy');
         const horaStr = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'HH:mm:ss');
 
-        const marcasDelDia = _obtenerMarcasDelDia(documento, hoyStr);
+        const marcasDelDia = _obtenerMarcasDelDia(documento, hoyStr, datosHoja, colMap);
         const seqVal = _validarSecuencia(marcasDelDia, tipo);
         if (!seqVal.ok) return _respuestaJson({ ok: false, error: seqVal.error });
 
