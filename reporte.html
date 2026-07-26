@@ -582,8 +582,7 @@ async function consultar(){
       if(f.extraAutorizada)dE+=(f.minutosExtra||0)/60;
       dD+=(f.minutosDeuda||0)/60;
       if(f.finca){
-        if(!porFinca[f.finca])porFinca[f.finca]={p:0,t:0};
-        porFinca[f.finca].t++;
+        if(!porFinca[f.finca])porFinca[f.finca]={p:0};
         if(f.entrada)porFinca[f.finca].p++;
       }
       detalle.push({...f,fechaISO:fecha});
@@ -612,13 +611,20 @@ async function consultar(){
   document.getElementById('kpiExtra').textContent=(Math.round(totE*10)/10)+'h';
   document.getElementById('kpiDeficit').textContent=(Math.round(totD*10)/10)+'h';
 
-  /* Gráfica */
+  /* Gráfica: % real de asistencia = presentes / (presentes + ausentes), no
+     "de los que marcaron, cuántos completaron entrada" (eso siempre daba
+     ~100% porque nadie marca Salida sin Entrada). La finca se asigna por
+     dispositivo/kiosco, no por trabajador, así que los ausentes (que no
+     tienen finca porque nunca marcaron) se reparten entre las fincas que
+     sí tuvieron actividad — exacto si solo hay una finca activa, que es
+     el caso normal hoy. */
   const chart=document.getElementById('chartFincas');
   const fincas=Object.keys(porFinca);
   if(!fincas.length){chart.innerHTML='<div class="vacio">Sin datos de finca</div>';}
   else chart.innerHTML=fincas.map(f=>{
     const pf=porFinca[f];
-    const pct=pf.t?Math.round(pf.p/pf.t*100):0;
+    const totalAsignado=pf.p+totA;
+    const pct=totalAsignado?Math.round(pf.p/totalAsignado*100):0;
     return`<div class="bar-row">
       <div class="bar-lbl">${esc(f)}</div>
       <div class="bar-track">
