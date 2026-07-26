@@ -1,1 +1,38 @@
 node_modules/
+
+# Secretos / configuración local — nunca deben versionarse
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.jks
+
+# Respaldos de rostros enrolados exportados desde la app (contienen
+# descriptores biométricos cifrados) — se descargan localmente, no deben
+# terminar en el repo por accidente.
+respaldo_rostros_*.json
+
+# Android / Gradle — artefactos de compilación, no código fuente
+android/local.properties
+android/**/build/
+android/.gradle/
+android/**/.gradle/
+android/.idea/
+android/**/*.iml
+*.apk
+*.aab
+
+# Editores / IDEs
+.vscode/
+.idea/
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Backups y dumps locales
+*.bak
+*.backup
+*.dump

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Sync www/ (canonical) → root mirrors
+# Sync www/ (canonical) → root mirrors.
+# La lista de pairs de js/ sigue el mismo orden de carga que los <script>
+# de www/index.html — mantenla completa: cualquier archivo nuevo en www/js/
+# debe agregarse aquí o su mirror en la raíz quedará desactualizado.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
@@ -8,14 +11,16 @@ pairs=(
   "www/index.html:index.html"
   "www/sw.js:sw.js"
   "www/css/styles.css:css/styles.css"
-  "www/js/admin.js:js/admin.js"
-  "www/js/config.js:js/config.js"
-  "www/js/attendance.js:js/attendance.js"
   "www/js/audio.js:js/audio.js"
+  "www/js/config.js:js/config.js"
   "www/js/auth.js:js/auth.js"
-  "www/js/face-recognition.js:js/face-recognition.js"
+  "www/js/geolocation.js:js/geolocation.js"
   "www/js/offline-queue.js:js/offline-queue.js"
+  "www/js/face-recognition.js:js/face-recognition.js"
   "www/js/ui.js:js/ui.js"
+  "www/js/attendance.js:js/attendance.js"
+  "www/js/admin.js:js/admin.js"
+  "www/js/app.js:js/app.js"
 )
 
 changed=0
