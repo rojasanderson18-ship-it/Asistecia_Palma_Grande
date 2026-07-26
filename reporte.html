@@ -145,8 +145,8 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);-webkit-font-smoot
 .bar-val{
   position:absolute;right:8px;top:50%;transform:translateY(-50%);
   font-size:11.5px;font-weight:800;color:#fff;pointer-events:none;
+  background:rgba(0,0,0,.45);padding:1px 7px;border-radius:5px;
 }
-.bar-val.over{color:var(--t1);}
 
 /* TABLA */
 .tbl-wrap{overflow-x:auto;}
@@ -629,7 +629,7 @@ async function consultar(){
       <div class="bar-lbl">${esc(f)}</div>
       <div class="bar-track">
         <div class="bar-fill" style="width:${pct}%"></div>
-        <span class="bar-val ${pct<25?'over':''}">${pct}%</span>
+        <span class="bar-val">${pct}%</span>
       </div>
     </div>`;
   }).join('');
