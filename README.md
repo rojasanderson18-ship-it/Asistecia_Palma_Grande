@@ -59,12 +59,15 @@ Sistema de asistencia biométrica por **reconocimiento facial** para plantacione
 
 ### 1. Backend (Google Apps Script)
 
-1. Crea un Google Sheet nuevo (o usa uno existente) y copia su ID.
+1. Crea un Google Sheet nuevo (o usa uno existente) y copia su ID (la parte de la URL entre `/d/` y `/edit`).
 2. Abre [script.google.com](https://script.google.com), crea un proyecto nuevo y pega el contenido de [`backend/Code.gs`](backend/Code.gs).
-3. Reemplaza `SHEET_ID` con el ID de tu Sheet.
-4. Ejecuta una vez la función `setPin('TU_PIN_INICIAL')` desde el editor para fijar el PIN de administrador (nunca se guarda en el repo).
-5. Implementar → **Nueva implementación** → tipo "Aplicación web", acceso "Cualquier usuario". Copia la URL `/exec` generada.
-6. Cada vez que modifiques `Code.gs`, debes volver a **Implementar → Gestionar implementaciones → Nueva versión** para que los cambios surtan efecto.
+3. En el editor de Apps Script, ejecuta una vez cada una de estas funciones (seleccionándolas en el desplegable de funciones y presionando "Ejecutar"; ninguna se guarda en el repo, quedan en `PropertiesService` de tu propio proyecto):
+   - `setSheetId('TU_ID_DE_SHEET')` — enlaza el script a tu Google Sheet.
+   - `setPin('TU_PIN_INICIAL')` — PIN de administrador.
+   - `setSupervisorPin('OTRO_PIN')` — PIN de supervisor (opcional, pero recomendado).
+   - `setConfig({ empresa:'...', fincaNombre:'...', lat:..., lng:..., radio:200 })` — datos de la finca.
+4. Implementar → **Nueva implementación** → tipo "Aplicación web", acceso "Cualquier usuario". Copia la URL `/exec` generada.
+5. Cada vez que modifiques `Code.gs`, debes volver a **Implementar → Gestionar implementaciones → Nueva versión** para que los cambios surtan efecto.
 
 ### 2. Frontend
 
@@ -120,12 +123,14 @@ Asistencia_Palma_Grande/
 
 Este proyecto maneja datos biométricos y personales; las siguientes reglas son de cumplimiento obligatorio en todo el código:
 
-- **El PIN nunca se almacena en texto plano, hash reversible ni configuración local.** Se hashea con SHA-256 en el cliente y se valida en el backend contra un hash guardado en `PropertiesService`.
-- **Ningún dato sensible vive en el frontend**: nombres, documentos, cargos, coordenadas, radios de geocerca y URLs internas se sirven siempre desde el backend autenticado, nunca hardcodeados en el código fuente ni en el repositorio.
+- **El PIN nunca se almacena en texto plano, hash reversible ni configuración local.** Se hashea con SHA-256 en el cliente y se valida en el backend contra un hash guardado en `PropertiesService`. El login (admin y supervisor) tiene rate-limiting con bloqueo temporal tras intentos fallidos.
+- **Nombres, documentos y cargos** se sirven siempre desde endpoints autenticados (sesión admin/supervisor o `deviceToken` de kiosco autorizado), nunca hardcodeados en el código fuente ni en el repositorio.
+- **Coordenadas y radio de geocerca**: el kiosco los necesita *antes* de marcar para mostrar retroalimentación visual ("dentro/fuera de la finca"), por lo que se sirven vía `GET accion=obtenerConfig` sin autenticación — es una decisión consciente de UX, no un descuido. La validación real y definitiva de geocerca (y de horario, biometría, etc.) ocurre siempre del lado del servidor dentro de `accion=marcar`, usando los valores guardados en `PropertiesService`; ese dato público nunca es la única barrera de seguridad. Si tu operación requiere ocultar la ubicación exacta de la finca incluso de ese endpoint, contempla mover la validación de geocerca a un endpoint autenticado por `deviceToken` (cambio de API, no incluido en esta versión).
+- **El `SHEET_ID` no está hardcodeado en el código fuente**: se configura una sola vez por instalación con `setSheetId('...')` desde el editor de Apps Script y se guarda en `PropertiesService`, igual que el PIN.
 - **Los descriptores faciales se almacenan solo en el dispositivo** (`localStorage`), nunca se suben al backend. El respaldo/restauración entre dispositivos usa cifrado **AES-256-GCM** con clave derivada por **PBKDF2** (150.000 iteraciones) a partir de una contraseña elegida por el administrador — `btoa` se usa únicamente como codificación binario→texto del resultado cifrado, nunca como mecanismo de seguridad.
-- **Toda acción administrativa queda auditada** (autorizaciones, eliminaciones, cambios de PIN, revocación de dispositivos) con fecha, identificador de dispositivo y resultado.
+- **Toda acción administrativa queda auditada** (autorizaciones, eliminaciones, cambios de datos de personal, cambios de PIN, autorización/revocación de dispositivos, cambios de configuración) con fecha, identificador y resultado, en la hoja `AuditoriaPin`.
 - **Sesiones de corta duración**: 15 minutos para administrador, 5 para supervisor, con validación server-side en cada solicitud sensible.
-- **Fotos de enrolamiento**: se sirven únicamente vía el endpoint autenticado `obtenerFoto`, nunca por URL pública directa.
+- **Fotos de enrolamiento**: se sirven únicamente vía el endpoint autenticado `obtenerFoto` (sesión admin o supervisor), nunca por URL pública directa; los archivos en Drive no tienen acceso compartido.
 
 ## Configuración de horarios
 

@@ -1,23 +1,46 @@
 /***********************************************************
  * CONTROL DE ASISTENCIA — Backend Google Apps Script v4.0
  *
- * Configuración inicial (ejecutar en el editor de Apps Script):
+ * ── Configuración inicial obligatoria (ejecutar UNA VEZ en el editor
+ *    de Apps Script, seleccionando la función en el desplegable y
+ *    presionando "Ejecutar" — nunca se guarda nada de esto en el repo) ──
+ *
+ *   setSheetId('TU_ID_DE_GOOGLE_SHEET')
+ *       — Enlaza este script a tu Google Sheet. Toma el ID de la URL:
+ *         https://docs.google.com/spreadsheets/d/ESTE_ES_EL_ID/edit
+ *         Si no se configura, se usa el ID de referencia del proyecto
+ *         original como fallback (ver más abajo) — configúralo antes
+ *         de operar con datos reales, cada instalación debe tener su
+ *         propio Sheet.
+ *
  *   setPin('XXXX')             — PIN de administrador (4–8 dígitos)
  *   setSupervisorPin('YYYY')   — PIN de supervisor (diferente al admin)
  *   setConfig({ empresa:'Mi Empresa', fincaNombre:'Sede Principal',
  *               lat:4.710989, lng:-74.072092, radio:200 })
  *
- * Endpoints públicos (sin autenticación):
- *   GET  accion=obtenerConfig           — configuración pública de empresa/finca
+ * ── Clasificación de endpoints por nivel de acceso ──
  *
- * Endpoints de dispositivo autorizado (deviceToken):
- *   POST accion=marcar                  — registrar marcación (servidor valida todo)
- *   POST accion=marcasHoy               — marcaciones del día por documento
+ * Endpoints públicos (sin autenticación — accesibles por cualquiera con la URL):
+ *   GET  accion=obtenerConfig  — nombre de empresa/finca y, por diseño, también
+ *                                lat/lng/radio/umbral/horarios: el kiosco los
+ *                                necesita para dar retroalimentación de
+ *                                geocerca ANTES de marcar. La validación real
+ *                                de geocerca, horario y biometría ocurre
+ *                                siempre en el servidor dentro de `marcar` —
+ *                                esta respuesta es solo para UX, nunca la
+ *                                única barrera de seguridad.
+ *   (sin accion, o accion desconocida) — health check, sin datos.
+ *
+ * Endpoints de dispositivo autorizado (requieren deviceToken emitido por
+ * accion=autorizarDispositivo; un dispositivo revocado deja de poder usarlos):
+ *   POST accion=marcar                    — registrar marcación (servidor valida todo)
+ *   POST accion=marcasHoy                 — marcaciones del día por documento
  *   POST accion=sincronizarPersonalKiosco — catálogo ligero de personal
  *
- * Endpoints de sesión admin (token 15 min):
- *   POST accion=login                   — iniciar sesión admin
- *   POST accion=loginSupervisor         — iniciar sesión supervisor (token 5 min)
+ * Endpoints de sesión admin (requieren token de accion=login, expira en 15 min;
+ * cada acción administrativa relevante queda registrada en la hoja de auditoría):
+ *   POST accion=login                   — iniciar sesión admin (rate-limited)
+ *   POST accion=loginSupervisor         — iniciar sesión supervisor (token 5 min, rate-limited)
  *   POST accion=cambiarPin              — cambiar PIN (sesión + PIN actual)
  *   POST accion=guardarConfig           — guardar configuración
  *   POST accion=registrarPersonal       — registrar empleado
@@ -31,13 +54,21 @@
  *   POST accion=borrarMarcacionesDelDia — borrar marcaciones de una persona en una fecha (admin)
  *   POST accion=autorizarSalidaAnticipada — autorizar salida anticipada ya registrada (admin)
  *   POST accion=autorizarHorasExtra     — autorizar horas extra ya registradas (admin)
- *   POST accion=obtenerFoto             — foto privada de empleado (base64)
  *   POST accion=autorizarDispositivo    — registrar y autorizar kiosco
  *   POST accion=listarDispositivos      — ver dispositivos autorizados
  *   POST accion=revocarDispositivo      — revocar acceso de un kiosco
+ *
+ * Endpoints de sesión admin O supervisor:
+ *   POST accion=obtenerFoto             — foto privada de empleado (base64)
  ***********************************************************/
 
-const SHEET_ID           = "1ZjIJ_AHty-ltlFDJP_0MV4mIXAhs1oNKhKcYWNMlbC8";
+// El Sheet ID vive en PropertiesService (configúralo con setSheetId(), ver
+// arriba) para no dejarlo hardcodeado en el código fuente del repositorio.
+// El valor literal de abajo es solo un fallback de continuidad para esta
+// instalación existente — cualquier instalación nueva debe llamar a
+// setSheetId() con su propio Sheet antes de usarse en producción.
+const SHEET_ID           = PropertiesService.getScriptProperties().getProperty('SHEET_ID')
+                              || "1ZjIJ_AHty-ltlFDJP_0MV4mIXAhs1oNKhKcYWNMlbC8";
 const HOJA_MARCACIONES   = "Marcaciones";
 const HOJA_PERSONAL      = "Personal";
 const HOJA_DISPOSITIVOS  = "Dispositivos";
@@ -649,6 +680,7 @@ function doPost(e) {
       const hashNuevo = String(datos.hashNuevo || '').toLowerCase().trim();
       if (!hashNuevo || hashNuevo.length !== 64) return _respuestaJson({ ok: false, error: 'hash inválido' });
       PropertiesService.getScriptProperties().setProperty('PIN_HASH', hashNuevo);
+      _auditarIntento('admin', 'CAMBIAR-PIN', 'admin');
       return _respuestaJson({ ok: true });
     }
 
@@ -661,6 +693,7 @@ function doPost(e) {
       const seguro = {};
       permitidos.forEach(function(k) { if (cfg[k] != null) seguro[k] = cfg[k]; });
       PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));
+      _auditarIntento('admin', 'GUARDAR-CONFIG', 'admin');
       return _respuestaJson({ ok: true });
     }
 
@@ -682,6 +715,7 @@ function doPost(e) {
       SpreadsheetApp.flush();
       // Invalidar cache de personal kiosco
       CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+      _auditarIntento(docNuevo, 'REGISTRAR-PERSONAL', 'admin');
       return _respuestaJson({ ok: true });
     }
 
@@ -690,6 +724,7 @@ function doPost(e) {
       const sv = _validarSesion(datos.token, ['admin']);
       if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
       guardarFotoPersonal_(datos.documento, datos.foto, datos.nombre, datos.cargo);
+      _auditarIntento(String(datos.documento || ''), 'GUARDAR-FOTO-PERSONAL', 'admin');
       return _respuestaJson({ ok: true });
     }
 
@@ -706,6 +741,7 @@ function doPost(e) {
           hoja.deleteRow(i + 1);
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          _auditarIntento(doc, 'ELIMINAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
       }
@@ -724,6 +760,7 @@ function doPost(e) {
           hoja.getRange(i + 1, 6).setValue('ACTIVO');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          _auditarIntento(doc, 'ACTIVAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
       }
@@ -742,6 +779,7 @@ function doPost(e) {
           hoja.getRange(i + 1, 6).setValue('INACTIVO');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          _auditarIntento(doc, 'INACTIVAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
       }
@@ -763,6 +801,7 @@ function doPost(e) {
           if (typeof datos.jornadaContinua === 'boolean') hoja.getRange(i + 1, 7).setValue(datos.jornadaContinua ? 'SI' : '');
           SpreadsheetApp.flush();
           CacheService.getScriptCache().remove('PERSONAL_KIOSCO');
+          _auditarIntento(doc, 'ACTUALIZAR-PERSONAL', 'admin');
           return _respuestaJson({ ok: true });
         }
       }
@@ -932,12 +971,14 @@ function doPost(e) {
           }
           const existingToken = String(filas[i][1]).trim();
           CacheService.getScriptCache().remove('DEV_' + existingToken);
+          _auditarIntento(deviceId, 'AUTORIZAR-DISPOSITIVO', 'admin');
           return _respuestaJson({ ok: true, deviceToken: existingToken, nuevo: false });
         }
       }
       const deviceToken = _generarDeviceToken();
       hoja.appendRow([deviceId, deviceToken, nombre, empresa, finca, 'activo', new Date(), new Date()]);
       SpreadsheetApp.flush();
+      _auditarIntento(deviceId, 'AUTORIZAR-DISPOSITIVO', 'admin');
       return _respuestaJson({ ok: true, deviceToken: deviceToken, nuevo: true });
     }
 
@@ -973,6 +1014,7 @@ function doPost(e) {
           SpreadsheetApp.flush();
           const tok = String(filas[i][1]).trim();
           CacheService.getScriptCache().remove('DEV_' + tok);
+          _auditarIntento(deviceId, 'REVOCAR-DISPOSITIVO', 'admin');
           return _respuestaJson({ ok: true });
         }
       }
@@ -1524,6 +1566,15 @@ function calcularResumenDiario() {
 /* ══════════════════════════════════════════════════════
    UTILIDADES — ejecutar manualmente en el editor
 ══════════════════════════════════════════════════════ */
+
+/** Enlaza el script a tu propio Google Sheet (por ID, tomado de su URL).
+ *  Ejemplo: setSheetId('1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789') */
+function setSheetId(id) {
+  const limpio = String(id || '').trim();
+  if (!limpio || !/^[a-zA-Z0-9_-]{20,}$/.test(limpio)) throw new Error('Sheet ID inválido');
+  PropertiesService.getScriptProperties().setProperty('SHEET_ID', limpio);
+  Logger.log('SHEET_ID configurado: ' + limpio);
+}
 
 /** Configura el PIN de administrador. Ejemplo: setPin('1234') */
 function setPin(pin) {
