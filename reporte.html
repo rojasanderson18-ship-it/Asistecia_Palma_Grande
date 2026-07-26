@@ -202,6 +202,10 @@ tr.fila-tarde:hover td{background:#FFE0E0;}
   .kpis{grid-template-columns:repeat(2,1fr);}
 }
 .print-only{display:none;}
+.print-header{display:flex;align-items:center;gap:12px;padding-bottom:14px;margin-bottom:16px;border-bottom:2px solid var(--dg);}
+.print-header-logo{width:40px;height:40px;border-radius:9px;background:var(--xl);border:1px solid var(--xb);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.print-header-tit{font-size:15px;font-weight:800;}
+.print-header-sub{font-size:11.5px;color:var(--t2);margin-top:2px;}
 @media print{
   .sidebar,.topbar,.filtros-card,.no-print,.pant-only{display:none!important;}
   .print-only{display:inline!important;}
@@ -299,6 +303,24 @@ tr.fila-tarde:hover td{background:#FFE0E0;}
   </div>
 
   <div class="content">
+
+    <!-- Encabezado exclusivo para impresión/PDF: en pantalla el topbar y el
+         sidebar ya muestran esta información, pero ambos se ocultan al
+         imprimir (@media print), dejando el PDF sin encabezado. -->
+    <div class="print-header print-only">
+      <div class="print-header-logo">
+        <svg viewBox="0 0 48 48" width="34" height="34">
+          <rect x="21" y="28" width="5" height="13" rx="2.5" fill="#2E7D32"/>
+          <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#2E7D32" transform="rotate(-30 24 21)"/>
+          <ellipse cx="24" cy="21" rx="2.8" ry="10" fill="#2E7D32" transform="rotate(30 24 21)"/>
+          <ellipse cx="24" cy="18" rx="2.8" ry="10" fill="#2E7D32"/>
+        </svg>
+      </div>
+      <div>
+        <div class="print-header-tit">Palma Grande S.A.S. — Dashboard de Asistencia</div>
+        <div class="print-header-sub" id="printHeaderRango">Período consultado: —</div>
+      </div>
+    </div>
 
     <!-- FILTROS -->
     <div class="filtros-card no-print" id="seccionFiltros">
@@ -535,6 +557,8 @@ async function consultar(){
   const dias=diffDays(ini,fin)+1;
   if(dias>31){errEl.textContent='Máximo 31 días por consulta';return;}
   errEl.textContent='';
+  document.getElementById('printHeaderRango').textContent=
+    ini===fin?`Fecha: ${isoA(ini)}`:`Período: ${isoA(ini)} al ${isoA(fin)}`;
 
   const spinner=document.getElementById('filtroSpinner');
   spinner.style.display='';
