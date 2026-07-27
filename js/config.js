@@ -231,27 +231,44 @@ async function sincronizarConfigDesdeBackend() {
 // fija en el servidor al tocar "Autorizar este dispositivo", y es la que
 // debe usarse aquí — si no, un kiosco ya autorizado se ve DENTRO/FUERA según
 // la ubicación que otro kiosco tenga puesta en ese momento en Configuración.
+function _aplicarGeocercaCacheada() {
+  try {
+    const g = JSON.parse(localStorage.getItem('device_geocerca') || 'null');
+    if (g && g.lat != null && g.lng != null) {
+      CONFIG.FINCA.lat = parseFloat(g.lat);
+      CONFIG.FINCA.lng = parseFloat(g.lng);
+      if (g.radio) CONFIG.FINCA.radioMetros = parseInt(g.radio);
+      if (g.finca) CONFIG.FINCA.nombre = g.finca;
+    }
+  } catch {}
+}
+
 async function sincronizarGeocercaPropia() {
   if (!CONFIG.GS_URL) return;
   const deviceToken = (typeof getDeviceToken === 'function') ? getDeviceToken() : localStorage.getItem('device_token');
   if (!deviceToken) return;
   const deviceId = (typeof _getDeviceId === 'function') ? _getDeviceId() : null;
   if (!deviceId) return;
+  // infoDispositivo vive en doPost (igual que el resto de endpoints con
+  // deviceToken), no en doGet — nunca pedirlo por GET con el token en la URL.
   const ctrl = new AbortController();
   const timo = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const r = await fetch(`${CONFIG.GS_URL}?accion=infoDispositivo&deviceToken=${encodeURIComponent(deviceToken)}&deviceId=${encodeURIComponent(deviceId)}&_=${Date.now()}`,
-      { cache: 'no-store', signal: ctrl.signal });
+    const r = await fetch(CONFIG.GS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ accion: 'infoDispositivo', deviceToken, deviceId }),
+      cache: 'no-store', signal: ctrl.signal,
+    });
     if (!r.ok) return;
     const d = await r.json();
     if (d && d.ok && d.lat != null && d.lng != null) {
-      CONFIG.FINCA.lat = parseFloat(d.lat);
-      CONFIG.FINCA.lng = parseFloat(d.lng);
-      if (d.radio) CONFIG.FINCA.radioMetros = parseInt(d.radio);
-      if (d.finca) CONFIG.FINCA.nombre = d.finca;
+      const g = { finca: d.finca || '', lat: parseFloat(d.lat), lng: parseFloat(d.lng), radio: d.radio ? parseInt(d.radio) : CONFIG.FINCA.radioMetros };
+      localStorage.setItem('device_geocerca', JSON.stringify(g));
+      _aplicarGeocercaCacheada();
     }
   } catch {
-    // Sin conexión: se mantiene lo último aplicado
+    // Sin conexión: se mantiene la última geocerca cacheada
   } finally {
     clearTimeout(timo);
   }
@@ -259,6 +276,9 @@ async function sincronizarGeocercaPropia() {
 
 /* ── Aplicar al iniciar ── */
 aplicarConfig(getCfgGuardada());
+// Geocerca propia cacheada (si este kiosco ya está autorizado): debe ganarle
+// a la config compartida también en modo offline, antes de intentar la red.
+_aplicarGeocercaCacheada();
 
 // aplicarEmpresaUI(), sincronizarConfigDesdeBackend() y
 // sincronizarGeocercaPropia() se llaman desde app.js

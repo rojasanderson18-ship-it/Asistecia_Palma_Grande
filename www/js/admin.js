@@ -346,16 +346,26 @@ function _leerHorTabla() {
   });
 }
 
-function abrirConfig() {
+async function abrirConfig() {
+  // Si este kiosco ya está autorizado, traer primero SU finca/geocerca
+  // propia (no la compartida) para precargar el formulario con lo que
+  // realmente tiene fijo este dispositivo.
+  const tieneToken = !!((typeof getDeviceToken === 'function') && getDeviceToken());
+  if (tieneToken && typeof sincronizarGeocercaPropia === 'function') {
+    await sincronizarGeocercaPropia();
+  }
   const cfg = getCfgGuardada() || {};
   const gsUrlEl = document.getElementById('cfgGsUrl');
   if (gsUrlEl) gsUrlEl.value = cfg.gsUrl || '';
   const empresaEl = document.getElementById('cfgEmpresa');
   if (empresaEl) empresaEl.value = cfg.empresa || CONFIG.EMPRESA.nombre;
-  document.getElementById('cfgNombreFinca').value = cfg.fincaNombre || CONFIG.FINCA.nombre;
-  document.getElementById('cfgLat').value = cfg.lat != null ? cfg.lat : '';
-  document.getElementById('cfgLng').value = cfg.lng != null ? cfg.lng : '';
-  document.getElementById('cfgRadio').value = cfg.radio != null ? cfg.radio : CONFIG.FINCA.radioMetros;
+  // fincaNombre/lat/lng/radio: si el kiosco está autorizado, CONFIG.FINCA ya
+  // trae los valores propios de este dispositivo (recién sincronizados
+  // arriba); si no, se usa la config compartida como punto de partida.
+  document.getElementById('cfgNombreFinca').value = tieneToken ? CONFIG.FINCA.nombre : (cfg.fincaNombre || CONFIG.FINCA.nombre);
+  document.getElementById('cfgLat').value = tieneToken ? CONFIG.FINCA.lat : (cfg.lat != null ? cfg.lat : '');
+  document.getElementById('cfgLng').value = tieneToken ? CONFIG.FINCA.lng : (cfg.lng != null ? cfg.lng : '');
+  document.getElementById('cfgRadio').value = tieneToken ? CONFIG.FINCA.radioMetros : (cfg.radio != null ? cfg.radio : CONFIG.FINCA.radioMetros);
   // Tabla de horarios
   const horarios = (cfg.horarios && Array.isArray(cfg.horarios)) ? cfg.horarios : CONFIG.HORARIOS;
   _renderHorTabla(horarios);
@@ -487,15 +497,19 @@ document.getElementById('btnGuardarConfig').addEventListener('click', async () =
   delete cfg.entrada; delete cfg.salida; delete cfg.salidaSab;
 
   // 2. Si hay URL de servidor: guardar PRIMERO en backend; solo guardar local si el backend acepta
+  const deviceToken = (typeof getDeviceToken === 'function') ? getDeviceToken() : null;
   if (CONFIG.GS_URL || cfg.gsUrl) {
     if (cfg.gsUrl && !CONFIG.GS_URL) CONFIG.GS_URL = cfg.gsUrl;
-    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, umbral, horarios };
+    // deviceToken: si este kiosco ya está autorizado, la finca/geocerca se
+    // guarda en SU fila (no en la config compartida) — ver backend.
+    const cfgBackend = { empresa: cfg.empresa, fincaNombre, lat, lng, radio, umbral, horarios, deviceToken: deviceToken || undefined };
     const rb = await guardarConfigBackend(cfgBackend);
     if (!rb.ok) {
       btn.disabled = false;
       await showAlert('Cambio no aplicado: no fue posible validar con el servidor.\n' + (rb.error || ''));
       return;
     }
+    if (deviceToken && typeof sincronizarGeocercaPropia === 'function') await sincronizarGeocercaPropia();
   }
 
   // 3. Backend aceptó (o no hay URL de servidor): guardar en LocalStorage

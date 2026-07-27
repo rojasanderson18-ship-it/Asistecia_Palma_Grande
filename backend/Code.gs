@@ -744,9 +744,40 @@ function doPost(e) {
       const sv = _validarSesion(datos.token, ['admin']);
       if (!sv.ok) return _respuestaJson({ ok: false, error: sv.error });
       const cfg = datos.config || {};
-      const permitidos = ['empresa','fincaNombre','fincaId','lat','lng','radio','entrada','salida','salidaSab','umbral','horarios'];
+      // Campos generales de la empresa: SIEMPRE compartidos entre kioscos.
+      const permitidosGenerales = ['empresa','fincaId','entrada','salida','salidaSab','umbral','horarios'];
       const seguro = {};
-      permitidos.forEach(function(k) { if (cfg[k] != null) seguro[k] = cfg[k]; });
+      permitidosGenerales.forEach(function(k) { if (cfg[k] != null) seguro[k] = cfg[k]; });
+
+      // finca/lat/lng/radio: si este kiosco YA está autorizado (trae
+      // deviceToken válido), se guardan en la fila propia de ESE
+      // dispositivo — así editar la finca desde un kiosco no cambia lo que
+      // ven los demás. Si el kiosco todavía no está autorizado, se guardan
+      // en la config compartida como "borrador" hasta que se toque
+      // "Autorizar este dispositivo" (que copia esos valores a su fila).
+      const dv = datos.deviceToken ? _validarDeviceToken(datos.deviceToken) : { ok: false };
+      const tieneGeoNueva = cfg.fincaNombre != null || cfg.lat != null || cfg.lng != null || cfg.radio != null;
+      if (dv.ok && tieneGeoNueva) {
+        const hoja  = obtenerOhCrearHojaDispositivos();
+        const filas = hoja.getDataRange().getValues();
+        for (let i = 1; i < filas.length; i++) {
+          if (String(filas[i][0]).trim() === dv.deviceId) {
+            if (cfg.fincaNombre != null) hoja.getRange(i + 1, 5).setValue(String(cfg.fincaNombre));
+            if (cfg.lat != null)         hoja.getRange(i + 1, 9).setValue(parseFloat(cfg.lat));
+            if (cfg.lng != null)         hoja.getRange(i + 1, 10).setValue(parseFloat(cfg.lng));
+            if (cfg.radio != null)       hoja.getRange(i + 1, 11).setValue(parseInt(cfg.radio));
+            SpreadsheetApp.flush();
+            CacheService.getScriptCache().remove('DEV_' + String(datos.deviceToken).slice(0, 64));
+            break;
+          }
+        }
+      } else if (tieneGeoNueva) {
+        if (cfg.fincaNombre != null) seguro.fincaNombre = cfg.fincaNombre;
+        if (cfg.lat != null)         seguro.lat = cfg.lat;
+        if (cfg.lng != null)         seguro.lng = cfg.lng;
+        if (cfg.radio != null)       seguro.radio = cfg.radio;
+      }
+
       PropertiesService.getScriptProperties().setProperty('APP_CONFIG', JSON.stringify(seguro));
       _auditarIntento('admin', 'GUARDAR-CONFIG', 'admin');
       return _respuestaJson({ ok: true });

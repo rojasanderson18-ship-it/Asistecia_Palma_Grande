@@ -227,7 +227,11 @@ async function guardarConfigBackend(cfg) {
   if (!CONFIG.GS_URL) return { ok: false, error: 'Sin URL de servidor' };
   if (!_adminToken) return { ok: false, error: 'Sesión expirada, vuelve a ingresar el PIN' };
   try {
-    const d = await _postGs({ accion: 'guardarConfig', token: _adminToken, config: cfg });
+    // deviceToken viaja aparte de "config": el backend lo usa para decidir si
+    // finca/lat/lng/radio se guardan en la fila propia del kiosco o en la
+    // config compartida — no es un campo de configuración en sí.
+    const { deviceToken, ...configFields } = cfg;
+    const d = await _postGs({ accion: 'guardarConfig', token: _adminToken, config: configFields, deviceToken });
     if (d.ok) return { ok: true };
     return { ok: false, error: d.error || 'No se pudo guardar la configuración' };
   } catch {
