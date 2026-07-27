@@ -34,11 +34,11 @@ tickReloj();
 /* ── CONFIRMACIÓN INMERSIVA ── */
 let _cdInterval = null;
 function showConf(d) {
-  playSound('success');
   if (navigator.vibrate) navigator.vibrate([200, 50, 200]);
 
   const primerNombre = d.nombre.split(' ')[0];
   const esEntrada = d.tipo === 'Entrada';
+  if (typeof decirBienvenida === 'function') decirBienvenida(primerNombre, esEntrada);
   const bg = esEntrada ? '#061410' : '#08091A';
   const ico = esEntrada
     ? `<svg class="conf-ico-chk" viewBox="0 0 64 64" fill="none">

@@ -35,3 +35,18 @@ window.playSound = function(tipo) {
     }
   } catch(e) { /* Dispositivo sin soporte o bloqueado por política del browser */ }
 };
+
+/* ── Voz (confirmación de Entrada/Salida) ──
+   Usa la Web Speech API; si el dispositivo no la soporta, no hace nada
+   (silencioso, sin romper el flujo de marcación). */
+window.decirBienvenida = function(nombre, esEntrada) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const frase = (esEntrada ? 'Bienvenido, ' : 'Hasta luego, ') + (nombre || '');
+    const u = new SpeechSynthesisUtterance(frase);
+    u.lang = 'es-CO';
+    u.rate = 1;
+    speechSynthesis.cancel(); // no encolar sobre una locución anterior sin terminar
+    speechSynthesis.speak(u);
+  } catch (e) { /* Dispositivo sin soporte o bloqueado por política del browser */ }
+};
