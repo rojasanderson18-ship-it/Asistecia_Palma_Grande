@@ -86,7 +86,13 @@ aplicarEmpresaUI();
 if (!isAppConfigured()) {
   document.getElementById('setupOverlay').style.display = 'flex';
 } else {
-  setTimeout(sincronizarConfigDesdeBackend, 800);
+  // sincronizarGeocercaPropia() debe ir DESPUÉS de que termine
+  // sincronizarConfigDesdeBackend() — si no, la geocerca propia del kiosco
+  // quedaría sobreescrita por la configuración compartida.
+  setTimeout(async () => {
+    await sincronizarConfigDesdeBackend();
+    await sincronizarGeocercaPropia();
+  }, 800);
   setTimeout(cargarPersonalDesdeBackend, 1500);
   // Restaurar sesión y pantalla admin si el refresh fue durante una sesión activa
   // (sin retraso: se ejecuta antes del primer pintado para evitar parpadeo del teclado)

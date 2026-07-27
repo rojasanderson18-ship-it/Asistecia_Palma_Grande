@@ -1124,6 +1124,24 @@ function doPost(e) {
     }
 
     /* ── Marcas del día (requiere deviceToken de kiosco autorizado) ── */
+    /* ── Geocerca/finca propia de ESTE kiosco (no la compartida) ── */
+    // El cliente la necesita para decidir localmente si está dentro del
+    // cerco antes de marcar — si usara la configuración compartida en su
+    // lugar, cambiar la finca en Configuración para dar de alta un kiosco
+    // nuevo haría que los kioscos YA autorizados muestren "fuera de la
+    // geocerca" (o la oculten) usando la ubicación de otro kiosco.
+    if (accion === 'infoDispositivo') {
+      const dv = _validarDeviceToken(datos.deviceToken);
+      if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });
+      if (!datos.deviceId) return _respuestaJson({ ok: false, error: 'deviceId requerido.' });
+      if (String(datos.deviceId).trim().slice(0, 64) !== dv.deviceId)
+        return _respuestaJson({ ok: false, error: 'Dispositivo no autorizado.' });
+      return _respuestaJson({
+        ok: true, finca: dv.finca || '',
+        lat: dv.lat, lng: dv.lng, radio: dv.radio
+      });
+    }
+
     if (accion === 'marcasHoy') {
       const dv = _validarDeviceToken(datos.deviceToken);
       if (!dv.ok) return _respuestaJson({ ok: false, error: dv.error });

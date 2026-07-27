@@ -434,6 +434,7 @@ document.getElementById('btnAutorizarDispositivo').addEventListener('click', asy
   if (r.ok) {
     if (infoEl) infoEl.textContent = r.nuevo ? '✓ Dispositivo autorizado correctamente' : '✓ Dispositivo ya estaba autorizado (token actualizado)';
     showToast('✓ Dispositivo autorizado');
+    if (typeof sincronizarGeocercaPropia === 'function') sincronizarGeocercaPropia();
     _cargarListaDispositivos();
   } else {
     if (infoEl) infoEl.textContent = '✗ ' + (r.error || 'Error al autorizar');
@@ -1281,6 +1282,7 @@ async function _ejecutarSetup() {
     return;
   }
   _setupStepEstado('sIco3', 'ok');
+  if (typeof sincronizarGeocercaPropia === 'function') await sincronizarGeocercaPropia();
 
   // Paso 4: sincronizar personal
   _setupStepEstado('sIco4', 'run');

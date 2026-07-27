@@ -223,8 +223,43 @@ async function sincronizarConfigDesdeBackend() {
   }
 }
 
+/* ── Geocerca/finca propia de este kiosco (sobreescribe la compartida) ── */
+// sincronizarConfigDesdeBackend() aplica la configuración GENERAL compartida
+// (empresa, horarios, umbral) — pero lat/lng/radio/fincaNombre de ESE
+// resultado son los del formulario de Configuración, que es uno solo para
+// toda la cuenta. Si este kiosco ya fue autorizado, su geocerca real quedó
+// fija en el servidor al tocar "Autorizar este dispositivo", y es la que
+// debe usarse aquí — si no, un kiosco ya autorizado se ve DENTRO/FUERA según
+// la ubicación que otro kiosco tenga puesta en ese momento en Configuración.
+async function sincronizarGeocercaPropia() {
+  if (!CONFIG.GS_URL) return;
+  const deviceToken = (typeof getDeviceToken === 'function') ? getDeviceToken() : localStorage.getItem('device_token');
+  if (!deviceToken) return;
+  const deviceId = (typeof _getDeviceId === 'function') ? _getDeviceId() : null;
+  if (!deviceId) return;
+  const ctrl = new AbortController();
+  const timo = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const r = await fetch(`${CONFIG.GS_URL}?accion=infoDispositivo&deviceToken=${encodeURIComponent(deviceToken)}&deviceId=${encodeURIComponent(deviceId)}&_=${Date.now()}`,
+      { cache: 'no-store', signal: ctrl.signal });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.ok && d.lat != null && d.lng != null) {
+      CONFIG.FINCA.lat = parseFloat(d.lat);
+      CONFIG.FINCA.lng = parseFloat(d.lng);
+      if (d.radio) CONFIG.FINCA.radioMetros = parseInt(d.radio);
+      if (d.finca) CONFIG.FINCA.nombre = d.finca;
+    }
+  } catch {
+    // Sin conexión: se mantiene lo último aplicado
+  } finally {
+    clearTimeout(timo);
+  }
+}
+
 /* ── Aplicar al iniciar ── */
 aplicarConfig(getCfgGuardada());
 
-// aplicarEmpresaUI() y sincronizarConfigDesdeBackend() se llaman desde app.js
+// aplicarEmpresaUI(), sincronizarConfigDesdeBackend() y
+// sincronizarGeocercaPropia() se llaman desde app.js
 // cargarPersonalDesdeBackend() se llama desde app.js tras DOMContentLoaded
