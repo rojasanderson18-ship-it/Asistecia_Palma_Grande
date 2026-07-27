@@ -231,9 +231,11 @@ function abrirModalSupervisor(txt, cb) {
   const pinEl = document.getElementById('modalPinInput');
   const errEl = document.getElementById('modalPinErr');
   const modal = document.getElementById('modalSupervisor');
+  const btn   = document.getElementById('modalPinOk');
   if (txtEl) txtEl.innerHTML = txt;
   if (pinEl) pinEl.value = '';
   if (errEl) errEl.textContent = '';
+  if (btn) { btn.disabled = false; btn.textContent = 'Autorizar'; }
   if (modal) modal.style.display = 'flex';
   setTimeout(() => { if (pinEl) pinEl.focus(); }, 100);
 }
@@ -242,13 +244,21 @@ document.getElementById('modalPinOk').onclick = async () => {
   const btn = document.getElementById('modalPinOk');
   const pin = document.getElementById('modalPinInput').value;
   const errEl = document.getElementById('modalPinErr');
+  const txtOriginal = btn.textContent;
   btn.disabled = true;
+  btn.textContent = 'Verificando…';
   const result = await loginSupervisor(pin);
-  btn.disabled = false;
   if (!result.ok) {
+    btn.disabled = false;
+    btn.textContent = txtOriginal;
     if (errEl) errEl.textContent = result.error || 'PIN incorrecto';
     return;
   }
+  // Sigue deshabilitado/"Autorizando…" durante el reintento de la
+  // marcación: sin esto, la pantalla se queda viendo igual (con la cámara
+  // de fondo) mientras espera al servidor y parece que el botón no hizo
+  // nada hasta que de repente aparece el resultado.
+  btn.textContent = 'Autorizando…';
   document.getElementById('modalSupervisor').style.display = 'none';
   // _modalOkCb (ejecutarMarcacion) es async y lee el token de supervisor
   // recién después de esperar al GPS — hay que esperar a que termine antes
