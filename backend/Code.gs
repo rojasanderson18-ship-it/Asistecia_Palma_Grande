@@ -1283,7 +1283,12 @@ function doPost(e) {
 
         const nombre = empleado.nombre;
         const cargo  = empleado.cargo;
-        const finca  = appCfg.fincaNombre || dv.finca || '';
+        // La finca de cada marcación debe ser la del dispositivo/kiosco que
+        // marca (fija desde que se autorizó ese kiosco), no la configuración
+        // general compartida — si no, cambiar la finca en Configuración para
+        // dar de alta un kiosco nuevo hace que TODOS los kioscos existentes
+        // empiecen a marcar con esa misma finca.
+        const finca  = dv.finca || appCfg.fincaNombre || '';
 
         let resultadoFacial;
         if      (datos.sinBiometria && esFueraGeo && gpsAusente) resultadoFacial = 'SUPERVISOR_BIO_GPS_GEO';
