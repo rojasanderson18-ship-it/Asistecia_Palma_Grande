@@ -197,7 +197,10 @@ function _generarDeviceToken() {
     .join('');
 }
 
-// Devuelve {ok, deviceId, nombre, empresa, finca} o {ok:false, error}
+// Devuelve {ok, deviceId, nombre, empresa, finca, lat, lng, radio} o {ok:false, error}
+// lat/lng/radio son la geocerca PROPIA de este dispositivo (fija desde que
+// se autorizó), null si el dispositivo es de antes de que existiera este
+// campo — en ese caso el llamador debe usar la configuración compartida.
 // Usa CacheService para no leer la hoja en cada marcación
 function _validarDeviceToken(deviceToken) {
   if (!deviceToken || typeof deviceToken !== 'string' || deviceToken.length < 32) {
@@ -214,14 +217,17 @@ function _validarDeviceToken(deviceToken) {
   const hoja  = obtenerOhCrearHojaDispositivos();
   const datos = hoja.getDataRange().getValues();
   for (let i = 1; i < datos.length; i++) {
-    const [deviceId, dToken, nombre, empresa, finca, estado] = datos[i];
+    const [deviceId, dToken, nombre, empresa, finca, estado, , , lat, lng, radio] = datos[i];
     if (String(dToken).trim() === tok) {
       if (String(estado).trim().toLowerCase() !== 'activo') {
         CacheService.getScriptCache().put(cacheKey, JSON.stringify({ ok: false }), CACHE_DEVICE_TTL);
         return { ok: false, error: 'Dispositivo inactivo. Contacta al administrador.' };
       }
+      const latN = parseFloat(lat), lngN = parseFloat(lng), radioN = parseInt(radio);
       const result = { ok: true, deviceId: String(deviceId).trim(), nombre: String(nombre).trim(),
-                       empresa: String(empresa).trim(), finca: String(finca).trim(), row: i + 1 };
+                       empresa: String(empresa).trim(), finca: String(finca).trim(), row: i + 1,
+                       lat: isNaN(latN) ? null : latN, lng: isNaN(lngN) ? null : lngN,
+                       radio: isNaN(radioN) ? null : radioN };
       CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), CACHE_DEVICE_TTL);
       return result;
     }
@@ -392,8 +398,19 @@ function obtenerOhCrearHojaDispositivos() {
   let hoja   = ss.getSheetByName(HOJA_DISPOSITIVOS);
   if (!hoja) {
     hoja = ss.insertSheet(HOJA_DISPOSITIVOS);
-    hoja.appendRow(['DeviceId','DeviceToken','Nombre','Empresa','Finca','Estado','FechaRegistro','UltimaConexion']);
+    hoja.appendRow(['DeviceId','DeviceToken','Nombre','Empresa','Finca','Estado','FechaRegistro','UltimaConexion','Lat','Lng','Radio']);
     hoja.setFrozenRows(1);
+  } else {
+    // Migrar: agregar columnas de geocerca propia por dispositivo si faltan
+    // (hojas creadas antes de que existiera esta función). Nunca borra ni
+    // mueve columnas existentes, solo agrega al final.
+    const headers = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0].map(String);
+    ['Lat', 'Lng', 'Radio'].forEach(function(col) {
+      if (headers.indexOf(col) === -1) {
+        hoja.getRange(1, hoja.getLastColumn() + 1).setValue(col);
+        headers.push(col);
+      }
+    });
   }
   return hoja;
 }
@@ -638,16 +655,26 @@ function _haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Calcula si las coordenadas están dentro de la geocerca configurada en el backend
-function _calcularGeocerca(lat, lng) {
+// Calcula si las coordenadas están dentro de la geocerca configurada.
+// geocercaDispositivo: {lat,lng,radio} propia del kiosco que marca (prioridad)
+// — si no viene, se usa la configuración compartida en PropertiesService
+// (dispositivos autorizados antes de que existiera la geocerca por kiosco).
+function _calcularGeocerca(lat, lng, geocercaDispositivo) {
   try {
-    const props  = PropertiesService.getScriptProperties();
-    const raw    = props.getProperty('APP_CONFIG');
-    if (!raw) return { dentroGeocerca: false, distancia: null, sinConfig: true };
-    const cfg    = JSON.parse(raw);
-    const cLat   = parseFloat(cfg.lat);
-    const cLng   = parseFloat(cfg.lng);
-    const radio  = parseInt(cfg.radio) || 200;
+    let cLat, cLng, radio;
+    if (geocercaDispositivo && geocercaDispositivo.lat != null && geocercaDispositivo.lng != null) {
+      cLat  = geocercaDispositivo.lat;
+      cLng  = geocercaDispositivo.lng;
+      radio = geocercaDispositivo.radio || 200;
+    } else {
+      const props = PropertiesService.getScriptProperties();
+      const raw   = props.getProperty('APP_CONFIG');
+      if (!raw) return { dentroGeocerca: false, distancia: null, sinConfig: true };
+      const cfg = JSON.parse(raw);
+      cLat  = parseFloat(cfg.lat);
+      cLng  = parseFloat(cfg.lng);
+      radio = parseInt(cfg.radio) || 200;
+    }
     if (isNaN(cLat) || isNaN(cLng)) return { dentroGeocerca: false, distancia: null, sinConfig: true };
     const dist = _haversine(parseFloat(lat), parseFloat(lng), cLat, cLng);
     return { dentroGeocerca: dist <= radio, distancia: Math.round(dist) };
@@ -991,17 +1018,28 @@ function doPost(e) {
       const cfg     = JSON.parse(cfgRaw);
       const empresa = cfg.empresa || '';
       const finca   = cfg.fincaNombre || '';
+      const lat     = cfg.lat != null ? parseFloat(cfg.lat) : '';
+      const lng     = cfg.lng != null ? parseFloat(cfg.lng) : '';
+      const radio   = cfg.radio != null ? parseInt(cfg.radio) : '';
       const nombre  = String(datos.nombre || 'Kiosco').trim().slice(0, 60);
       // Verificar si ya existe
       const hoja  = obtenerOhCrearHojaDispositivos();
       const filas = hoja.getDataRange().getValues();
       for (let i = 1; i < filas.length; i++) {
         if (String(filas[i][0]).trim() === deviceId) {
-          // Ya existe — reactivar si estaba inactivo
+          // Ya existe — reactivar si estaba inactivo, y SIEMPRE refrescar su
+          // finca/geocerca con la configuración actual: volver a tocar
+          // "Autorizar este dispositivo" es la forma de fijarle a ESTE
+          // kiosco la finca/ubicación que tengas puesta en Configuración
+          // en ese momento (útil para corregir un kiosco después).
           if (String(filas[i][5]).trim().toLowerCase() !== 'activo') {
             hoja.getRange(i + 1, 6).setValue('activo');
-            SpreadsheetApp.flush();
           }
+          hoja.getRange(i + 1, 5).setValue(finca);
+          hoja.getRange(i + 1, 9).setValue(lat);
+          hoja.getRange(i + 1, 10).setValue(lng);
+          hoja.getRange(i + 1, 11).setValue(radio);
+          SpreadsheetApp.flush();
           const existingToken = String(filas[i][1]).trim();
           CacheService.getScriptCache().remove('DEV_' + existingToken);
           _auditarIntento(deviceId, 'AUTORIZAR-DISPOSITIVO', 'admin');
@@ -1009,7 +1047,7 @@ function doPost(e) {
         }
       }
       const deviceToken = _generarDeviceToken();
-      hoja.appendRow([deviceId, deviceToken, nombre, empresa, finca, 'activo', new Date(), new Date()]);
+      hoja.appendRow([deviceId, deviceToken, nombre, empresa, finca, 'activo', new Date(), new Date(), lat, lng, radio]);
       SpreadsheetApp.flush();
       _auditarIntento(deviceId, 'AUTORIZAR-DISPOSITIVO', 'admin');
       return _respuestaJson({ ok: true, deviceToken: deviceToken, nuevo: true });
@@ -1180,13 +1218,21 @@ function doPost(e) {
         const lat = parseFloat(datos.lat);
         const lng = parseFloat(datos.lng);
         const gpsValido = !isNaN(lat) && !isNaN(lng);
-        const geocercaConfigurada = !isNaN(parseFloat(appCfg.lat)) && !isNaN(parseFloat(appCfg.lng));
+        // La geocerca es la propia del dispositivo/kiosco (fija desde que se
+        // autorizó); si el dispositivo es de antes de que existiera este
+        // campo, se usa la configuración compartida como respaldo.
+        const geocercaDispositivo = (dv.lat != null && dv.lng != null)
+          ? { lat: dv.lat, lng: dv.lng, radio: dv.radio }
+          : null;
+        const geocercaConfigurada = geocercaDispositivo
+          ? true
+          : (!isNaN(parseFloat(appCfg.lat)) && !isNaN(parseFloat(appCfg.lng)));
         let dentroGeocerca = false, distanciaMetros = null;
         let sinConfigGeo = !geocercaConfigurada;
         let gpsAusente = false;
 
         if (gpsValido && geocercaConfigurada) {
-          const geo = _calcularGeocerca(lat, lng);
+          const geo = _calcularGeocerca(lat, lng, geocercaDispositivo);
           dentroGeocerca  = geo.dentroGeocerca;
           distanciaMetros = geo.distancia;
           sinConfigGeo    = !!geo.sinConfig;
