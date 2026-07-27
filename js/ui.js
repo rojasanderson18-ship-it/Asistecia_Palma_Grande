@@ -254,12 +254,11 @@ document.getElementById('modalPinOk').onclick = async () => {
     if (errEl) errEl.textContent = result.error || 'PIN incorrecto';
     return;
   }
-  // Sigue deshabilitado/"Autorizando…" durante el reintento de la
-  // marcación: sin esto, la pantalla se queda viendo igual (con la cámara
-  // de fondo) mientras espera al servidor y parece que el botón no hizo
-  // nada hasta que de repente aparece el resultado.
+  // El modal se mantiene ABIERTO con "Autorizando…" hasta que la marcación
+  // realmente termine — si se cierra antes, la pantalla de atrás (la cámara)
+  // se queda quieta sin ninguna señal mientras espera al servidor, dando la
+  // sensación de que el botón no hizo nada.
   btn.textContent = 'Autorizando…';
-  document.getElementById('modalSupervisor').style.display = 'none';
   // _modalOkCb (ejecutarMarcacion) es async y lee el token de supervisor
   // recién después de esperar al GPS — hay que esperar a que termine antes
   // de borrar el token, si no, se limpia antes de que la marcación lo use
@@ -269,6 +268,7 @@ document.getElementById('modalPinOk').onclick = async () => {
     _modalOkCb = null;
     await cb();
   }
+  document.getElementById('modalSupervisor').style.display = 'none';
   clearSupervisorToken();
 };
 
