@@ -250,7 +250,15 @@ document.getElementById('modalPinOk').onclick = async () => {
     return;
   }
   document.getElementById('modalSupervisor').style.display = 'none';
-  if (_modalOkCb) { _modalOkCb(); _modalOkCb = null; }
+  // _modalOkCb (ejecutarMarcacion) es async y lee el token de supervisor
+  // recién después de esperar al GPS — hay que esperar a que termine antes
+  // de borrar el token, si no, se limpia antes de que la marcación lo use
+  // y el backend la rechaza como si el PIN nunca se hubiera validado.
+  if (_modalOkCb) {
+    const cb = _modalOkCb;
+    _modalOkCb = null;
+    await cb();
+  }
   clearSupervisorToken();
 };
 
