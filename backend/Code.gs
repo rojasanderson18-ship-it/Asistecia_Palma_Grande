@@ -1425,8 +1425,13 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
     if (normalizarFecha(fechaFila) !== fecha) continue;
     if (fincaFiltro && String(finca) !== String(fincaFiltro)) continue;
     const clave = String(documento);
-    if (!porPersona[clave]) porPersona[clave] = { nombre: nombre, cargo: cargo, finca: finca };
+    // Cada marcación guarda su propia finca (viene del kiosco/dispositivo,
+    // no de la persona) — un trabajador puede entrar en una finca y salir
+    // en otra, así que no se puede asumir una sola finca por persona/día.
+    if (!porPersona[clave]) porPersona[clave] = { nombre: nombre, cargo: cargo };
     porPersona[clave][tipo] = normalizarHora(hora);
+    if (tipo === 'Entrada') porPersona[clave].fincaEntrada = finca;
+    if (tipo === 'Salida')  porPersona[clave].fincaSalida  = finca;
     if (tipo === 'Salida' && iExcep != null) porPersona[clave].excepcionSalida = String(fila[iExcep] || '');
     if (tipo === 'Salida' && iExtraAut != null) porPersona[clave].extraAutorizada = String(fila[iExtraAut] || '').trim().toUpperCase() === 'SI';
   }
@@ -1464,7 +1469,8 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
 
   Object.keys(porPersona).forEach(function(documento) {
     const p = porPersona[documento];
-    porFinca[p.finca] = (porFinca[p.finca] || 0) + 1;
+    const fincaPrincipal = p.fincaEntrada || p.fincaSalida || '';
+    porFinca[fincaPrincipal] = (porFinca[fincaPrincipal] || 0) + 1;
     const marcas = [];
     const puntualidad = [];
     let minutosDeuda = 0;
@@ -1507,7 +1513,8 @@ function calcularResumenDashboard(fechaParam, fincaFiltro) {
         minutosExtra = Math.round((hd - jornadaHorasPersona) * 60);
       }
     }
-    filas.push({ documento: documento, nombre: p.nombre, cargo: p.cargo, finca: p.finca,
+    filas.push({ documento: documento, nombre: p.nombre, cargo: p.cargo,
+                 fincaEntrada: p.fincaEntrada || '', fincaSalida: p.fincaSalida || '',
                  entrada: p.Entrada || '', salida: p.Salida || '', horasLaboradas: horasLaboradas,
                  marcas: marcas, minutosDeuda: minutosDeuda, minutosExtra: minutosExtra, puntualidad: puntualidad,
                  jornadaContinua: tieneJornadaContinua, extraAutorizada: !!p.extraAutorizada });
