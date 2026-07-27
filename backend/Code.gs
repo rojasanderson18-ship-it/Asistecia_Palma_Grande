@@ -1058,18 +1058,25 @@ function doPost(e) {
       const filas = hoja.getDataRange().getValues();
       for (let i = 1; i < filas.length; i++) {
         if (String(filas[i][0]).trim() === deviceId) {
-          // Ya existe — reactivar si estaba inactivo, y SIEMPRE refrescar su
-          // finca/geocerca con la configuración actual: volver a tocar
-          // "Autorizar este dispositivo" es la forma de fijarle a ESTE
-          // kiosco la finca/ubicación que tengas puesta en Configuración
-          // en ese momento (útil para corregir un kiosco después).
+          // Ya existe: solo reactivar si estaba inactivo. NO tocar su
+          // finca/lat/lng/radio — eso ahora se edita únicamente desde
+          // "Guardar configuración" (escribe directo en la fila de ESTE
+          // dispositivo). Si "Autorizar" también copiara aquí la config
+          // compartida, cada vez que se reautoriza un kiosco ya editado se
+          // le borraría su finca propia y volvería a la de otro kiosco.
+          // Excepción: si el dispositivo es de antes de que existiera la
+          // geocerca por kiosco (celdas vacías), se siembra con la
+          // compartida como punto de partida.
           if (String(filas[i][5]).trim().toLowerCase() !== 'activo') {
             hoja.getRange(i + 1, 6).setValue('activo');
           }
-          hoja.getRange(i + 1, 5).setValue(finca);
-          hoja.getRange(i + 1, 9).setValue(lat);
-          hoja.getRange(i + 1, 10).setValue(lng);
-          hoja.getRange(i + 1, 11).setValue(radio);
+          const yaTieneGeo = filas[i][8] !== '' && filas[i][8] != null;
+          if (!yaTieneGeo) {
+            hoja.getRange(i + 1, 5).setValue(finca);
+            hoja.getRange(i + 1, 9).setValue(lat);
+            hoja.getRange(i + 1, 10).setValue(lng);
+            hoja.getRange(i + 1, 11).setValue(radio);
+          }
           SpreadsheetApp.flush();
           const existingToken = String(filas[i][1]).trim();
           CacheService.getScriptCache().remove('DEV_' + existingToken);
