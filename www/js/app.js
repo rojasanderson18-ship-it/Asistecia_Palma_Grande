@@ -241,7 +241,9 @@ document.getElementById('btnWkSupAuth').onclick = () => {
   if (!nombre || !tipo) return;
   abrirModalSupervisor(
     `<b>${xh(nombre)}</b> — Autorizar marcación de ${tipo} con PIN de supervisor.`,
-    () => { ejecutarMarcacion(nombre, tipo, null, true, excep); }
+    // Debe devolver la promesa: el modal espera a que termine antes de
+    // borrar el token de supervisor (si no, se limpia antes de usarse).
+    () => ejecutarMarcacion(nombre, tipo, null, true, excep)
   );
 };
 
