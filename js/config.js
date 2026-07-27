@@ -121,7 +121,10 @@ function aplicarConfig(cfg) {
 
 function aplicarEmpresaUI() {
   const cfg = getCfgGuardada();
-  const finca = (cfg && cfg.fincaNombre) ? cfg.fincaNombre : CONFIG.FINCA.nombre;
+  // CONFIG.FINCA.nombre manda: si este kiosco ya está autorizado,
+  // sincronizarGeocercaPropia() lo dejó con la finca PROPIA del dispositivo,
+  // que debe ganarle al valor cacheado de la config compartida (cfg.fincaNombre).
+  const finca = CONFIG.FINCA.nombre || (cfg && cfg.fincaNombre) || '';
   const empresa = (cfg && cfg.empresa) ? cfg.empresa : CONFIG.EMPRESA.nombre;
   const el = document.getElementById('nombreFinca');
   const sep = document.querySelector('.hdr-sub-sep');
@@ -266,6 +269,9 @@ async function sincronizarGeocercaPropia() {
       const g = { finca: d.finca || '', lat: parseFloat(d.lat), lng: parseFloat(d.lng), radio: d.radio ? parseInt(d.radio) : CONFIG.FINCA.radioMetros };
       localStorage.setItem('device_geocerca', JSON.stringify(g));
       _aplicarGeocercaCacheada();
+      // Refrescar el encabezado en pantalla ("Control de asistencia · Finca X")
+      // con el nombre propio del kiosco recién aplicado.
+      if (typeof aplicarEmpresaUI === 'function') aplicarEmpresaUI();
     }
   } catch {
     // Sin conexión: se mantiene la última geocerca cacheada
