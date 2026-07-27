@@ -285,8 +285,13 @@ const _MSG_REQUIERE_CONEXION = 'Esta marcación excepcional requiere conexión p
    tipoExcepcion:   tipo de excepción cuando sinBiometria = true.
 ── */
 async function ejecutarMarcacion(nombre, tipo, distanciaFacial, sinBiometria, tipoExcepcion) {
-  // Refrescar GPS antes de construir el payload (timeout 5 s)
-  if (typeof verificarGPSAhora === 'function') {
+  // Refrescar GPS antes de construir el payload (timeout 5 s) — pero NO si ya
+  // viene autorizada por un supervisor (reintento tras el PIN): el supervisor
+  // ya validó la excepción manualmente, así que esperar varios segundos por
+  // una lectura GPS fresca (que en zonas de mala señal casi siempre agota el
+  // timeout) solo hace más lento algo que ya está autorizado.
+  const yaAutorizadaPorSupervisor = !!(typeof getSupervisorToken === 'function' && getSupervisorToken());
+  if (typeof verificarGPSAhora === 'function' && !yaAutorizadaPorSupervisor) {
     await Promise.race([
       verificarGPSAhora(),
       new Promise(r => setTimeout(r, 5000)),
