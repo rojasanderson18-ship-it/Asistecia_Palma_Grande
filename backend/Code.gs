@@ -1242,6 +1242,7 @@ function doPost(e) {
             const iEst    = colMap['EstadoPuntualidad']  != null ? colMap['EstadoPuntualidad']  : 10;
             const iMsg    = colMap['MensajePuntualidad'] != null ? colMap['MensajePuntualidad'] : 12;
             const iMin    = colMap['MinutosDiferencia']  != null ? colMap['MinutosDiferencia']  : 11;
+            _auditarIntento(documento, 'MARCAR-IDEMPOTENTE', marcacionId);
             return _respuestaJson({
               ok: true, idempotente: true,
               nombre: String(f[iNombre] || ''), cargo: String(f[iCargo] || ''), finca: String(f[iFinca] || ''),
@@ -1280,7 +1281,13 @@ function doPost(e) {
 
         const marcasDelDia = _obtenerMarcasDelDia(documento, hoyStr, datosHoja, colMap);
         const seqVal = _validarSecuencia(marcasDelDia, tipo);
-        if (!seqVal.ok) return _respuestaJson({ ok: false, error: seqVal.error });
+        if (!seqVal.ok) {
+          // Auditar: sin esto no queda ningún rastro en el servidor de una
+          // marcación (sobre todo sin conexión) que el cliente creyó exitosa
+          // pero el servidor rechazó — imposible diagnosticar después.
+          _auditarIntento(documento, 'MARCAR-RECHAZO-SECUENCIA', tipo + '|' + hoyStr + '|' + seqVal.error);
+          return _respuestaJson({ ok: false, error: seqVal.error });
+        }
 
         // Configuración del servidor
         const appCfg = (function() {
@@ -1461,6 +1468,7 @@ function doPost(e) {
         _set('ResultadoFacial',      resultadoFacial);
         hoja.appendRow(fila);
         SpreadsheetApp.flush();
+        _auditarIntento(documento, 'MARCAR-OK', tipo + '|' + hoyStr + ' ' + horaStr + '|' + finca + '|' + (datos.sinConexion ? 'OFFLINE' : 'ONLINE'));
 
         _actualizarUltimaConexion(datos.deviceToken);
 
