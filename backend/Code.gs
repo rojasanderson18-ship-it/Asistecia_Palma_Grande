@@ -1255,8 +1255,26 @@ function doPost(e) {
           }
         }
 
-        // Fecha y hora del SERVIDOR (nunca del cliente)
-        const ahoraServidor = new Date();
+        // Fecha y hora: normalmente la del SERVIDOR (nunca la del cliente, para
+        // evitar que se pueda falsear la hora de una marcación normal). La
+        // EXCEPCIÓN es una marcación que se hizo SIN CONEXIÓN y se está
+        // sincronizando ahora: ahí sí se usa la fecha/hora que el cliente
+        // reportó al momento real de marcar — si no, un kiosco que estuvo
+        // horas (o un día) sin internet sincroniza TODO con la fecha/hora en
+        // que por fin volvió la señal, lo cual no solo registra mal la hora
+        // sino que además puede hacer que dos marcaciones de días distintos
+        // (ej. Salida de ayer y Entrada de hoy) queden ambas fechadas "hoy",
+        // y la validación de secuencia rechace la segunda como duplicado
+        // (se pierde la marcación).
+        let ahoraServidor = new Date();
+        if (datos.sinConexion === true && datos.fechaHora) {
+          const fechaCliente = new Date(datos.fechaHora);
+          const ahora = new Date();
+          const TREINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
+          if (!isNaN(fechaCliente.getTime()) && fechaCliente <= ahora && (ahora - fechaCliente) <= TREINTA_DIAS_MS) {
+            ahoraServidor = fechaCliente;
+          }
+        }
         const hoyStr  = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'dd/MM/yyyy');
         const horaStr = Utilities.formatDate(ahoraServidor, 'America/Bogota', 'HH:mm:ss');
 
