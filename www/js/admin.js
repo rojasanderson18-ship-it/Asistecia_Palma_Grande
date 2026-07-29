@@ -452,6 +452,22 @@ document.getElementById('btnAutorizarDispositivo').addEventListener('click', asy
   }
 });
 
+/* ── Ver cola offline (pendientes + rechazadas) ── */
+document.getElementById('btnVerColaOffline').addEventListener('click', async () => {
+  const pendientes = JSON.parse(localStorage.getItem('cola') || '[]');
+  const rechazadas = JSON.parse(localStorage.getItem('cola_rechazados') || '[]');
+  const fmt = (item, i) => {
+    const f = item.fechaHora ? new Date(item.fechaHora).toLocaleString('es-CO') : '(sin fecha)';
+    const err = item._meta && item._meta.ultimoError ? ` — ${item._meta.ultimoError}` : '';
+    return `${i + 1}. ${f} · doc ${item.documento || '?'} · ${item.tipo || '?'}${err}`;
+  };
+  let msg = '';
+  if (pendientes.length) msg += `PENDIENTES (${pendientes.length}):\n` + pendientes.map(fmt).join('\n') + '\n\n';
+  if (rechazadas.length) msg += `RECHAZADAS (${rechazadas.length}):\n` + rechazadas.map(fmt).join('\n');
+  if (!msg) msg = 'No hay marcaciones pendientes ni rechazadas en este dispositivo.';
+  await showAlert(msg);
+});
+
 document.getElementById('btnGuardarConfig').addEventListener('click', async () => {
   const pinActual = document.getElementById('cfgPinActual').value;
   const pinNuevo  = document.getElementById('cfgPinNuevo').value;
